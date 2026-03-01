@@ -1,0 +1,84 @@
+// This is your Prisma schema file.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  role      String   @default("STUDENT") // STUDENT, PROVIDER, ADMIN, DRIVER
+  name      String
+  email     String   @unique
+  password  String   // In a real app this would be hashed
+  phone     String?
+  points    Int      @default(0) // UniZy rewards
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  listings      HousingListing[]
+  verifications VerificationDocument[]
+  orders        Order[]
+  reviews       Review[]
+}
+
+model HousingListing {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  price       Float
+  type        String   // Shared, Studio, Apartment
+  status      String   @default("PENDING") // PENDING, ACTIVE, REJECTED, RENTED
+  location    String
+  images      String   // JSON stringified array of URLs
+  amenities   String   // JSON stringified array of strings
+  contact     String
+  
+  providerId  String
+  provider    User     @relation(fields: [providerId], references: [id])
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model VerificationDocument {
+  id        String   @id @default(uuid())
+  type      String   // STUDENT_ID, DRIVERS_LICENSE, DEED
+  status    String   @default("PENDING") // PENDING, VERIFIED, REJECTED
+  fileUrl   String
+  
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Order {
+  id          String   @id @default(uuid())
+  service     String   // TRANSPORT, DELIVERY
+  status      String   @default("PENDING") // PENDING, ACCEPTED, IN_TRANSIT, COMPLETED
+  total       Float
+  details     String   // JSON stringified specific details (pickup/dropoff or food items)
+  
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  driverId    String?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Review {
+  id        String   @id @default(uuid())
+  rating    Int
+  comment   String?
+  
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+}
