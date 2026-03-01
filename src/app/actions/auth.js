@@ -68,8 +68,19 @@ export async function loginUser(username, password) {
 
 export async function registerUser(data) {
     try {
-        // Expected data: { name, email, password, phone, role }
-        const { name, email, password, phone, role } = data;
+        // Expected data: { name, email, password, phone, role, university, faculty, academicYear, gender, referralCode }
+        const {
+            name,
+            email,
+            password,
+            phone,
+            role,
+            university,
+            faculty,
+            academicYear,
+            gender,
+            referralCode
+        } = data;
 
         // Check if user exists
         const existingUser = await prisma.user.findUnique({
@@ -87,7 +98,13 @@ export async function registerUser(data) {
                 email,
                 password, // Plain text for MVP as per schema comment
                 phone: phone || null,
-                role: role || 'STUDENT'
+                role: role || 'STUDENT',
+                university: university || 'Assiut University',
+                faculty: faculty || null,
+                academicYear: academicYear || null,
+                gender: gender || null,
+                referralCode: referralCode || null,
+                isVerified: false // Default to unverified until ID upload
             }
         });
 

@@ -78,8 +78,8 @@ export default function HubPage() {
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
                         className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === tab.id
-                                ? 'bg-white dark:bg-[#1E293B] text-[var(--unizy-primary)] shadow-sm'
-                                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                            ? 'bg-white dark:bg-[#1E293B] text-[var(--unizy-primary)] shadow-sm'
+                            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
                             }`}
                     >
                         <tab.icon className={`w-4 h-4 ${activeTab === tab.id ? 'opacity-100' : 'opacity-70'}`} />
@@ -110,8 +110,8 @@ export default function HubPage() {
                             </button>
                             <button
                                 className={`px-6 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all ${postText.trim().length > 0
-                                        ? 'bg-[var(--unizy-primary)] text-white hover:opacity-90 shadow-md shadow-blue-500/20'
-                                        : 'bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed'
+                                    ? 'bg-[var(--unizy-primary)] text-white hover:opacity-90 shadow-md shadow-blue-500/20'
+                                    : 'bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed'
                                     }`}
                             >
                                 <Edit3 className="w-4 h-4" />

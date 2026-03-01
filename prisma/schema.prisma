@@ -11,11 +11,21 @@ datasource db {
 
 model User {
   id        String   @id @default(uuid())
-  role      String   @default("STUDENT") // STUDENT, PROVIDER, ADMIN, DRIVER
+  role      String   @default("STUDENT") // STUDENT, PROVIDER, ADMIN, DRIVER, MERCHANT, SUPPORT, AMBASSADOR
   name      String
   email     String   @unique
   password  String // In a real app this would be hashed
   phone     String?
+  
+  // Phase 16: Expanded Profile
+  university   String?  @default("Assiut University")
+  faculty      String?
+  academicYear String?
+  gender       String?
+  referralCode String?
+  isVerified   Boolean  @default(false)
+  profileImage String?
+
   points    Int      @default(0) // UniZy rewards
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
