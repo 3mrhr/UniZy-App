@@ -1,0 +1,127 @@
+'use client';
+
+import React, { useState } from 'react';
+import { Send, Plus, Clock, CheckCircle, Users, Filter, Megaphone } from 'lucide-react';
+
+const MOCK_CAMPAIGNS = [
+    { id: '1', title: 'Welcome Week Special', message: '50% off your first ride! Use code WELCOME50', targetRole: 'STUDENT', status: 'SENT', sentAt: '2026-02-20', recipientCount: 823 },
+    { id: '2', title: 'Ramadan Meal Deals', message: 'Exclusive meal plans starting at 150 EGP/week', targetRole: null, status: 'SCHEDULED', scheduledAt: '2026-03-10' },
+    { id: '3', title: 'Driver Bonus Week', message: 'Complete 20 rides this week for 500 bonus points', targetRole: 'DRIVER', status: 'DRAFT' },
+];
+
+export default function AdminCampaignsPage() {
+    const [campaigns, setCampaigns] = useState(MOCK_CAMPAIGNS);
+    const [showForm, setShowForm] = useState(false);
+    const [form, setForm] = useState({ title: '', message: '', targetRole: '', targetUni: '' });
+
+    const handleCreate = () => {
+        const newCampaign = {
+            id: Date.now().toString(),
+            ...form,
+            targetRole: form.targetRole || null,
+            status: 'DRAFT',
+        };
+        setCampaigns(prev => [newCampaign, ...prev]);
+        setForm({ title: '', message: '', targetRole: '', targetUni: '' });
+        setShowForm(false);
+    };
+
+    const handleSend = (id) => {
+        setCampaigns(prev => prev.map(c => c.id === id ? { ...c, status: 'SENT', sentAt: new Date().toISOString().split('T')[0], recipientCount: Math.floor(Math.random() * 500) + 100 } : c));
+    };
+
+    const statusColor = {
+        DRAFT: 'bg-gray-100 dark:bg-gray-800 text-gray-500',
+        SCHEDULED: 'bg-blue-100 dark:bg-blue-900/20 text-blue-600',
+        SENT: 'bg-green-100 dark:bg-green-900/20 text-green-600',
+    };
+
+    return (
+        <div className="space-y-8 animate-in fade-in duration-500">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">Campaign <span className="text-brand-600">Manager</span></h1>
+                    <p className="text-sm font-bold text-gray-500 dark:text-gray-400 mt-1 uppercase tracking-widest">Push notifications & promotions</p>
+                </div>
+                <button onClick={() => setShowForm(!showForm)} className="flex items-center gap-2 px-5 py-3 bg-brand-600 text-white rounded-2xl font-bold shadow-lg shadow-brand-500/20 hover:bg-brand-700 transition-all">
+                    <Plus size={18} /> New Campaign
+                </button>
+            </div>
+
+            {/* Create Form */}
+            {showForm && (
+                <div className="bg-white dark:bg-[#1E293B] rounded-3xl border border-gray-100 dark:border-gray-800 p-8 space-y-4">
+                    <h3 className="text-lg font-black text-gray-900 dark:text-white mb-4">Create Campaign</h3>
+                    <div>
+                        <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Title</label>
+                        <input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="e.g. Summer Housing Deals" className="w-full px-5 py-3 rounded-2xl bg-gray-50 dark:bg-unizy-navy/50 border-2 border-transparent focus:border-brand-500 outline-none text-gray-900 dark:text-white font-bold" />
+                    </div>
+                    <div>
+                        <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Message</label>
+                        <textarea value={form.message} onChange={e => setForm({ ...form, message: e.target.value })} rows={3} placeholder="Write the notification body..." className="w-full px-5 py-3 rounded-2xl bg-gray-50 dark:bg-unizy-navy/50 border-2 border-transparent focus:border-brand-500 outline-none text-gray-900 dark:text-white font-bold resize-none" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Target Audience</label>
+                            <select value={form.targetRole} onChange={e => setForm({ ...form, targetRole: e.target.value })} className="w-full px-5 py-3 rounded-2xl bg-gray-50 dark:bg-unizy-navy/50 border-2 border-transparent focus:border-brand-500 outline-none text-gray-900 dark:text-white font-bold appearance-none cursor-pointer">
+                                <option value="">All Users</option>
+                                <option value="STUDENT">Students Only</option>
+                                <option value="DRIVER">Drivers Only</option>
+                                <option value="MERCHANT">Merchants Only</option>
+                                <option value="PROVIDER">Providers Only</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">University</label>
+                            <select value={form.targetUni} onChange={e => setForm({ ...form, targetUni: e.target.value })} className="w-full px-5 py-3 rounded-2xl bg-gray-50 dark:bg-unizy-navy/50 border-2 border-transparent focus:border-brand-500 outline-none text-gray-900 dark:text-white font-bold appearance-none cursor-pointer">
+                                <option value="">All Universities</option>
+                                <option value="Assiut University">Assiut University</option>
+                                <option value="Sphinx University">Sphinx University</option>
+                                <option value="Badari University">Badari University</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-3 pt-2">
+                        <button onClick={handleCreate} className="px-6 py-3 bg-brand-600 text-white rounded-2xl font-bold hover:bg-brand-700 transition-all">Save as Draft</button>
+                        <button onClick={() => setShowForm(false)} className="px-6 py-3 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-2xl font-bold hover:bg-gray-200 transition-all">Cancel</button>
+                    </div>
+                </div>
+            )}
+
+            {/* Campaign List */}
+            <div className="bg-white dark:bg-[#1E293B] rounded-3xl border border-gray-100 dark:border-gray-800 overflow-hidden">
+                <div className="px-8 py-6 border-b border-gray-100 dark:border-gray-800 flex items-center gap-3">
+                    <Megaphone className="text-brand-500" size={20} />
+                    <h3 className="text-lg font-black text-gray-900 dark:text-white">All Campaigns</h3>
+                    <span className="ml-auto text-xs font-bold text-gray-400">{campaigns.length} total</span>
+                </div>
+                <div className="divide-y divide-gray-50 dark:divide-gray-800/50">
+                    {campaigns.map((c) => (
+                        <div key={c.id} className="p-6 hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
+                            <div className="flex items-start justify-between gap-4">
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <h4 className="font-black text-gray-900 dark:text-white">{c.title}</h4>
+                                        <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-lg ${statusColor[c.status]}`}>{c.status}</span>
+                                    </div>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-1">{c.message}</p>
+                                    <div className="flex items-center gap-4 mt-2 text-xs text-gray-400 font-bold">
+                                        {c.targetRole && <span className="flex items-center gap-1"><Filter size={10} /> {c.targetRole}</span>}
+                                        {c.recipientCount && <span className="flex items-center gap-1"><Users size={10} /> {c.recipientCount} recipients</span>}
+                                        {c.sentAt && <span className="flex items-center gap-1"><CheckCircle size={10} /> Sent {c.sentAt}</span>}
+                                        {c.scheduledAt && <span className="flex items-center gap-1"><Clock size={10} /> Scheduled {c.scheduledAt}</span>}
+                                    </div>
+                                </div>
+                                {c.status === 'DRAFT' && (
+                                    <button onClick={() => handleSend(c.id)} className="flex items-center gap-2 px-4 py-2.5 bg-green-100 dark:bg-green-900/20 text-green-600 rounded-xl font-bold text-sm hover:bg-green-200 transition-all shrink-0">
+                                        <Send size={14} /> Send Now
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+}

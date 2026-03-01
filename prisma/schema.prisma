@@ -14,7 +14,7 @@ model User {
   role      String   @default("STUDENT") // STUDENT, PROVIDER, ADMIN, DRIVER, MERCHANT, SUPPORT, AMBASSADOR
   name      String
   email     String   @unique
-  password  String // In a real app this would be hashed
+  password  String // bcrypt hashed
   phone     String?
   
   // Phase 16: Expanded Profile
@@ -22,7 +22,7 @@ model User {
   faculty      String?
   academicYear String?
   gender       String?
-  referralCode String?
+  referralCode String?  @unique
   isVerified   Boolean  @default(false)
   profileImage String?
 
@@ -38,6 +38,10 @@ model User {
   deals          Deal[]
   savedDeals     SavedDeal[]
   meals          Meal[]
+  hubPosts       HubPost[]
+  notifications  Notification[]
+  referralsMade  Referral[]  @relation("referrer")
+  referralsUsed  Referral[]  @relation("referred")
 }
 
 model HousingListing {
@@ -177,4 +181,72 @@ model Meal {
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+// ========== Phase 22: Hub Posts ==========
+
+model HubPost {
+  id        String   @id @default(uuid())
+  content   String
+  category  String   @default("general") // general, study_help, lost_found, housing, marketplace
+  imageUrl  String?
+  likes     Int      @default(0)
+  comments  Int      @default(0)
+  isFlagged Boolean  @default(false)
+  flagReason String?
+  status    String   @default("ACTIVE") // ACTIVE, FLAGGED, REMOVED
+
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ========== Phase 23: Referrals ==========
+
+model Referral {
+  id          String   @id @default(uuid())
+  code        String   // The referral code used
+  status      String   @default("COMPLETED") // COMPLETED, PENDING
+  pointsAwarded Int    @default(50)
+
+  referrerId  String
+  referrer    User     @relation("referrer", fields: [referrerId], references: [id])
+
+  referredId  String
+  referred    User     @relation("referred", fields: [referredId], references: [id])
+
+  createdAt   DateTime @default(now())
+}
+
+// ========== Phase 23: Campaigns ==========
+
+model Campaign {
+  id          String   @id @default(uuid())
+  title       String
+  message     String
+  targetRole  String?  // null = all, or STUDENT, DRIVER, etc.
+  targetUni   String?  // null = all universities
+  status      String   @default("DRAFT") // DRAFT, SENT, SCHEDULED
+  sentAt      DateTime?
+  scheduledAt DateTime?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ========== Notifications ==========
+
+model Notification {
+  id        String   @id @default(uuid())
+  title     String
+  message   String
+  type      String   @default("GENERAL") // GENERAL, CAMPAIGN, REFERRAL, ORDER, SYSTEM
+  isRead    Boolean  @default(false)
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
 }

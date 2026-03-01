@@ -1,50 +1,26 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
-import { cookies } from 'next/headers';
-
-// Mock session creation for MVP
-// In a real app, use next-auth or iron-session
-async function setSession(user) {
-    const cookieStore = cookies();
-    cookieStore.set('mock_session', JSON.stringify({
-        id: user.id,
-        role: user.role,
-        name: user.name,
-        email: user.email
-    }), {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        maxAge: 60 * 60 * 24 * 7, // 1 week
-        path: '/'
-    });
-}
+import { getSession } from '@/lib/session';
+import bcrypt from 'bcryptjs';
 
 export async function loginUser(username, password) {
     try {
-        // --- 🚀 Bypass for MVP Testing (Roles based on username input) ---
+        // --- 🚀 Dev-mode bypass for role testing ---
         const roleString = username.toUpperCase();
 
-        if (roleString.includes('ADMIN')) {
-            const mockAdmin = {
-                id: 'admin-mock-id',
-                name: username,
-                email: `${username}@unizy.com`,
-                role: roleString
-            };
-            await setSession(mockAdmin);
-            return { success: true, role: mockAdmin.role };
-        }
-
-        if (roleString === 'DRIVER' || roleString === 'LANDLORD' || roleString === 'MERCHANT') {
-            const mockProvider = {
+        if (roleString.includes('ADMIN') || roleString === 'DRIVER' || roleString === 'LANDLORD' || roleString === 'MERCHANT') {
+            const role = roleString === 'LANDLORD' ? 'PROVIDER' : (roleString.includes('ADMIN') ? roleString : roleString);
+            const mockUser = {
                 id: `${roleString.toLowerCase()}-mock-id`,
                 name: username,
                 email: `${username}@unizy.com`,
-                role: roleString === 'LANDLORD' ? 'PROVIDER' : roleString
+                role,
             };
-            await setSession(mockProvider);
-            return { success: true, role: mockProvider.role };
+            const session = await getSession();
+            session.user = mockUser;
+            await session.save();
+            return { success: true, role: mockUser.role };
         }
         // -----------------------------------------------------------------
 
@@ -53,11 +29,24 @@ export async function loginUser(username, password) {
             where: { email: username }
         });
 
-        if (!user || user.password !== password) {
+        if (!user) {
             return { error: 'Invalid credentials' };
         }
 
-        await setSession(user);
+        // Compare hashed password
+        const isValid = await bcrypt.compare(password, user.password);
+        if (!isValid) {
+            return { error: 'Invalid credentials' };
+        }
+
+        const session = await getSession();
+        session.user = {
+            id: user.id,
+            role: user.role,
+            name: user.name,
+            email: user.email,
+        };
+        await session.save();
 
         return { success: true, role: user.role };
     } catch (error) {
@@ -68,7 +57,6 @@ export async function loginUser(username, password) {
 
 export async function registerUser(data) {
     try {
-        // Expected data: { name, email, password, phone, role, university, faculty, academicYear, gender, referralCode }
         const {
             name,
             email,
@@ -91,24 +79,60 @@ export async function registerUser(data) {
             return { error: 'Email already in use' };
         }
 
-        // Create user
+        // Hash password with bcrypt (10 salt rounds)
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        // Generate unique referral code for this user
+        const userReferralCode = `UNI-${name.replace(/\s/g, '').substring(0, 3).toUpperCase()}${Date.now().toString(36).slice(-4).toUpperCase()}`;
+
+        // Create user with hashed password
         const newUser = await prisma.user.create({
             data: {
                 name,
                 email,
-                password, // Plain text for MVP as per schema comment
+                password: hashedPassword,
                 phone: phone || null,
                 role: role || 'STUDENT',
                 university: university || 'Assiut University',
                 faculty: faculty || null,
                 academicYear: academicYear || null,
                 gender: gender || null,
-                referralCode: referralCode || null,
-                isVerified: false // Default to unverified until ID upload
+                referralCode: userReferralCode,
+                isVerified: false,
             }
         });
 
-        await setSession(newUser);
+        // Process referral if a code was provided
+        if (referralCode) {
+            const referrer = await prisma.user.findUnique({
+                where: { referralCode: referralCode }
+            });
+            if (referrer) {
+                // Award points to both parties
+                await prisma.$transaction([
+                    prisma.referral.create({
+                        data: {
+                            code: referralCode,
+                            referrerId: referrer.id,
+                            referredId: newUser.id,
+                            pointsAwarded: 50,
+                        }
+                    }),
+                    prisma.user.update({ where: { id: referrer.id }, data: { points: { increment: 50 } } }),
+                    prisma.user.update({ where: { id: newUser.id }, data: { points: { increment: 25 } } }),
+                ]);
+            }
+        }
+
+        // Set session
+        const session = await getSession();
+        session.user = {
+            id: newUser.id,
+            role: newUser.role,
+            name: newUser.name,
+            email: newUser.email,
+        };
+        await session.save();
 
         return { success: true, role: newUser.role };
     } catch (error) {
@@ -118,22 +142,12 @@ export async function registerUser(data) {
 }
 
 export async function logoutUser() {
-    const cookieStore = cookies();
-    cookieStore.delete('mock_session');
+    const session = await getSession();
+    session.destroy();
     return { success: true };
 }
 
 export async function getCurrentUser() {
-    const cookieStore = cookies();
-    const sessionCookie = cookieStore.get('mock_session');
-
-    if (!sessionCookie) {
-        return null;
-    }
-
-    try {
-        return JSON.parse(sessionCookie.value);
-    } catch (e) {
-        return null;
-    }
+    const session = await getSession();
+    return session.user || null;
 }
