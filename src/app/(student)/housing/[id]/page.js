@@ -1,34 +1,35 @@
 import Link from "next/link";
 import Image from "next/image";
 
-// Mock data (would fetch from DB in real app)
-const getListing = (id) => ({
-    id,
-    title: "Cozy Studio near Science Faculty",
-    price: 1500,
-    deposit: 1000,
-    area: "Al Zahraa, New Assiut",
-    type: "Studio",
-    distance: "5 mins walk to campus",
-    gender: "Mixed",
-    verified: true,
-    description: "A perfect quiet studio for a dedicated student. Recently renovated with new appliances. High-speed internet included in rent. 2 months minimum stay.",
-    rules: ["No smoking indoors", "No loud noise after 11 PM", "No pets"],
-    amenities: ["WiFi", "AC", "Washing Machine", "Kitchenette", "Furnished"],
-    landlord: {
-        name: "Ahmed Hassan",
-        rating: 4.8,
-        reviews: 12
-    },
-    images: [
-        "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800&q=80",
-        "https://images.unsplash.com/photo-1502672260266-1c1de2d96674?w=800&q=80",
-        "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?w=800&q=80"
-    ]
-});
+import { getHousingListingById } from '@/app/actions/housing';
+import { getReviewsForHousing } from '@/app/actions/reviews';
 
-export default function ListingDetails({ params }) {
-    const listing = getListing(params.id);
+export default async function ListingDetails({ params }) {
+    const { id } = await params;
+    const listingData = await getHousingListingById(id);
+    const reviewData = await getReviewsForHousing(id);
+
+    // Provide robust fallbacks if db empty or id missing
+    const listing = listingData || {
+        id,
+        title: "Cozy Studio near Science Faculty (Mock)",
+        price: 1500,
+        type: "Studio",
+        location: "Al Zahraa, New Assiut",
+        description: "A perfect quiet studio for a dedicated student. Recently renovated with new appliances. High-speed internet included in rent. 2 months minimum stay.",
+        images: "[\"https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800&q=80\"]",
+        amenities: "[\"WiFi\", \"AC\"]",
+        provider: { name: "Ahmed Hassan" }
+    };
+
+    let images = [];
+    try { images = JSON.parse(listing.images); } catch (e) { }
+    if (!images.length) images = ["https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800&q=80"];
+
+    let amenities = [];
+    try { amenities = JSON.parse(listing.amenities); } catch (e) { }
+
+    const landlordName = listing.provider?.name || "Unknown Landlord";
 
     return (
         <div className="flex flex-col min-h-screen bg-white pb-28 relative">
@@ -45,14 +46,14 @@ export default function ListingDetails({ params }) {
             {/* Hero Image Gallery (Simplified for MVP) */}
             <div className="relative h-72 w-full bg-gray-900 overflow-hidden rounded-b-3xl">
                 <Image
-                    src={listing.images[0]}
+                    src={images[0]}
                     alt={listing.title}
                     fill
                     className="object-cover opacity-90 animate-fade-in"
                     priority
                 />
                 <div className="absolute bottom-4 right-4 bg-black/50 backdrop-blur-md text-white text-xs px-3 py-1.5 rounded-full font-medium tracking-wide">
-                    1 / {listing.images.length}
+                    1 / {images.length}
                 </div>
                 <div className="absolute inset-0 bg-gradient-to-t from-gray-900/80 to-transparent"></div>
             </div>
@@ -63,11 +64,9 @@ export default function ListingDetails({ params }) {
                 <div className="bg-white rounded-3xl p-6 shadow-xl border border-gray-100 mb-6">
                     <div className="flex justify-between items-start gap-4 mb-4">
                         <h1 className="text-2xl font-bold text-gray-900 leading-tight">{listing.title}</h1>
-                        {listing.verified && (
-                            <div className="bg-green-50 text-green-700 p-2 rounded-full border border-green-100 flex-shrink-0" title="Verified Listing">
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7"></path></svg>
-                            </div>
-                        )}
+                        <div className="bg-green-50 text-green-700 p-2 rounded-full border border-green-100 flex-shrink-0" title="Verified Listing">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7"></path></svg>
+                        </div>
                     </div>
 
                     <div className="flex items-end gap-2 mb-4">
@@ -77,8 +76,7 @@ export default function ListingDetails({ params }) {
 
                     <div className="flex flex-wrap gap-2 md:gap-4 text-xs md:text-sm font-medium">
                         <span className="bg-gray-100 text-gray-700 px-3 py-1.5 rounded-xl">{listing.type}</span>
-                        <span className="bg-purple-50 text-purple-700 px-3 py-1.5 rounded-xl border border-purple-100">{listing.gender}</span>
-                        <span className="bg-blue-50 text-brand-700 px-3 py-1.5 rounded-xl border border-brand-100">{listing.area}</span>
+                        <span className="bg-blue-50 text-brand-700 px-3 py-1.5 rounded-xl border border-brand-100">{listing.location}</span>
                     </div>
                 </div>
 
@@ -87,12 +85,12 @@ export default function ListingDetails({ params }) {
                     <div className="bg-gray-50 p-4 rounded-2xl flex flex-col gap-1">
                         <span className="text-xl">🚶</span>
                         <span className="text-xs text-gray-500 font-medium">Distance</span>
-                        <span className="text-sm font-bold text-gray-900">{listing.distance}</span>
+                        <span className="text-sm font-bold text-gray-900">Near Campus</span>
                     </div>
                     <div className="bg-gray-50 p-4 rounded-2xl flex flex-col gap-1">
                         <span className="text-xl">💰</span>
                         <span className="text-xs text-gray-500 font-medium">Deposit</span>
-                        <span className="text-sm font-bold text-gray-900">{listing.deposit} EGP</span>
+                        <span className="text-sm font-bold text-gray-900">{listing.price} EGP</span>
                     </div>
                 </div>
 
@@ -103,47 +101,71 @@ export default function ListingDetails({ params }) {
                 </section>
 
                 {/* Amenities */}
-                <section className="mb-8">
-                    <h2 className="text-lg font-bold text-gray-900 mb-4">Amenities</h2>
-                    <div className="grid grid-cols-2 gap-y-4 gap-x-2">
-                        {listing.amenities.map(amenity => (
-                            <div key={amenity} className="flex items-center gap-3 text-gray-700 text-sm font-medium">
-                                <div className="w-8 h-8 rounded-full bg-brand-50 flex items-center justify-center text-brand-600">✓</div>
-                                {amenity}
-                            </div>
-                        ))}
-                    </div>
-                </section>
+                {amenities && amenities.length > 0 && (
+                    <section className="mb-8">
+                        <h2 className="text-lg font-bold text-gray-900 mb-4">Amenities</h2>
+                        <div className="grid grid-cols-2 gap-y-4 gap-x-2">
+                            {amenities.map(amenity => (
+                                <div key={amenity} className="flex items-center gap-3 text-gray-700 text-sm font-medium">
+                                    <div className="w-8 h-8 rounded-full bg-brand-50 flex items-center justify-center text-brand-600">✓</div>
+                                    {amenity}
+                                </div>
+                            ))}
+                        </div>
+                    </section>
+                )}
 
-                {/* Rules */}
-                <section className="mb-8">
-                    <h2 className="text-lg font-bold text-gray-900 mb-4">House Rules</h2>
-                    <ul className="space-y-3">
-                        {listing.rules.map(rule => (
-                            <li key={rule} className="flex items-start gap-3 text-sm text-gray-600">
-                                <span className="text-red-400 mt-0.5">•</span> {rule}
-                            </li>
-                        ))}
-                    </ul>
-                </section>
-
-                {/* Landlord Info */}
-                <section className="bg-gray-50 rounded-2xl p-5 flex items-center justify-between">
+                {/* Landlord Info and Aggregated Reviews */}
+                <section className="bg-gray-50 rounded-2xl p-5 flex items-center justify-between mb-8">
                     <div className="flex items-center gap-4">
                         <div className="w-12 h-12 rounded-full bg-gray-300 overflow-hidden">
                             {/* Placeholder Avatar */}
                             <div className="w-full h-full bg-gradient-to-tr from-gray-400 to-gray-200"></div>
                         </div>
                         <div>
-                            <p className="font-bold text-gray-900 text-sm">Hosted by {listing.landlord.name}</p>
+                            <p className="font-bold text-gray-900 text-sm">Hosted by {landlordName}</p>
                             <div className="flex items-center gap-1 text-xs text-yellow-500 mt-1">
-                                <span>★</span> <span className="text-gray-700 font-medium">{listing.landlord.rating} ({listing.landlord.reviews} reviews)</span>
+                                <span>★</span> <span className="text-gray-700 font-medium">{reviewData.average > 0 ? reviewData.average : 'New'} ({reviewData.count} reviews)</span>
                             </div>
                         </div>
                     </div>
                     <button className="bg-white p-2 rounded-full shadow-sm text-brand-600 border border-gray-100 hover:bg-gray-50 transition-colors">
                         💬
                     </button>
+                </section>
+
+                {/* Real Reviews Stream */}
+                <section className="mb-12">
+                    <h2 className="text-lg font-bold text-gray-900 mb-4">Guest Reviews</h2>
+                    <div className="space-y-4">
+                        {reviewData.reviews && reviewData.reviews.length > 0 ? (
+                            reviewData.reviews.map(review => (
+                                <div key={review.id} className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-full bg-brand-100 text-brand-700 font-bold flex items-center justify-center">
+                                                {review.user?.name?.charAt(0) || 'U'}
+                                            </div>
+                                            <div>
+                                                <p className="font-bold text-gray-900 text-sm">{review.user?.name || 'A Student'}</p>
+                                                <p className="text-xs text-gray-500">{new Date(review.createdAt).toLocaleDateString()}</p>
+                                            </div>
+                                        </div>
+                                        <div className="bg-yellow-50 text-yellow-600 px-2 py-1 rounded-lg text-xs font-bold flex items-center gap-1">
+                                            <span>★</span> {review.rating}.0
+                                        </div>
+                                    </div>
+                                    {review.comment && (
+                                        <p className="text-gray-600 text-sm">{review.comment}</p>
+                                    )}
+                                </div>
+                            ))
+                        ) : (
+                            <div className="text-center p-8 bg-gray-50 rounded-2xl border border-gray-100 border-dashed">
+                                <p className="text-gray-500 text-sm text-center italic">No reviews yet for this listing.</p>
+                            </div>
+                        )}
+                    </div>
                 </section>
 
                 {/* Additional Spacing for Fixed Bottom Bar on Desktop */}

@@ -25,6 +25,24 @@ export default function DeliveryPage() {
         { id: 4, name: 'Daily Mart', rating: '4.7', time: '30-40 min', image: 'https://images.unsplash.com/photo-1534723452862-4c874018d66d?ixlib=rb-1.2.1&auto=format&fit=crop&w=400&q=80', tag: 'Essentials' },
     ];
 
+    const [isOrdering, setIsOrdering] = useState(false);
+
+    const handleOrder = async (vendor) => {
+        setIsOrdering(true);
+        const { createOrder } = await import('@/app/actions/orders');
+        const result = await createOrder('DELIVERY', {
+            vendor: vendor.name,
+            items: ['Mock Item 1', 'Mock Item 2']
+        }, 150.00); // Fixed price for mock MVP
+
+        setIsOrdering(false);
+        if (result.success) {
+            alert('Order placed successfully! Track it in your Activity Center.');
+        } else {
+            alert(result.error || 'Failed to place order');
+        }
+    };
+
     return (
         <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-unizy-navy pb-32 transition-colors duration-300">
 
@@ -93,8 +111,11 @@ export default function DeliveryPage() {
                                 </div>
                             </div>
 
-                            <button className="w-full bg-gray-50 dark:bg-unizy-navy/50 hover:bg-brand-600 hover:text-white dark:hover:bg-brand-600 transition-all py-4 rounded-2xl font-black text-xs uppercase tracking-widest text-gray-900 dark:text-white hover:text-white">
-                                Order Now
+                            <button
+                                onClick={() => handleOrder(vendor)}
+                                disabled={isOrdering}
+                                className={`w-full bg-gray-50 dark:bg-unizy-navy/50 hover:bg-brand-600 hover:text-white dark:hover:bg-brand-600 transition-all py-4 rounded-2xl font-black text-xs uppercase tracking-widest text-gray-900 dark:text-white hover:text-white ${isOrdering ? 'opacity-70 cursor-not-allowed' : ''}`}>
+                                {isOrdering ? '...' : 'Order Now'}
                             </button>
                         </div>
                     ))}

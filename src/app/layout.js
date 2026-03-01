@@ -15,10 +15,15 @@ const inter = Inter({ subsets: ['latin'] });
 export default function RootLayout({ children }) {
   const pathname = usePathname();
 
-  // Logic to determine if we are on a public page
   const isPublicPage = pathname === '/';
   const isLoginPage = pathname === '/login';
   const isAuthPage = isLoginPage || pathname === '/signup';
+
+  // Specific portals manage their own headers
+  const isSpecialPortal = pathname.startsWith('/admin') ||
+    pathname.startsWith('/driver') ||
+    pathname.startsWith('/provider') ||
+    pathname.startsWith('/merchant');
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -27,8 +32,8 @@ export default function RootLayout({ children }) {
           <LanguageProvider>
             <div className="min-h-screen flex flex-col">
 
-              {/* Desktop Header - Hidden on Mobile and Auth Pages */}
-              {!isAuthPage && (
+              {/* Desktop Header - Only for Public and Student Pages */}
+              {!isAuthPage && !isSpecialPortal && (
                 <header className="hidden sm:flex bg-white/80 dark:bg-unizy-navy/80 backdrop-blur-md border-b border-gray-100 dark:border-unizy-dark sticky top-0 z-50 px-8 py-3 items-center justify-between shadow-sm">
                   <Link href="/" className="flex items-center gap-3 group">
                     <div className="relative w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center transition-transform group-hover:scale-110">

@@ -8,42 +8,50 @@ import { useLanguage } from '@/i18n/LanguageProvider';
 export default function HousingHome() {
     const { dict } = useLanguage();
 
-    // In progress listings
-    const listings = [
-        {
-            id: "1",
-            title: "Cozy Studio near Science Faculty",
-            price: 1500,
-            area: "Al Zahraa",
-            type: "Studio",
-            distance: "5 mins walk to campus",
-            gender: "Mixed",
-            verified: true,
-            image: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=500&q=80"
-        },
-        {
-            id: "2",
-            title: "Shared Room in Luxury Dorm",
-            price: 800,
-            area: "Downtown New Assiut",
-            type: "Shared Room",
-            distance: "10 mins by bus",
-            gender: "Male Only",
-            verified: true,
-            image: "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?w=500&q=80"
-        },
-        {
-            id: "3",
-            title: "Spacious Private Bedroom",
-            price: 2000,
-            area: "Al Amal",
-            type: "Private Room",
-            distance: "15 mins walk to campus",
-            gender: "Female Only",
-            verified: false,
-            image: "https://images.unsplash.com/photo-1502672260266-1c1de2d96674?w=500&q=80"
+    const [listings, setListings] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        async function fetchListings() {
+            const { getHousingListings } = await import('@/app/actions/housing');
+            const data = await getHousingListings();
+            if (data?.length > 0) {
+                const formatted = data.map(item => {
+                    let images = [];
+                    try { images = JSON.parse(item.images); } catch (e) { }
+                    return {
+                        id: item.id,
+                        title: item.title,
+                        price: item.price,
+                        area: item.location,
+                        type: item.type,
+                        distance: "Near Campus",
+                        gender: "Mixed",
+                        verified: item.provider?.name === 'Super Admin', // Just as a UI mock
+                        image: images[0] || "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=500&q=80"
+                    };
+                });
+                setListings(formatted);
+            } else {
+                // If API returns empty (no entries seeded yet), keep mock data for presentation
+                setListings([
+                    {
+                        id: "mock1",
+                        title: "Cozy Studio near Science Faculty",
+                        price: 1500,
+                        area: "Al Zahraa",
+                        type: "Studio",
+                        distance: "5 mins walk to campus",
+                        gender: "Mixed",
+                        verified: true,
+                        image: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=500&q=80"
+                    }
+                ]);
+            }
+            setIsLoading(false);
         }
-    ];
+        fetchListings();
+    }, []);
 
     return (
         <div className="flex flex-col min-h-screen bg-gray-50 pb-24 dark:bg-unizy-navy transition-colors">

@@ -6,6 +6,7 @@ generator client {
 
 datasource db {
   provider = "sqlite"
+  url      = "file:./dev.db"
 }
 
 model User {
@@ -13,72 +14,120 @@ model User {
   role      String   @default("STUDENT") // STUDENT, PROVIDER, ADMIN, DRIVER
   name      String
   email     String   @unique
-  password  String   // In a real app this would be hashed
+  password  String // In a real app this would be hashed
   phone     String?
   points    Int      @default(0) // UniZy rewards
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  listings      HousingListing[]
-  verifications VerificationDocument[]
-  orders        Order[]
-  reviews       Review[]
+  listings       HousingListing[]
+  verifications  VerificationDocument[]
+  orders         Order[]
+  reviews        Review[]
+  supportTickets SupportTicket[]
+  deals          Deal[]
+  meals          Meal[]
 }
 
 model HousingListing {
-  id          String   @id @default(uuid())
+  id          String @id @default(uuid())
   title       String
   description String
   price       Float
-  type        String   // Shared, Studio, Apartment
-  status      String   @default("PENDING") // PENDING, ACTIVE, REJECTED, RENTED
+  type        String // Shared, Studio, Apartment
+  status      String @default("PENDING") // PENDING, ACTIVE, REJECTED, RENTED
   location    String
-  images      String   // JSON stringified array of URLs
-  amenities   String   // JSON stringified array of strings
+  images      String // JSON stringified array of URLs
+  amenities   String // JSON stringified array of strings
   contact     String
-  
-  providerId  String
-  provider    User     @relation(fields: [providerId], references: [id])
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+
+  providerId String
+  provider   User   @relation(fields: [providerId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model VerificationDocument {
-  id        String   @id @default(uuid())
-  type      String   // STUDENT_ID, DRIVERS_LICENSE, DEED
-  status    String   @default("PENDING") // PENDING, VERIFIED, REJECTED
-  fileUrl   String
-  
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
+  id      String @id @default(uuid())
+  type    String // STUDENT_ID, DRIVERS_LICENSE, DEED
+  status  String @default("PENDING") // PENDING, VERIFIED, REJECTED
+  fileUrl String
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 model Order {
-  id          String   @id @default(uuid())
-  service     String   // TRANSPORT, DELIVERY
-  status      String   @default("PENDING") // PENDING, ACCEPTED, IN_TRANSIT, COMPLETED
-  total       Float
-  details     String   // JSON stringified specific details (pickup/dropoff or food items)
-  
-  userId      String
-  user        User     @relation(fields: [userId], references: [id])
-  driverId    String?
+  id      String @id @default(uuid())
+  service String // TRANSPORT, DELIVERY
+  status  String @default("PENDING") // PENDING, ACCEPTED, IN_TRANSIT, COMPLETED
+  total   Float
+  details String // JSON stringified specific details (pickup/dropoff or food items)
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  userId   String
+  user     User    @relation(fields: [userId], references: [id])
+  driverId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Review {
-  id        String   @id @default(uuid())
-  rating    Int
-  comment   String?
-  
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
+  id      String  @id @default(uuid())
+  rating  Int
+  comment String?
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  // Optional relations - What is being reviewed?
+  targetUserId     String?  // Reviewing a driver or landlord
+  housingListingId String?  // Reviewing a specific house
+  orderId          String?  // Reviewing a specific transport/delivery order
 
   createdAt DateTime @default(now())
+}
+
+model SupportTicket {
+  id       String @id @default(uuid())
+  subject  String
+  category String
+  status   String @default("OPEN") // OPEN, IN_PROGRESS, RESOLVED
+  priority String @default("LOW") // LOW, MEDIUM, HIGH
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Deal {
+  id          String @id @default(uuid())
+  title       String
+  description String
+  discount    String
+
+  merchantId String
+  merchant   User   @relation(fields: [merchantId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Meal {
+  id     String @id @default(uuid())
+  name   String
+  price  Float
+  status String @default("AVAILABLE") // AVAILABLE, SOLD_OUT
+
+  merchantId String
+  merchant   User   @relation(fields: [merchantId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

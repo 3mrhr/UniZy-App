@@ -5,32 +5,45 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import ThemeLangControls from '@/components/ThemeLangControls';
+import { loginUser } from '@/app/actions/auth';
 
 export default function Login() {
     const router = useRouter();
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState('');
 
-    const handleLogin = (e) => {
+    const handleLogin = async (e) => {
         e.preventDefault();
         setIsLoading(true);
+        setError('');
 
-        // Role-based redirection logic (Mock for MVP)
-        setTimeout(() => {
-            if (username === 'superadmin' && password === 'admin000') {
+        try {
+            const result = await loginUser(username, password);
+            if (result.error) {
+                setError(result.error);
+                setIsLoading(false);
+                return;
+            }
+
+            // Role-based redirection logic
+            const role = result.role || 'STUDENT';
+            if (role.includes('ADMIN')) {
                 router.push('/admin');
-            } else if (username === 'driver') {
+            } else if (role === 'DRIVER') {
                 router.push('/driver');
-            } else if (username === 'landlord') {
+            } else if (role === 'PROVIDER' || role === 'LANDLORD') {
                 router.push('/provider');
-            } else if (username === 'merchant') {
+            } else if (role === 'MERCHANT') {
                 router.push('/merchant');
             } else {
-                // Default to students portal
                 router.push('/students');
             }
-        }, 800);
+        } catch (err) {
+            setError('An error occurred during login');
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -56,6 +69,12 @@ export default function Login() {
                 </div>
 
                 <form onSubmit={handleLogin} className="bg-white/70 dark:bg-unizy-dark/70 backdrop-blur-2xl rounded-[2.5rem] p-10 shadow-2xl border border-white/50 dark:border-white/5 animate-fade-in-up">
+
+                    {error && (
+                        <div className="mb-6 p-3 bg-red-50 border border-red-200 text-red-600 rounded-xl text-sm font-bold text-center">
+                            {error}
+                        </div>
+                    )}
 
                     <div className="mb-6">
                         <label className="block text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3 ml-1">Username</label>

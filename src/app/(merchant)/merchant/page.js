@@ -30,6 +30,12 @@ export default function MerchantDashboard() {
         setMenuItems(menuItems.map(m => m.id === id ? { ...m, available: !m.available } : m));
     };
 
+    // Mock Deals
+    const [deals, setDeals] = useState([
+        { id: 'd1', title: '50% Off Second Burger', status: 'Active', redemptions: 12 },
+        { id: 'd2', title: 'Free Drink with Combo', status: 'Paused', redemptions: 45 }
+    ]);
+
     return (
         <div className="min-h-screen bg-rose-50 dark:bg-unizy-navy transition-colors pb-24">
 
@@ -126,6 +132,24 @@ export default function MerchantDashboard() {
                         <button className="w-full mt-6 py-4 rounded-2xl bg-gray-100 dark:bg-white/5 font-bold text-xs text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10 transition-colors">
                             Manage Full Menu
                         </button>
+                    </div>
+
+                    <div className="bg-white dark:bg-unizy-dark p-8 rounded-[2.5rem] shadow-sm border border-gray-100 dark:border-white/5 animate-fade-in delay-300">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-widest">Active Deals</h3>
+                            <button className="text-xs font-bold text-[var(--unizy-primary)]">+ New</button>
+                        </div>
+                        <div className="space-y-4">
+                            {deals.map(deal => (
+                                <div key={deal.id} className="p-4 bg-gray-50 dark:bg-unizy-navy/50 rounded-2xl flex flex-col gap-2">
+                                    <div className="flex justify-between items-start">
+                                        <p className="text-sm font-bold text-gray-900 dark:text-white">{deal.title}</p>
+                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${deal.status === 'Active' ? 'bg-green-100 text-green-600' : 'bg-yellow-100 text-yellow-600'}`}>{deal.status}</span>
+                                    </div>
+                                    <p className="text-xs text-gray-500">{deal.redemptions} redemptions</p>
+                                </div>
+                            ))}
+                        </div>
                     </div>
 
                     <div className="bg-gradient-to-br from-rose-500 to-pink-600 p-8 rounded-[2.5rem] shadow-xl shadow-rose-500/20 text-white relative overflow-hidden group">

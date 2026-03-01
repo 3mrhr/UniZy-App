@@ -14,7 +14,7 @@ export default function Navigation() {
         { label: t.services || 'Services', href: '/students#services', icon: '⚡' },
         { label: t.hub || 'Hub', href: '/hub', icon: '👥' },
         { label: t.activity || 'Activity', href: '/activity', icon: '📋' },
-        { label: t.account || 'Account', href: '/profile', icon: '👤' },
+        { label: t.account || 'Account', href: '/account', icon: '👤' },
     ];
 
     return (

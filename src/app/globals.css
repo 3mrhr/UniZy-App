@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Allow next-themes class='dark' to trigger Tailwind's dark: variant */
+@custom-variant dark (&:is(.dark *));
+
 @theme {
   --color-brand-50: #eff6ff;
   --color-brand-100: #dbeafe;

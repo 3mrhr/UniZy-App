@@ -13,6 +13,7 @@ export default function TransportPage() {
     const [pickup, setPickup] = useState('My Current Location');
     const [destination, setDestination] = useState('');
     const [selectedVehicle, setSelectedVehicle] = useState('standard');
+    const [isBooking, setIsBooking] = useState(false);
 
     const vehicles = [
         { id: 'standard', name: 'Standard', price: 'EGP 45', time: '3 min', icon: '🚗' },
@@ -20,6 +21,24 @@ export default function TransportPage() {
         { id: 'scooter', name: 'Scooter', price: 'EGP 25', time: '2 min', icon: '🛵' },
         { id: 'bus', name: 'Shuttle Bus', price: 'EGP 10', time: '12 min', icon: '🚌' },
     ];
+
+    const handleBook = async () => {
+        if (!destination) return alert('Please enter a destination');
+        setIsBooking(true);
+        const selected = vehicles.find(v => v.id === selectedVehicle);
+        const { createOrder } = await import('@/app/actions/orders');
+        const result = await createOrder('TRANSPORT', {
+            pickup, destination, vehicle: selected.name
+        }, parseFloat(selected.price.replace('EGP ', '')));
+
+        setIsBooking(false);
+        if (result.success) {
+            alert('Booking assigned successfully! Track it in your Activity Center.');
+            setDestination('');
+        } else {
+            alert(result.error || 'Failed to book');
+        }
+    };
 
     return (
         <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-unizy-navy transition-colors duration-300 pb-20 sm:pb-0">
@@ -83,8 +102,11 @@ export default function TransportPage() {
                             ))}
                         </div>
 
-                        <button className="w-full bg-brand-600 hover:bg-brand-700 text-white font-black py-5 rounded-[1.5rem] mt-6 shadow-lg shadow-brand-500/20 transition-all hover:scale-[1.02] active:scale-95">
-                            Book {vehicles.find(v => v.id === selectedVehicle)?.name}
+                        <button
+                            onClick={handleBook}
+                            disabled={isBooking}
+                            className={`w-full bg-brand-600 hover:bg-brand-700 text-white font-black py-5 rounded-[1.5rem] mt-6 shadow-lg shadow-brand-500/20 transition-all hover:scale-[1.02] active:scale-95 ${isBooking ? 'opacity-70 cursor-not-allowed' : ''}`}>
+                            {isBooking ? 'Booking...' : `Book ${vehicles.find(v => v.id === selectedVehicle)?.name}`}
                         </button>
                     </div>
                 </div>
