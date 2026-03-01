@@ -9,12 +9,11 @@ const MOCK_DEAL = {
     id: 'd1',
     merchant: 'Burger Bros',
     title: '50% Off Second Burger',
-    arTitle: 'خصم 50% على البرجر الثاني',
-    description: 'Enjoy a delicious 50% discount on any second burger of equal or lesser value. Valid for dine-in and takeout.',
-    arDescription: 'استمتع بخصم رائع 50٪ على أي برجر ثاني بقيمة مساوية أو أقل. صالح للأكل في المطعم والتيك أواي.',
+    description: 'Enjoy a delicious 50% discount on any second burger of equal or lesser value. Valid for dine-in and takeout on our entire menu.',
     image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&q=80',
     distance: '1.2 km',
     rating: 4.8,
+    reviews: 312,
     type: 'discount',
     value: '50%',
     expiresIn: '2 days',
@@ -23,17 +22,12 @@ const MOCK_DEAL = {
     currency: 'EGP',
     terms: [
         'Valid for students with active UniZy ID.',
-        'Cannot be combined with other offers.',
-        'One use per day per student.'
-    ],
-    arTerms: [
-        'صالح للطلاب الذين يحملون هوية UniZy نشطة.',
-        'لا يمكن دمجه مع عروض أخرى.',
-        'استخدام واحد في اليوم لكل طالب.'
+        'Cannot be combined with other offers or promos.',
+        'One use per day per student account.'
     ],
     branches: [
-        { name: 'University Campus Branch', arName: 'فرع الحرم الجامعي', distance: '1.2 km' },
-        { name: 'Downtown Branch', arName: 'فرع وسط البلد', distance: '4.5 km' }
+        { name: 'University Campus Branch', distance: '1.2 km' },
+        { name: 'Downtown Main Branch', distance: '4.5 km' }
     ],
     promoCode: 'UNIBROS50'
 };
@@ -42,132 +36,229 @@ export default function DealDetailsPage({ params }) {
     const router = useRouter();
     const { language } = useLanguage();
     const isRTL = language === 'ar-EG';
+
+    // Unwrapping promise to prevent sync access errors in Next 15+
+    const unwrappedParams = React.use(params);
+    const dealId = unwrappedParams.id;
+
+    const [deal, setDeal] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
     const [isSaved, setIsSaved] = useState(false);
     const [codeCopied, setCodeCopied] = useState(false);
 
+    useEffect(() => {
+        const fetchDealDetails = async () => {
+            setIsLoading(true);
+            try {
+                const { getDealById, checkIsDealSaved } = await import('@/app/actions/deals');
+
+                const [dealResult, savedResult] = await Promise.all([
+                    getDealById(dealId),
+                    checkIsDealSaved(dealId)
+                ]);
+
+                if (dealResult.success && dealResult.deal) {
+                    setDeal(dealResult.deal);
+                }
+                setIsSaved(savedResult);
+
+            } catch (error) {
+                console.error("Failed to fetch deal", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        if (dealId) {
+            fetchDealDetails();
+        }
+    }, [dealId]);
+
     const handleCopyCode = () => {
-        navigator.clipboard.writeText(MOCK_DEAL.promoCode);
+        if (!deal?.promoCode) return;
+        navigator.clipboard.writeText(deal.promoCode);
         setCodeCopied(true);
         setTimeout(() => setCodeCopied(false), 2000);
     };
 
+    const handleToggleSave = async () => {
+        try {
+            const { toggleSaveDeal } = await import('@/app/actions/deals');
+            const result = await toggleSaveDeal(dealId);
+            if (result.success) {
+                setIsSaved(result.saved);
+            }
+        } catch (error) {
+            console.error("Failed to toggle save status", error);
+        }
+    };
+
+    if (isLoading) {
+        return (
+            <main className="min-h-screen pb-24 bg-gray-50 dark:bg-unizy-navy flex items-center justify-center">
+                <div className="animate-pulse flex flex-col items-center">
+                    <div className="w-16 h-16 border-4 border-brand-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                    <p className="text-gray-500 font-bold">Loading Deal Details...</p>
+                </div>
+            </main>
+        );
+    }
+
+    if (!deal) {
+        return (
+            <main className="min-h-screen pb-24 bg-gray-50 dark:bg-unizy-navy flex items-center justify-center">
+                <div className="text-center px-6">
+                    <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-2">Deal Not Found</h2>
+                    <p className="text-gray-500 mb-6">This deal might have expired or doesn't exist.</p>
+                    <button onClick={() => router.back()} className="px-6 py-3 bg-brand-600 text-white rounded-full font-bold shadow-lg">Go Back</button>
+                </div>
+            </main>
+        );
+    }
+
+    // Default branches if missing from schema 
+    const branches = [
+        { name: 'University Campus Branch', distance: '1.2 km' },
+        { name: 'Downtown Main Branch', distance: '4.5 km' }
+    ];
+
     return (
-        <main className="min-h-screen pb-24 bg-[var(--unizy-bg-light)] dark:bg-[var(--unizy-bg-dark)] transition-colors duration-300">
+        <main className="min-h-screen pb-24 bg-gray-50 dark:bg-unizy-navy transition-colors duration-300">
 
             {/* Dynamic Header Image */}
-            <div className="relative h-64 sm:h-80 w-full">
-                <img src={MOCK_DEAL.image} alt={MOCK_DEAL.merchant} className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80"></div>
+            <div className="relative h-72 sm:h-96 w-full rounded-b-[3rem] overflow-hidden shadow-2xl shadow-black/10">
+                {deal.image ? (
+                    <img src={deal.image} alt={deal.merchant?.name} className="w-full h-full object-cover" />
+                ) : (
+                    <div className="w-full h-full bg-brand-600 flex items-center justify-center">
+                        <Tag className="text-white/30 w-32 h-32" />
+                    </div>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/20"></div>
 
                 {/* Top Nav Overlay */}
-                <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center z-10 pt-safe">
+                <div className="absolute top-0 left-0 right-0 p-6 flex justify-between items-center z-10 pt-safe">
                     <button
                         onClick={() => router.back()}
-                        className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center text-white hover:bg-black/60 transition-colors"
+                        className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-xl flex items-center justify-center text-white hover:bg-white/40 transition-colors border border-white/30 shadow-lg"
                     >
-                        {isRTL ? <ArrowRight className="w-5 h-5" /> : <ArrowLeft className="w-5 h-5" />}
+                        {isRTL ? <ArrowRight className="w-6 h-6" /> : <ArrowLeft className="w-6 h-6" />}
                     </button>
-                    <div className="flex gap-2">
-                        <button className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center text-white hover:bg-black/60 transition-colors">
+                    <div className="flex gap-3">
+                        <button className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-xl flex items-center justify-center text-white hover:bg-white/40 transition-colors border border-white/30 shadow-lg" onClick={() => {
+                            if (navigator.share) {
+                                navigator.share({
+                                    title: deal.title,
+                                    text: `Check out this deal from ${deal.merchant?.name} on UniZy!`,
+                                    url: window.location.href,
+                                });
+                            }
+                        }}>
                             <Share2 className="w-5 h-5" />
                         </button>
                         <button
-                            onClick={() => setIsSaved(!isSaved)}
-                            className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center text-white hover:bg-black/60 transition-colors"
+                            onClick={handleToggleSave}
+                            className={`w-12 h-12 rounded-full backdrop-blur-xl flex items-center justify-center text-white transition-colors border shadow-lg ${isSaved ? 'bg-red-500/90 border-red-500 hover:bg-red-600' : 'bg-white/20 border-white/30 hover:bg-white/40'}`}
                         >
-                            <Heart className={`w-5 h-5 ${isSaved ? 'fill-red-500 text-red-500' : ''}`} />
+                            <Heart className={`w-5 h-5 ${isSaved ? 'fill-white stroke-white' : ''}`} />
                         </button>
                     </div>
                 </div>
 
                 {/* Bottom Title Overlay */}
-                <div className="absolute bottom-4 left-4 right-4 text-white">
-                    <div className="flex items-center gap-2 mb-2">
-                        <span className="bg-[var(--unizy-primary)] text-white text-xs font-bold px-2.5 py-1 rounded-lg flex items-center gap-1 shadow-lg">
-                            <Tag className="w-3.5 h-3.5" /> {isRTL ? 'خصم حصري' : 'Exclusive Deal'}
+                <div className="absolute bottom-8 left-6 right-6 text-white max-w-7xl mx-auto">
+                    <div className="flex items-center gap-3 mb-3">
+                        <span className="bg-brand-500 text-white text-xs font-black px-3 py-1.5 rounded-xl flex items-center gap-1.5 shadow-lg tracking-wide uppercase">
+                            <Tag className="w-3.5 h-3.5" /> Exclusive Deal
                         </span>
-                        <span className="flex items-center gap-1 text-sm bg-black/50 backdrop-blur-md px-2 py-1 rounded-lg">
-                            <Star className="w-3.5 h-3.5 text-yellow-500 fill-current" /> {MOCK_DEAL.rating}
+                        <span className="flex items-center gap-1 text-sm bg-white/20 backdrop-blur-md px-3 py-1.5 rounded-xl font-bold border border-white/20">
+                            <Star className="w-4 h-4 text-yellow-400 fill-current" /> {deal.rating?.toFixed(1) || '5.0'} <span className="opacity-70 text-xs font-normal">({deal.reviews || 0})</span>
                         </span>
                     </div>
-                    <h1 className="text-2xl sm:text-3xl font-extrabold leading-tight shadow-black drop-shadow-lg">
-                        {isRTL ? MOCK_DEAL.arTitle : MOCK_DEAL.title}
+                    <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black leading-tight shadow-black drop-shadow-2xl mb-2">
+                        {deal.title}
                     </h1>
-                    <p className="text-gray-200 mt-1 flex items-center gap-2 shadow-black drop-shadow-md font-medium">
-                        {MOCK_DEAL.merchant}
+                    <p className="text-gray-200 text-lg flex items-center gap-2 drop-shadow-md font-bold">
+                        {deal.merchant?.name || 'Local Merchant'}
                     </p>
                 </div>
             </div>
 
-            <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
+            <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
 
                 {/* Important Info Strip */}
-                <div className="flex bg-white dark:bg-[#1E293B] rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-800 mb-6 divide-x dark:divide-gray-700 rtl:divide-x-reverse">
-                    <div className="flex-1 text-center px-2">
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{isRTL ? 'ينتهي خلال' : 'Expires In'}</p>
-                        <p className="font-bold text-orange-500 flex items-center justify-center gap-1">
-                            <Clock className="w-4 h-4" /> {MOCK_DEAL.expiresIn}
+                <div className="grid grid-cols-3 bg-white dark:bg-unizy-dark rounded-[2rem] p-6 shadow-xl shadow-gray-200/50 dark:shadow-none border border-gray-100 dark:border-white/5 mb-8">
+                    <div className="flex flex-col items-center justify-center text-center px-4 border-r border-gray-100 dark:border-gray-800">
+                        <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1">Expires In</p>
+                        <p className="font-black text-lg text-orange-500 flex items-center gap-1.5 bg-orange-50 dark:bg-orange-900/10 px-3 py-1 rounded-xl whitespace-nowrap">
+                            <Clock className="w-4 h-4 hidden sm:block" /> {deal.expiresIn || 'Ongoing'}
                         </p>
                     </div>
-                    <div className="flex-1 text-center px-2">
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{isRTL ? 'توفير' : 'Savings'}</p>
-                        <p className="font-bold text-green-500">{MOCK_DEAL.value}</p>
+                    <div className="flex flex-col items-center justify-center text-center px-4 border-r border-gray-100 dark:border-gray-800">
+                        <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1">Savings</p>
+                        <p className="font-black text-xl text-green-500">{deal.discount}</p>
                     </div>
-                    <div className="flex-1 text-center px-2">
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{isRTL ? 'السعر بعد الخصم' : 'Est. Price'}</p>
-                        <p className="font-bold text-[var(--unizy-text-dark)] dark:text-white">{MOCK_DEAL.discountPrice} <span className="text-xs font-normal text-gray-500">{MOCK_DEAL.currency}</span></p>
+                    <div className="flex flex-col items-center justify-center text-center px-4">
+                        <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1">Price</p>
+                        <p className="font-black text-xl text-gray-900 dark:text-white">{deal.discountPrice || '-'} <span className="text-xs font-bold text-gray-400">{deal.currency || 'EGP'}</span></p>
                     </div>
                 </div>
 
                 {/* Promo Code Action */}
-                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-2xl p-6 border border-blue-100 dark:border-blue-900 mb-8 flex flex-col items-center text-center">
-                    <h3 className="font-bold text-[var(--unizy-text-dark)] dark:text-white mb-2">
-                        {isRTL ? 'استخدم كود الخصم في المطعم' : 'Use Promo Code at Merchant'}
+                <div className="bg-brand-50 rounded-[2.5rem] p-8 border border-brand-100 dark:border-brand-900/30 dark:bg-brand-500/5 mb-10 flex flex-col items-center text-center shadow-inner relative overflow-hidden">
+                    {/* Decorative Blob */}
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-brand-500/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2"></div>
+
+                    <h3 className="text-xl font-black text-brand-900 dark:text-white mb-2 z-10">
+                        In-Store Redemption Code
                     </h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 px-4">
-                        {isRTL ? 'اعرض هذا الكود للكاشير عند الدفع للحصول على الخصم.' : 'Show this code to the cashier in-store to claim your discount.'}
+                    <p className="text-sm font-medium text-brand-700/80 dark:text-brand-200/60 mb-6 max-w-sm z-10">
+                        Show this exclusive promo code to the cashier before paying to instantly apply your student discount.
                     </p>
 
-                    <div className="relative group w-full max-w-xs cursor-pointer" onClick={handleCopyCode}>
-                        <div className="absolute inset-0 bg-blue-500 bg-opacity-20 rounded-xl blur-md group-hover:bg-opacity-30 transition-all"></div>
-                        <div className="relative flex items-center justify-between bg-white dark:bg-[#1E293B] border-2 border-dashed border-[var(--unizy-primary)] rounded-xl py-3 px-6 shadow-sm">
-                            <span className="font-mono text-xl font-bold tracking-wider text-[var(--unizy-primary)] w-full text-center">
-                                {MOCK_DEAL.promoCode}
+                    <div className="relative group w-full max-w-xs cursor-pointer z-10" onClick={handleCopyCode}>
+                        <div className="absolute inset-0 bg-brand-500 bg-opacity-20 rounded-[1.5rem] blur-xl group-hover:bg-opacity-30 transition-all"></div>
+                        <div className="relative flex items-center justify-between bg-white dark:bg-unizy-dark border-2 border-dashed border-brand-500 rounded-[1.5rem] py-4 px-6 shadow-md transition-transform group-active:scale-95">
+                            <span className="font-mono text-2xl font-black tracking-widest text-brand-600 dark:text-brand-400 w-full text-center">
+                                {deal.promoCode || 'UNIZY50'}
                             </span>
                             {codeCopied ? (
-                                <CheckCircle2 className="w-5 h-5 text-green-500 absolute right-4" />
+                                <CheckCircle2 className="w-6 h-6 text-green-500 absolute right-4" />
                             ) : (
-                                <Copy className="w-5 h-5 text-gray-400 group-hover:text-[var(--unizy-primary)] absolute right-4 transition-colors" />
+                                <Copy className="w-6 h-6 text-brand-400 group-hover:text-brand-600 absolute right-4 transition-colors" />
                             )}
                         </div>
                     </div>
-                    {codeCopied && <p className="text-xs text-green-500 mt-2 font-medium">{isRTL ? 'تم نسخ الكود!' : 'Code copied!'}</p>}
+                    {codeCopied && <p className="text-sm text-green-600 dark:text-green-400 mt-4 font-bold animate-fade-in z-10">Copied to clipboard!</p>}
                 </div>
 
                 {/* Details Section */}
-                <div className="mb-8 space-y-6">
+                <div className="space-y-8 bg-white dark:bg-unizy-dark p-8 rounded-[3rem] shadow-xl shadow-gray-200/50 dark:shadow-none border border-gray-100 dark:border-white/5">
+
                     <section>
-                        <h3 className="text-lg font-bold text-[var(--unizy-text-dark)] dark:text-white flex items-center gap-2 mb-3">
-                            <Info className="w-5 h-5 text-[var(--unizy-primary)]" />
-                            {isRTL ? 'عن العرض' : 'About this Deal'}
+                        <h3 className="text-xl font-black text-gray-900 dark:text-white flex items-center gap-2 mb-4">
+                            <Info className="w-6 h-6 text-brand-500" />
+                            About this Deal
                         </h3>
-                        <p className="text-gray-600 dark:text-gray-300 leading-relaxed text-sm">
-                            {isRTL ? MOCK_DEAL.arDescription : MOCK_DEAL.description}
+                        <p className="text-gray-600 dark:text-gray-300 leading-relaxed font-medium">
+                            {deal.description}
                         </p>
                     </section>
 
+                    <hr className="border-gray-100 dark:border-gray-800" />
+
                     <section>
-                        <h3 className="text-lg font-bold text-[var(--unizy-text-dark)] dark:text-white flex items-center gap-2 mb-3 mt-8">
-                            <MapPin className="w-5 h-5 text-[var(--unizy-primary)]" />
-                            {isRTL ? 'الفروع المتاحة' : 'Available Branches'}
+                        <h3 className="text-xl font-black text-gray-900 dark:text-white flex items-center gap-2 mb-6">
+                            <MapPin className="w-6 h-6 text-brand-500" />
+                            Available Branches
                         </h3>
-                        <div className="space-y-3">
+                        <div className="grid sm:grid-cols-2 gap-4">
                             {MOCK_DEAL.branches.map((branch, index) => (
-                                <div key={index} className="flex justify-between items-center p-3 sm:p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-800">
-                                    <span className="font-medium text-[var(--unizy-text-dark)] dark:text-white">
-                                        {isRTL ? branch.arName : branch.name}
+                                <div key={index} className="flex justify-between items-center p-5 bg-gray-50 dark:bg-unizy-navy rounded-2xl border border-gray-100 dark:border-gray-800 hover:border-brand-500/30 transition-colors">
+                                    <span className="font-bold text-gray-900 dark:text-white">
+                                        {branch.name}
                                     </span>
-                                    <span className="text-sm text-gray-500 dark:text-gray-400 bg-white dark:bg-[#1E293B] px-2 py-1 rounded shadow-sm border border-gray-100 dark:border-gray-700">
+                                    <span className="text-xs font-black text-brand-600 bg-brand-50 dark:bg-brand-500/10 px-3 py-1.5 rounded-xl border border-brand-100 dark:border-brand-500/20">
                                         {branch.distance}
                                     </span>
                                 </div>
@@ -175,14 +266,14 @@ export default function DealDetailsPage({ params }) {
                         </div>
                     </section>
 
-                    <section className="bg-yellow-50 dark:bg-yellow-900/10 p-5 rounded-2xl border border-yellow-100 dark:border-yellow-900/30 mt-8">
-                        <h3 className="text-sm font-bold text-yellow-800 dark:text-yellow-500 mb-3 uppercase tracking-wider">
-                            {isRTL ? 'الشروط والأحكام' : 'Terms & Conditions'}
+                    <section className="bg-gray-50 dark:bg-unizy-navy p-6 rounded-3xl border border-dashed border-gray-300 dark:border-gray-700">
+                        <h3 className="text-sm font-black text-gray-500 dark:text-gray-400 mb-4 uppercase tracking-widest">
+                            Terms & Conditions
                         </h3>
-                        <ul className="list-disc leading-relaxed text-sm text-yellow-700 dark:text-yellow-600 space-y-2 ml-5 rtl:mr-5 rtl:ml-0">
-                            {(isRTL ? MOCK_DEAL.arTerms : MOCK_DEAL.terms).map((term, i) => (
-                                <li key={i}>{term}</li>
-                            ))}
+                        <ul className="list-disc leading-relaxed text-sm text-gray-600 dark:text-gray-300 space-y-3 ml-6 font-medium">
+                            <li className="pl-1">Valid for students with active UniZy ID.</li>
+                            <li className="pl-1">Cannot be combined with other offers or promos.</li>
+                            <li className="pl-1">One use per day per student account.</li>
                         </ul>
                     </section>
 

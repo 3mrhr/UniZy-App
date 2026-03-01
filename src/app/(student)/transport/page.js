@@ -111,22 +111,16 @@ export default function TransportPage() {
                     </div>
                 </div>
 
-                {/* Right Panel: Map Mockup */}
-                <div className="lg:col-span-2 relative min-h-[400px] lg:min-h-full bg-gray-200 dark:bg-unizy-dark/30 rounded-[3rem] overflow-hidden border border-gray-100 dark:border-white/5 group animate-fade-in delay-200">
-                    {/* Mock Map Background */}
-                    <div className="absolute inset-0 saturate-50 opacity-50 dark:opacity-20 bg-[url('https://images.unsplash.com/photo-1524661135-423995f22d0b?ixlib=rb-1.2.1&auto=format&fit=crop&w=1500&q=80')] bg-cover bg-center"></div>
-
-                    {/* Map UI Elements */}
-                    <div className="absolute top-8 right-8 flex flex-col gap-2">
-                        <button className="w-12 h-12 rounded-2xl bg-white dark:bg-unizy-dark shadow-xl flex items-center justify-center text-xl font-bold dark:text-white">+</button>
-                        <button className="w-12 h-12 rounded-2xl bg-white dark:bg-unizy-dark shadow-xl flex items-center justify-center text-xl font-bold dark:text-white">−</button>
+                {/* Right Panel: Map Mockup (Coming Soon) */}
+                <div className="lg:col-span-2 relative min-h-[400px] lg:min-h-full bg-gray-50 dark:bg-unizy-navy/50 border border-dashed border-gray-300 dark:border-gray-700 rounded-[3rem] overflow-hidden flex flex-col items-center justify-center p-8 text-center animate-fade-in delay-200">
+                    <div className="w-20 h-20 bg-brand-50 dark:bg-brand-500/10 rounded-full flex items-center justify-center mb-6">
+                        <span className="text-4xl">🗺️</span>
                     </div>
-
-                    {/* Floating Live Indicator */}
-                    <div className="absolute bottom-8 left-1/2 -translate-x-1/2 bg-white dark:bg-unizy-dark px-6 py-4 rounded-[1.5rem] shadow-2xl flex items-center gap-4 border border-gray-100 dark:border-white/5 animate-bounce-slow">
-                        <div className="w-3 h-3 rounded-full bg-brand-500 animate-pulse"></div>
-                        <p className="text-sm font-bold text-gray-700 dark:text-gray-300">Searching for nearby drivers...</p>
-                    </div>
+                    <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-2 tracking-tight">Live Map Tracking</h2>
+                    <div className="bg-brand-500 text-white text-xs font-black uppercase tracking-widest px-3 py-1 rounded-full mb-4 inline-block">Coming Soon</div>
+                    <p className="text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
+                        We are currently integrating live GPS tracking for drivers. This feature will be available in an upcoming update!
+                    </p>
                 </div>
 
             </main>

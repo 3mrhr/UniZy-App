@@ -1,47 +1,190 @@
-import AdminSidebar from "@/components/admin/AdminSidebar";
-import ThemeLangControls from "@/components/ThemeLangControls";
+"use client";
 
-export const metadata = {
-    title: "UniZy Admin | Control Center",
-    description: "Operations dashboard for UniZy overall management.",
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
+import {
+    LayoutDashboard, Users, ShoppingBag, Truck,
+    Home, Tag, Utensils, ShieldAlert, LogOut,
+    Menu, X, Bell, Settings, ChevronRight
+} from 'lucide-react';
+
+const ADMIN_ROLES = {
+    ADMIN_SUPER: {
+        label: 'Super Admin',
+        color: 'bg-indigo-600',
+        links: [
+            { label: 'Overview', icon: LayoutDashboard, href: '/admin' },
+            { label: 'User Management', icon: Users, href: '/admin/users' },
+            { label: 'Global Moderation', icon: ShieldAlert, href: '/admin/moderation' },
+            { label: 'Delivery', icon: Truck, href: '/admin/delivery' },
+            { label: 'Transport', icon: ShoppingBag, href: '/admin/transport' },
+            { label: 'Housing', icon: Home, href: '/admin/housing' },
+            { label: 'Commerce', icon: Tag, href: '/admin/commerce' },
+            { label: 'Settings', icon: Settings, href: '/admin/settings' },
+        ]
+    },
+    ADMIN_DELIVERY: {
+        label: 'Delivery Admin',
+        color: 'bg-orange-600',
+        links: [
+            { label: 'Overview', icon: LayoutDashboard, href: '/admin/delivery' },
+            { label: 'Vendors', icon: Users, href: '/admin/delivery/vendors' },
+            { label: 'Live Orders', icon: Truck, href: '/admin/delivery/orders' },
+            { label: 'Analytics', icon: ShieldAlert, href: '/admin/delivery/analytics' },
+        ]
+    },
+    ADMIN_TRANSPORT: {
+        label: 'Transport Admin',
+        color: 'bg-blue-600',
+        links: [
+            { label: 'Overview', icon: LayoutDashboard, href: '/admin/transport' },
+            { label: 'Fleet', icon: ShoppingBag, href: '/admin/transport/fleet' },
+            { label: 'Live Rides', icon: Users, href: '/admin/transport/rides' },
+            { label: 'Analytics', icon: ShieldAlert, href: '/admin/transport/analytics' },
+        ]
+    },
+    ADMIN_HOUSING: {
+        label: 'Housing Admin',
+        color: 'bg-emerald-600',
+        links: [
+            { label: 'Overview', icon: LayoutDashboard, href: '/admin/housing' },
+            { label: 'Verifications', icon: ShieldAlert, href: '/admin/housing/verifications' },
+            { label: 'Listings', icon: Home, href: '/admin/housing/listings' },
+            { label: 'Analytics', icon: Users, href: '/admin/housing/analytics' },
+        ]
+    },
+    ADMIN_COMMERCE: {
+        label: 'Commerce Admin',
+        color: 'bg-purple-600',
+        links: [
+            { label: 'Overview', icon: LayoutDashboard, href: '/admin/commerce' },
+            { label: 'Deals', icon: Tag, href: '/admin/commerce/deals' },
+            { label: 'Meals', icon: Utensils, href: '/admin/commerce/meals' },
+            { label: 'Merchants', icon: Users, href: '/admin/commerce/merchants' },
+        ]
+    }
 };
 
 export default function AdminLayout({ children }) {
+    const pathname = usePathname();
+    const router = useRouter();
+    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+    const [role, setRole] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        // In a real app, this would check the authenticated user's role from a session/cookie
+        // For MVP, we'll simulate based on the path or a local storage flag
+        const savedRole = localStorage.getItem('unizy_admin_role') || 'ADMIN_SUPER';
+        setRole(savedRole);
+        setIsLoading(false);
+    }, []);
+
+    const activeRole = ADMIN_ROLES[role] || ADMIN_ROLES.ADMIN_SUPER;
+
+    const handleLogout = () => {
+        localStorage.removeItem('unizy_admin_role');
+        router.push('/login');
+    };
+
+    if (isLoading) return <div className="min-h-screen bg-gray-50 flex items-center justify-center font-black">Loading Dashboard...</div>;
+
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-unizy-navy flex text-slate-900 dark:text-slate-200 font-sans transition-colors duration-300">
-            <AdminSidebar />
+        <div className="min-h-screen bg-gray-50 dark:bg-[#0F172A] flex">
+            {/* Sidebar */}
+            <aside className={`fixed inset-y-0 left-0 z-50 w-72 bg-white dark:bg-[#1E293B] border-r border-gray-200 dark:border-gray-800 transition-transform duration-300 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:relative lg:translate-x-0`}>
+                <div className="h-full flex flex-col">
+                    {/* Sidebar Header */}
+                    <div className="p-6 flex items-center justify-between">
+                        <Link href="/admin" className="flex items-center gap-2">
+                            <div className="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center">
+                                <span className="text-white font-black text-xl">U</span>
+                            </div>
+                            <span className="text-xl font-black tracking-tight text-gray-900 dark:text-white">UniZy <span className="text-brand-600">Admin</span></span>
+                        </Link>
+                        <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden text-gray-400">
+                            <X className="w-6 h-6" />
+                        </button>
+                    </div>
 
-            {/* Main Content wrapper with left margin mapping to the sidebar width */}
-            <div className="flex-1 ml-64 flex flex-col">
-
-                {/* Top Header */}
-                <header className="bg-white h-16 border-b border-slate-200 flex items-center justify-between px-8 shadow-sm z-10 sticky top-0">
-                    <div className="relative w-96">
-                        <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-slate-400">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    {/* Role Badge */}
+                    <div className="px-6 mb-8">
+                        <div className={`px-4 py-3 rounded-2xl ${activeRole.color} text-white shadow-lg`}>
+                            <p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-0.5">Current Role</p>
+                            <p className="font-black text-sm">{activeRole.label}</p>
                         </div>
-                        <input
-                            type="text"
-                            placeholder="Search students, orders, listings..."
-                            className="w-full bg-slate-100 border-none text-sm rounded-lg block pl-9 p-2 focus:ring-2 focus:ring-brand-500 outline-none transition-all"
-                        />
+                    </div>
+
+                    {/* Navigation Links */}
+                    <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
+                        {activeRole.links.map((link) => {
+                            const isActive = pathname === link.href;
+                            return (
+                                <Link
+                                    key={link.href}
+                                    href={link.href}
+                                    className={`flex items-center justify-between px-4 py-3.5 rounded-xl transition-all group ${isActive
+                                            ? 'bg-brand-50 dark:bg-brand-500/10 text-brand-600 dark:text-brand-400'
+                                            : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:text-gray-900 dark:hover:text-white'
+                                        }`}
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <link.icon className={`w-5 h-5 ${isActive ? 'text-brand-600' : 'group-hover:text-gray-900 dark:group-hover:text-white'}`} />
+                                        <span className="font-bold text-sm tracking-tight">{link.label}</span>
+                                    </div>
+                                    {isActive && <div className="w-1.5 h-1.5 rounded-full bg-brand-600"></div>}
+                                </Link>
+                            );
+                        })}
+                    </nav>
+
+                    {/* Sidebar Footer */}
+                    <div className="p-4 border-t border-gray-100 dark:border-gray-800">
+                        <button
+                            onClick={handleLogout}
+                            className="w-full flex items-center gap-3 px-4 py-3 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/5 rounded-xl transition-all font-bold text-sm"
+                        >
+                            <LogOut className="w-5 h-5" /> Sign Out
+                        </button>
+                    </div>
+                </div>
+            </aside>
+
+            {/* Main Content Area */}
+            <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+                {/* Top Header */}
+                <header className="h-20 bg-white dark:bg-[#1E293B] border-b border-gray-200 dark:border-gray-800 flex items-center justify-between px-6 shrink-0 relative z-40">
+                    <div className="flex items-center gap-4">
+                        <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden text-gray-500">
+                            <Menu className="w-6 h-6" />
+                        </button>
+                        <h2 className="text-lg font-black text-gray-900 dark:text-white hidden sm:block italic">
+                            Control Center Portal
+                        </h2>
                     </div>
 
                     <div className="flex items-center gap-4">
-                        <ThemeLangControls />
-                        <div className="h-8 w-px bg-slate-200 dark:bg-slate-700 mx-2"></div>
-                        <button className="relative text-slate-500 hover:text-brand-600 transition-colors">
-                            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
-                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+                        <div className="hidden md:flex items-center gap-2 bg-gray-50 dark:bg-gray-800/50 px-3 py-1.5 rounded-full border border-gray-100 dark:border-gray-700">
+                            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                            <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">System Online</span>
+                        </div>
+                        <button className="w-10 h-10 rounded-xl bg-gray-50 dark:bg-gray-800/50 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all relative">
+                            <Bell className="w-5 h-5" />
+                            <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-[#1E293B]"></span>
                         </button>
+                        <div className="w-10 h-10 rounded-xl bg-brand-600 flex items-center justify-center text-white font-black text-sm shadow-lg shadow-brand-500/30">
+                            AD
+                        </div>
                     </div>
                 </header>
 
-                {/* Page Content */}
-                <main className="p-8 pb-20 animate-fade-in flex-1 bg-slate-50 dark:bg-unizy-navy">
-                    {children}
+                {/* Content */}
+                <main className="flex-1 overflow-y-auto p-6 md:p-8 bg-gray-50/50 dark:bg-[#0F172A]">
+                    <div className="max-w-7xl mx-auto">
+                        {children}
+                    </div>
                 </main>
-
             </div>
         </div>
     );

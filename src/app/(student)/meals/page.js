@@ -12,62 +12,38 @@ const MEAL_CATEGORIES = [
     { id: 'protein', en: 'High Protein', ar: 'عالي البروتين', icon: ChefHat },
 ];
 
-const MEALS_DATA = [
-    {
-        id: 'm1',
-        merchant: 'Campus Canteen',
-        name: 'Grilled Chicken & Rice',
-        arName: 'دجاج مشوي مع أرز',
-        image: 'https://images.unsplash.com/photo-1532550907401-a500c9a57435?auto=format&fit=crop&q=80',
-        price: '75',
-        currency: 'EGP',
-        rating: 4.5,
-        calories: '450 kcal',
-        prepTime: '15-20 min',
-        tags: ['protein', 'daily'],
-        isPopular: true
-    },
-    {
-        id: 'm2',
-        merchant: 'Fresh Bowl',
-        name: 'Vegan Quinoa Salad',
-        arName: 'سلطة كينوا نباتية',
-        image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80',
-        price: '65',
-        currency: 'EGP',
-        rating: 4.8,
-        calories: '320 kcal',
-        prepTime: '10 min',
-        tags: ['healthy'],
-        isPopular: false
-    },
-    {
-        id: 'm3',
-        merchant: 'Student Bites',
-        name: 'Classic Beef Burger Combo',
-        arName: 'وجبة برجر لحم كلاسيك',
-        image: 'https://images.unsplash.com/photo-1594212696431-7b00bf6895ce?auto=format&fit=crop&q=80',
-        price: '90',
-        currency: 'EGP',
-        rating: 4.3,
-        calories: '850 kcal',
-        prepTime: '20 min',
-        tags: ['budget'],
-        isPopular: true
-    }
-];
-
 export default function MealsPage() {
     const { language } = useLanguage();
     const isRTL = language === 'ar-EG';
     const [activeCategory, setActiveCategory] = useState('daily');
     const [searchQuery, setSearchQuery] = useState('');
+    const [meals, setMeals] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
 
-    const filteredMeals = MEALS_DATA.filter(meal =>
-        meal.tags.includes(activeCategory) &&
-        ((isRTL ? meal.arName : meal.name).toLowerCase().includes(searchQuery.toLowerCase()) ||
-            meal.merchant.toLowerCase().includes(searchQuery.toLowerCase()))
-    );
+    React.useEffect(() => {
+        const fetchMeals = async () => {
+            setIsLoading(true);
+            try {
+                const { getActiveMeals } = await import('@/app/actions/meals');
+                const result = await getActiveMeals(activeCategory, searchQuery);
+                if (result.success && result.meals) {
+                    setMeals(result.meals);
+                }
+            } catch (error) {
+                console.error("Failed to fetch meals", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        const timeoutId = setTimeout(() => {
+            fetchMeals();
+        }, 300);
+
+        return () => clearTimeout(timeoutId);
+    }, [activeCategory, searchQuery]);
+
+    // Removed filteredMeals mapping since search is managed on server side.
 
     return (
         <main className="min-h-screen pb-24 bg-[var(--unizy-bg-light)] dark:bg-[var(--unizy-bg-dark)] px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto pt-6 transition-colors duration-300">
@@ -118,8 +94,8 @@ export default function MealsPage() {
                             key={cat.id}
                             onClick={() => setActiveCategory(cat.id)}
                             className={`flex items-center gap-2 px-5 py-3 rounded-full font-medium transition-all whitespace-nowrap ${activeCategory === cat.id
-                                    ? 'bg-orange-500 text-white shadow-md shadow-orange-500/30'
-                                    : 'bg-white dark:bg-[#1E293B] text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:border-orange-500/50'
+                                ? 'bg-orange-500 text-white shadow-md shadow-orange-500/30'
+                                : 'bg-white dark:bg-[#1E293B] text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:border-orange-500/50'
                                 }`}
                         >
                             <cat.icon className={`w-4 h-4 ${activeCategory === cat.id ? 'text-white' : 'text-gray-400 dark:text-gray-500'}`} />
@@ -131,11 +107,32 @@ export default function MealsPage() {
 
             {/* Meals Feed */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredMeals.map((meal) => (
+                {isLoading ? (
+                    // Loading Skeletons
+                    [...Array(6)].map((_, i) => (
+                        <div key={i} className="bg-white dark:bg-[#1E293B] rounded-2xl overflow-hidden border border-gray-100 dark:border-gray-800 animate-pulse flex flex-col h-full">
+                            <div className="h-48 bg-gray-200 dark:bg-gray-700 w-full mb-4"></div>
+                            <div className="p-5 flex-1 flex flex-col space-y-3">
+                                <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+                                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+                                <div className="mt-auto pt-4 flex justify-between items-center">
+                                    <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/3"></div>
+                                    <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded-xl w-1/3"></div>
+                                </div>
+                            </div>
+                        </div>
+                    ))
+                ) : meals.map((meal) => (
                     <div key={meal.id} className="bg-white dark:bg-[#1E293B] rounded-2xl overflow-hidden border border-gray-100 dark:border-gray-800 hover:shadow-xl transition-shadow group flex flex-col">
                         {/* Image Area */}
-                        <div className="relative h-48 w-full overflow-hidden">
-                            <img src={meal.image} alt={meal.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                        <div className="relative h-48 w-full overflow-hidden bg-gray-100 dark:bg-gray-800">
+                            {meal.image ? (
+                                <img src={meal.image} alt={meal.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                            ) : (
+                                <div className="w-full h-full flex items-center justify-center">
+                                    <UtensilsCrossed className="w-12 h-12 text-gray-400" />
+                                </div>
+                            )}
                             <button className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/80 backdrop-blur flex items-center justify-center text-gray-400 hover:text-red-500 transition-colors">
                                 <Heart className="w-4 h-4" />
                             </button>
@@ -160,9 +157,9 @@ export default function MealsPage() {
                             <div className="flex justify-between items-start mb-2">
                                 <div>
                                     <h3 className="font-bold text-lg text-[var(--unizy-text-dark)] dark:text-white leading-tight">
-                                        {isRTL ? meal.arName : meal.name}
+                                        {isRTL ? (meal.arName || meal.name) : meal.name}
                                     </h3>
-                                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{meal.merchant}</p>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{meal.merchant?.name || 'Local Kitchen'}</p>
                                 </div>
                             </div>
 
@@ -185,7 +182,7 @@ export default function MealsPage() {
                     </div>
                 ))}
 
-                {filteredMeals.length === 0 && (
+                {!isLoading && meals.length === 0 && (
                     <div className="col-span-full py-12 text-center text-gray-500 dark:text-gray-400">
                         <UtensilsCrossed className="w-12 h-12 mx-auto mb-3 opacity-20" />
                         <p>{isRTL ? 'لا توجد وجبات تطابق بحثك حالياً.' : 'No meals match your search currently.'}</p>
