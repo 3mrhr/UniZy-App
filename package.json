@@ -12,6 +12,7 @@
     "@prisma/client": "^6.4.1",
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^11.3.0",
+    "cloudinary": "^2.9.0",
     "iron-session": "^8.0.4",
     "lucide-react": "^0.575.0",
     "next": "16.1.6",
