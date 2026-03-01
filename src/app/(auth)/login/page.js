@@ -105,7 +105,7 @@ export default function Login() {
                             <input type="checkbox" className="w-5 h-5 rounded-lg border-gray-200 dark:border-gray-700 text-brand-600 focus:ring-brand-500 bg-white dark:bg-unizy-navy" />
                             <span className="text-sm font-bold text-gray-600 dark:text-gray-400 group-hover:text-brand-600 transition-colors">Remember me</span>
                         </label>
-                        <Link href="#" className="text-sm font-black text-brand-600 hover:text-brand-700 uppercase tracking-tighter">Forgot?</Link>
+                        <span className="text-sm font-black text-brand-600 hover:text-brand-700 uppercase tracking-tighter cursor-pointer" onClick={() => alert('Password reset will be available soon.')}>Forgot?</span>
                     </div>
 
                     <button
@@ -121,7 +121,7 @@ export default function Login() {
                     </button>
 
                     <p className="text-center text-sm font-bold text-gray-500 dark:text-gray-400 mt-10">
-                        New on campus? <Link href="#" className="text-brand-600 font-extrabold hover:underline">Join UniZy</Link>
+                        New on campus? <Link href="/register" className="text-brand-600 font-extrabold hover:underline">Join UniZy</Link>
                     </p>
 
                 </form>

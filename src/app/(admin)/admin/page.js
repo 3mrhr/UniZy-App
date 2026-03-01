@@ -5,7 +5,7 @@ import {
     Users, ShoppingBag, Truck, Home, Tag,
     TrendingUp, ShieldAlert, AlertCircle,
     ArrowUpRight, ArrowDownRight, MoreVertical,
-    Search, Filter, Download
+    Search, Filter, Download, ChevronRight
 } from 'lucide-react';
 
 const STATS = [
@@ -77,16 +77,16 @@ export default function SuperadminOverview() {
                         {RECENT_ALERTS.map((alert) => (
                             <div key={alert.id} className="flex items-center gap-5 p-5 rounded-3xl bg-gray-50 dark:bg-[#0F172A] border border-gray-100 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-600 transition-all group cursor-pointer">
                                 <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${alert.severity === 'HIGH' ? 'bg-red-50 dark:bg-red-500/10 text-red-500' :
-                                        alert.severity === 'MEDIUM' ? 'bg-orange-50 dark:bg-orange-500/10 text-orange-500' :
-                                            'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-500'
+                                    alert.severity === 'MEDIUM' ? 'bg-orange-50 dark:bg-orange-500/10 text-orange-500' :
+                                        'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-500'
                                     }`}>
                                     <AlertCircle className="w-6 h-6" />
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center justify-between mb-1">
                                         <span className={`text-[10px] font-black uppercase tracking-widest ${alert.severity === 'HIGH' ? 'text-red-500' :
-                                                alert.severity === 'MEDIUM' ? 'text-orange-500' :
-                                                    'text-indigo-500'
+                                            alert.severity === 'MEDIUM' ? 'text-orange-500' :
+                                                'text-indigo-500'
                                             }`}>
                                             {alert.type}
                                         </span>

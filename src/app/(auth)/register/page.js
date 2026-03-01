@@ -71,10 +71,6 @@ export default function Register() {
 
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-unizy-navy flex flex-col items-center justify-center p-6 relative overflow-hidden transition-colors duration-500">
-            {/* Top Bar for Language/Theme */}
-            <div className="absolute top-6 right-6 z-50">
-                <ThemeLangControls />
-            </div>
 
             {/* Decorative Background Elements */}
             <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-brand-200 dark:bg-brand-900/20 rounded-full mix-blend-multiply filter blur-3xl opacity-50 animate-blob"></div>
