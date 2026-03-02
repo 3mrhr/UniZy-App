@@ -830,3 +830,15 @@ model WalletTransaction {
   createdAt   DateTime @default(now())
 }
 
+// ========== Phase 5: Analytics Events ==========
+
+model AnalyticsEvent {
+  id        String   @id @default(uuid())
+  event     String   // EVENT_NAME e.g. "ORDER_CREATED", "DEAL_VIEWED"
+  userId    String
+  module    String?  // TRANSPORT, DELIVERY, HOUSING, etc.
+  metadata  String?  // JSON blob for additional data
+  sessionId String?
+  createdAt DateTime @default(now())
+}
+
