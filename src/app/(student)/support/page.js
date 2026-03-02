@@ -95,7 +95,7 @@ export default function SupportDashboard() {
 
             <main className="max-w-4xl mx-auto px-4 py-8">
                 {/* Support Actions */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-12">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-12">
                     <Link href="/support/new" className="group bg-unizy-primary p-6 rounded-3xl shadow-xl shadow-unizy-primary/20 hover:scale-[1.02] transition-all">
                         <div className="flex justify-between items-start mb-4">
                             <div className="bg-white/20 p-3 rounded-2xl">
@@ -116,6 +116,17 @@ export default function SupportDashboard() {
                         </div>
                         <h3 className="text-gray-900 dark:text-white font-bold text-lg mb-1">{isRTL ? 'طلباتك الحالية' : 'Recent Orders'}</h3>
                         <p className="text-gray-500 dark:text-gray-400 text-sm">{isRTL ? 'تحقق من حالة طلباتك' : 'Check the status of your activities'}</p>
+                    </Link>
+
+                    <Link href="/support/refunds" className="group bg-white dark:bg-unizy-dark p-6 rounded-3xl border border-gray-100 dark:border-white/5 hover:scale-[1.02] transition-all">
+                        <div className="flex justify-between items-start mb-4">
+                            <div className="bg-rose-50 dark:bg-rose-900/20 p-3 rounded-2xl">
+                                <Info className="w-6 h-6 text-rose-500" />
+                            </div>
+                            <ChevronRight className={`w-5 h-5 text-gray-300 dark:text-white/20 group-hover:translate-x-1 transition-transform ${isRTL ? 'rotate-180' : ''}`} />
+                        </div>
+                        <h3 className="text-gray-900 dark:text-white font-bold text-lg mb-1">{isRTL ? 'طلبات الاسترجاع' : 'Refund Requests'}</h3>
+                        <p className="text-gray-500 dark:text-gray-400 text-sm">{isRTL ? 'تتبع حالة استرجاعك' : 'Track your refund status'}</p>
                     </Link>
                 </div>
 
@@ -157,8 +168,8 @@ export default function SupportDashboard() {
                                         </div>
                                         <div className="text-right shrink-0">
                                             <span className={`text-[10px] font-black px-2 py-1 rounded-md mb-2 block ${ticket.priority === 'URGENT' ? 'bg-red-50 text-red-500 dark:bg-red-950/20' :
-                                                    ticket.priority === 'HIGH' ? 'bg-orange-50 text-orange-500 dark:bg-orange-950/20' :
-                                                        'bg-gray-100 text-gray-500 dark:bg-white/5'
+                                                ticket.priority === 'HIGH' ? 'bg-orange-50 text-orange-500 dark:bg-orange-950/20' :
+                                                    'bg-gray-100 text-gray-500 dark:bg-white/5'
                                                 }`}>
                                                 {ticket.priority}
                                             </span>

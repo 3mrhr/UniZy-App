@@ -1,9 +1,7 @@
 'use server';
 
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from './auth';
-
-const prisma = new PrismaClient();
 
 // Fetch active meals, optionally filtered by category (tags) or search text
 export async function getActiveMeals(category = null, searchQuery = '') {

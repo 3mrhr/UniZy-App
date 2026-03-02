@@ -1,5 +1,7 @@
 "use client";
 
+
+import Link from 'next/link';
 import React from 'react';
 import {
     Truck, ShoppingBag, Users, Star,
@@ -23,6 +25,13 @@ const RECENT_ORDERS = [
 export default function DeliveryAdminDashboard() {
     return (
         <div className="space-y-8">
+
+            {/* Sub-page Navigation */}
+            <div className="flex flex-wrap gap-3 mb-8">
+                    <Link href="/admin/delivery/pricing" className="px-4 py-2 bg-white dark:bg-unizy-dark rounded-xl text-sm font-bold text-gray-600 dark:text-gray-300 hover:bg-brand-50 dark:hover:bg-brand-900/20 hover:text-brand-600 transition-all border border-gray-100 dark:border-white/5">Pricing</Link>
+                    <Link href="/admin/delivery/commissions" className="px-4 py-2 bg-white dark:bg-unizy-dark rounded-xl text-sm font-bold text-gray-600 dark:text-gray-300 hover:bg-brand-50 dark:hover:bg-brand-900/20 hover:text-brand-600 transition-all border border-gray-100 dark:border-white/5">Commissions</Link>
+            </div>
+
             <div>
                 <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">Delivery <span className="text-orange-600">Admin</span></h1>
                 <p className="text-sm font-bold text-gray-500 dark:text-gray-400 mt-1 uppercase tracking-widest italic">Restricted to Delivery Operations</p>

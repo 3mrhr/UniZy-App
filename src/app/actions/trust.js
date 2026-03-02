@@ -1,11 +1,9 @@
 'use server';
 
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from './auth';
 import { logAdminAction } from './audit';
 import { revalidatePath } from 'next/cache';
-
-const prisma = new PrismaClient();
 
 /**
  * STUDENT ACTIONS

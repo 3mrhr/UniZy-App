@@ -27,6 +27,7 @@ model User {
   isVerified   Boolean  @default(false)
   verificationStatus String @default("UNVERIFIED") // UNVERIFIED, PENDING, VERIFIED, REJECTED
   profileImage String?
+  notificationPrefs String? @default("{\"email\": true, \"push\": true, \"sms\": false}")
 
   points    Int      @default(0) // UniZy rewards
   createdAt DateTime @default(now())
@@ -115,6 +116,9 @@ model Order {
   userId   String
   user     User    @relation(fields: [userId], references: [id])
   driverId String?
+
+  promoCodeId String?
+  promoCode   PromoCode? @relation(fields: [promoCodeId], references: [id])
 
   dispatches Dispatch[]
 
@@ -317,6 +321,26 @@ model PasswordReset {
   createdAt DateTime @default(now())
 }
 
+// ========== Phase 48: Promotions & Coupons ==========
+
+model PromoCode {
+  id              String   @id @default(uuid())
+  code            String   @unique
+  discountType    String   // PERCENTAGE, FIXED
+  discountAmount  Float
+  maxUses         Int      @default(0) // 0 = unlimited
+  currentUses     Int      @default(0)
+  expiresAt       DateTime?
+  applicableType  String   // ALL, DELIVERY, TRANSPORT, HOUSING, SERVICES
+  isActive        Boolean  @default(true)
+  
+  orders          Order[]
+  transactions    Transaction[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
 // ========== OTP Verification ==========
 
 model OTP {
@@ -448,6 +472,9 @@ model Transaction {
   deal            Deal?           @relation(fields: [dealId], references: [id], onDelete: SetNull)
   mealId          String?
   meal            Meal?           @relation(fields: [mealId], references: [id], onDelete: SetNull)
+
+  promoCodeId     String?
+  promoCode       PromoCode?      @relation(fields: [promoCodeId], references: [id], onDelete: SetNull)
 
   amount          Float       @default(0.0)
   currency        String      @default("EGP")

@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Link from "next/link";
 import Image from "next/image";
 import { useLanguage } from '@/i18n/LanguageProvider';
+import { getVerifiedMerchants } from '@/app/actions/merchants';
 
 function DeliveryContent() {
     const { dict } = useLanguage();
@@ -22,20 +23,24 @@ function DeliveryContent() {
     const [isLoading, setIsLoading] = useState(true);
     const [selectedCategory, setSelectedCategory] = useState(null);
 
-    import('react').then(React => {
-        React.useEffect(() => {
-            const fetchMerchants = async () => {
-                setIsLoading(true);
-                const { getVerifiedMerchants } = await import('@/app/actions/merchants');
+    useEffect(() => {
+        const fetchMerchants = async () => {
+            setIsLoading(true);
+            try {
                 const res = await getVerifiedMerchants(selectedCategory);
                 if (res.success) {
-                    setVendors(res.data);
+                    setVendors(res.data || []);
+                } else {
+                    setVendors([]);
                 }
-                setIsLoading(false);
-            };
-            fetchMerchants();
-        }, [selectedCategory]);
-    });
+            } catch (e) {
+                console.error('Failed to fetch merchants:', e);
+                setVendors([]);
+            }
+            setIsLoading(false);
+        };
+        fetchMerchants();
+    }, [selectedCategory]);
 
     const [isOrdering, setIsOrdering] = useState(false);
 

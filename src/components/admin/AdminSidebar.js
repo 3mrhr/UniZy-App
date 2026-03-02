@@ -5,7 +5,7 @@ import { getCurrentUser } from "@/app/actions/auth";
 export default async function AdminSidebar() {
     const user = await getCurrentUser();
     const role = user?.role || 'SUPERADMIN';
-    const isGlobalAdmin = role === 'SUPERADMIN';
+    const isGlobalAdmin = role === 'SUPERADMIN' || role === 'ADMIN_SUPER' || role === 'ADMIN';
 
     // Base items everyone sees
     let navItems = [
@@ -27,11 +27,34 @@ export default async function AdminSidebar() {
         { label: "Cleaning", href: "/admin/cleaning", icon: "✨" },
     );
 
+    // Module-specific admin items
+    navItems.push(
+        { label: "Delivery", href: "/admin/delivery", icon: "🚚" },
+        { label: "Transport", href: "/admin/transport", icon: "🚗" },
+        { label: "Commerce", href: "/admin/commerce", icon: "🛒" },
+    );
+
     // Global Admin Only Items
     if (isGlobalAdmin) {
         navItems.push(
+            { label: "Pricing", href: "/admin/pricing", icon: "💲" },
+            { label: "Commissions", href: "/admin/commissions", icon: "📊" },
+            { label: "Dispatch", href: "/admin/dispatch", icon: "📦" },
+            { label: "Listings Mod.", href: "/admin/listings-moderation", icon: "🏘️" },
+            { label: "Intelligence", href: "/admin/analytics", icon: "📈" },
+            { label: "Promotions", href: "/admin/promotions", icon: "🎟️" },
+            { label: "Broadcasts", href: "/admin/notifications", icon: "🔔" },
             { label: "Users & Roles", href: "/admin/roles", icon: "👥" },
-            { label: "Finance & Payouts", href: "/admin/finance", icon: "💰" }
+            { label: "Finance & Payouts", href: "/admin/finance", icon: "💰" },
+            { label: "Transactions", href: "/admin/transactions", icon: "💳" },
+            { label: "Payments", href: "/admin/payments", icon: "🧾" },
+            { label: "Refunds", href: "/admin/refunds", icon: "↩️" },
+            { label: "Audit Logs", href: "/admin/audit-logs", icon: "📋" },
+            { label: "Reports", href: "/admin/reports", icon: "🚩" },
+            { label: "SLA Monitor", href: "/admin/sla", icon: "⏱️" },
+            { label: "Zones", href: "/admin/zones", icon: "🗺️" },
+            { label: "Staff", href: "/admin/staff", icon: "🧑‍💼" },
+            { label: "Referrals", href: "/admin/referrals", icon: "🔗" },
         );
     }
 

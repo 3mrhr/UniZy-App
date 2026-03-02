@@ -4,23 +4,53 @@ import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/app/actions/auth';
 import { revalidatePath } from 'next/cache';
 import { completeReferralIfEligible } from './referrals';
+import { validatePromoCode } from './promotions';
+import { createNotification } from './notifications';
 
-export async function createOrder(service, details, total) {
+export async function createOrder(service, details, total, promoCodeStr = null) {
     try {
         const user = await getCurrentUser();
         if (!user || user.role !== 'STUDENT') {
             return { error: 'Only students can create orders.' };
         }
 
+        let finalTotal = parseFloat(total);
+        let promoCodeId = null;
+
+        if (promoCodeStr) {
+            const promoRes = await validatePromoCode(promoCodeStr, service);
+            if (promoRes.success && promoRes.promo) {
+                const promo = promoRes.promo;
+                promoCodeId = promo.id;
+
+                if (promo.discountType === 'PERCENTAGE') {
+                    finalTotal = finalTotal - (finalTotal * (promo.discountAmount / 100));
+                } else {
+                    finalTotal = Math.max(0, finalTotal - promo.discountAmount);
+                }
+
+                await prisma.promoCode.update({
+                    where: { id: promo.id },
+                    data: { currentUses: { increment: 1 } }
+                });
+            } else {
+                return { error: promoRes.error || 'Invalid promo code' };
+            }
+        }
+
         const order = await prisma.order.create({
             data: {
                 service,
                 details: JSON.stringify(details),
-                total: parseFloat(total),
+                total: finalTotal,
                 status: 'PENDING',
-                userId: user.id
+                userId: user.id,
+                promoCodeId
             }
         });
+
+        // Notify User
+        await createNotification(user.id, 'Order Placed', `Your ${service.toLowerCase()} order has been placed.`, 'SYSTEM', `/activity/tracking/${order.id}`);
 
         // Trigger referral completion if this is the student's first order
         await completeReferralIfEligible(user.id);
@@ -141,6 +171,8 @@ export async function updateOrderStatus(orderId, newStatus) {
             }
         });
 
+        await createNotification(order.userId, 'Order Update', `Your order status changed to ${newStatus}.`, 'SYSTEM', `/activity/tracking/${order.id}`);
+
         revalidatePath('/driver');
         return { success: true, order };
     } catch (error) {
@@ -197,6 +229,8 @@ export async function cancelOrder(orderId) {
             where: { id: orderId },
             data: { status: 'CANCELLED' }
         });
+
+        await createNotification(user.id, 'Order Cancelled', `Your order has been cancelled.`, 'SYSTEM');
 
         revalidatePath('/activity');
         revalidatePath(`/activity/tracking/${orderId}`);

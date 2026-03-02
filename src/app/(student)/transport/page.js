@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from "next/link";
 import Image from "next/image";
 import { useLanguage } from '@/i18n/LanguageProvider';
 import { useRouter } from 'next/navigation';
+import { getRideEstimate } from '@/app/actions/orders';
 
 export default function TransportPage() {
     const { dict } = useLanguage();
@@ -13,8 +14,10 @@ export default function TransportPage() {
     const router = useRouter();
 
     const [pickup, setPickup] = useState('My Current Location');
+    const [pickupTouched, setPickupTouched] = useState(false);
     const [destination, setDestination] = useState('');
     const [selectedVehicle, setSelectedVehicle] = useState('standard');
+    const [promoCode, setPromoCode] = useState('');
     const [isBooking, setIsBooking] = useState(false);
 
     const [vehicles, setVehicles] = useState([
@@ -24,23 +27,26 @@ export default function TransportPage() {
         { id: 'bus', name: 'Shuttle Bus', price: 'EGP 10', time: '12 min', icon: '🚌' },
     ]);
 
-    // Simple debounce to fetch estimate when destination is typed
-    import('react').then(React => {
-        React.useEffect(() => {
-            if (destination.length > 3) {
-                const fetchEstimates = async () => {
-                    const { getRideEstimate } = await import('@/app/actions/orders');
+    const [showScheduleLink] = useState(true);
+
+    // Fetch estimates when destination is typed
+    useEffect(() => {
+        if (destination.length > 3) {
+            const fetchEstimates = async () => {
+                try {
                     const updated = await Promise.all(vehicles.map(async (v) => {
                         const res = await getRideEstimate(pickup, destination, v.name);
                         return { ...v, price: res.success ? `EGP ${res.price}` : v.price };
                     }));
                     setVehicles(updated);
-                };
-                const timeoutId = setTimeout(fetchEstimates, 1000);
-                return () => clearTimeout(timeoutId);
-            }
-        }, [destination, pickup]);
-    });
+                } catch (e) {
+                    console.error('Failed to fetch estimates:', e);
+                }
+            };
+            const timeoutId = setTimeout(fetchEstimates, 1000);
+            return () => clearTimeout(timeoutId);
+        }
+    }, [destination, pickup]);
 
     const handleBook = async () => {
         if (!destination) return alert('Please enter a destination');
@@ -51,7 +57,7 @@ export default function TransportPage() {
         const { createOrder } = await import('@/app/actions/orders');
         const result = await createOrder('TRANSPORT', {
             pickup, destination, vehicle: selected.name
-        }, priceNum);
+        }, priceNum, promoCode);
 
         setIsBooking(false);
         if (result.success) {
@@ -84,6 +90,7 @@ export default function TransportPage() {
                                 <input
                                     type="text"
                                     value={pickup}
+                                    onFocus={() => { if (!pickupTouched) { setPickup(''); setPickupTouched(true); } }}
                                     onChange={(e) => setPickup(e.target.value)}
                                     className="w-full bg-gray-50 dark:bg-unizy-navy/50 border-none rounded-2xl pl-12 p-4 text-sm font-medium focus:ring-2 focus:ring-brand-500 transition-all outline-none text-gray-900 dark:text-white"
                                     placeholder="Pickup point"
@@ -97,6 +104,16 @@ export default function TransportPage() {
                                     onChange={(e) => setDestination(e.target.value)}
                                     className="w-full bg-gray-50 dark:bg-unizy-navy/50 border-none rounded-2xl pl-12 p-4 text-sm font-medium focus:ring-2 focus:ring-brand-500 transition-all outline-none text-gray-900 dark:text-white"
                                     placeholder="Where to?"
+                                />
+                            </div>
+                            <div className="relative">
+                                <div className="absolute top-1/2 -mt-2 left-4 w-4 h-4 rounded-sm bg-brand-500/20 text-brand-500 flex items-center justify-center font-bold text-[10px]">%</div>
+                                <input
+                                    type="text"
+                                    value={promoCode}
+                                    onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                                    className="w-full bg-gray-50 dark:bg-unizy-navy/50 border-none rounded-2xl pl-12 p-4 text-sm font-bold focus:ring-2 focus:ring-brand-500 transition-all outline-none text-gray-900 dark:text-white uppercase tracking-wider"
+                                    placeholder="PROMO CODE (OPTIONAL)"
                                 />
                             </div>
                         </div>
@@ -129,6 +146,10 @@ export default function TransportPage() {
                             className={`w-full bg-brand-600 hover:bg-brand-700 text-white font-black py-5 rounded-[1.5rem] mt-6 shadow-lg shadow-brand-500/20 transition-all hover:scale-[1.02] active:scale-95 ${isBooking ? 'opacity-70 cursor-not-allowed' : ''}`}>
                             {isBooking ? 'Booking...' : `Book ${vehicles.find(v => v.id === selectedVehicle)?.name}`}
                         </button>
+
+                        <Link href="/transport/schedule" className="w-full flex items-center justify-center gap-2 mt-3 py-3 rounded-2xl bg-cyan-50 dark:bg-cyan-900/20 text-cyan-600 text-sm font-bold hover:bg-cyan-100 transition-colors">
+                            📅 View Bus Schedule
+                        </Link>
                     </div>
                 </div>
 

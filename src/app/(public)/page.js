@@ -46,6 +46,29 @@ export default function LandingPage() {
     return (
         <div className="flex flex-col min-h-screen bg-white dark:bg-unizy-navy overflow-hidden">
 
+            {/* Navigation Header */}
+            <header className="sticky top-0 z-50 bg-white/80 dark:bg-unizy-navy/80 backdrop-blur-md border-b border-gray-100 dark:border-white/5">
+                <div className="max-w-7xl mx-auto px-6 md:px-12 py-4 flex items-center justify-between">
+                    <Link href="/" className="flex items-center gap-2">
+                        <div className="relative w-8 h-8 rounded-lg overflow-hidden">
+                            <Image src="/images/unizy-logo-icon.png" alt="UniZy Logo" fill className="object-contain" />
+                        </div>
+                        <span className="text-xl font-black tracking-tighter text-brand-600 dark:text-white italic">UniZy</span>
+                    </Link>
+                    <nav className="hidden md:flex items-center gap-6 text-sm font-bold text-gray-600 dark:text-gray-400">
+                        <Link href="#services" className="hover:text-brand-600 transition-colors">{t.features ? 'Services' : 'Services'}</Link>
+                        <Link href="/contact" className="hover:text-brand-600 transition-colors">Contact</Link>
+                    </nav>
+                    <div className="flex items-center gap-3">
+                        <Link href="/login" className="text-sm font-bold text-gray-700 dark:text-gray-300 hover:text-brand-600 transition-colors px-4 py-2">
+                            Sign In
+                        </Link>
+                        <Link href="/register" className="bg-brand-600 hover:bg-brand-700 text-white text-sm font-bold px-5 py-2.5 rounded-xl transition-all hover:scale-105 active:scale-95 shadow-sm">
+                            Sign Up
+                        </Link>
+                    </div>
+                </div>
+            </header>
             {/* Hero Section */}
             <section className="relative py-20 md:py-32 px-6 md:px-12 overflow-hidden">
                 {/* Animated Background Elements */}
@@ -153,7 +176,7 @@ export default function LandingPage() {
                             {t.ctaSub}
                         </p>
                         <Link
-                            href="/login"
+                            href="/register"
                             className="inline-block bg-white text-brand-900 px-10 py-5 rounded-2xl font-black text-xl hover:bg-gray-100 transition-all hover:scale-105 active:scale-95 shadow-xl"
                         >
                             {t.getStarted}

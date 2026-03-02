@@ -1,10 +1,11 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useLanguage } from '@/i18n/LanguageProvider';
 import { Home, Truck, ShoppingBag, Tag, UtensilsCrossed, Users, Search, Gift, Bell, MapPin, ArrowRight, Star, MessageCircle, Package, Calendar, Wrench, Sparkles } from 'lucide-react';
+import { getMyNotifications } from '@/app/actions/notifications';
 
 const SERVICES = [
   { id: 'housing', label: 'Housing', arLabel: 'سكن', icon: Home, color: 'from-blue-500 to-indigo-600', href: '/housing' },
@@ -27,6 +28,17 @@ const QUICK_ACTIONS = [
 export default function StudentHome() {
   const { language } = useLanguage();
   const isRTL = language === 'ar-EG';
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    const fetchNotifs = async () => {
+      const res = await getMyNotifications();
+      if (res.success) {
+        setUnreadCount(res.unreadCount || 0);
+      }
+    };
+    fetchNotifs();
+  }, []);
 
   return (
     <main className="min-h-screen bg-gray-50 dark:bg-unizy-navy pb-24 transition-colors">
@@ -44,7 +56,9 @@ export default function StudentHome() {
             <div className="hidden sm:flex gap-3">
               <Link href="/notifications" className="w-11 h-11 bg-white/10 backdrop-blur-xl rounded-2xl flex items-center justify-center hover:bg-white/20 transition-all relative">
                 <Bell size={20} className="text-white" />
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full border-2 border-brand-700 flex items-center justify-center text-[8px] font-black text-white">3</span>
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full border-2 border-brand-700 flex items-center justify-center text-[8px] font-black text-white">{unreadCount > 9 ? '9+' : unreadCount}</span>
+                )}
               </Link>
               <Link href="/account" className="w-11 h-11 bg-white/10 backdrop-blur-xl rounded-2xl flex items-center justify-center overflow-hidden hover:bg-white/20 transition-all">
                 <img src="https://ui-avatars.com/api/?name=Omar+Hassan&background=random&color=fff&size=44" alt="Avatar" className="w-full h-full object-cover" />

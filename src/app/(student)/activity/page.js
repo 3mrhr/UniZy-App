@@ -13,9 +13,16 @@ export default function ActivityPage() {
     useEffect(() => {
         const fetchHistory = async () => {
             setIsLoading(true);
-            const res = await getUserTransactions({ type: filterCategory });
-            if (res.success) {
-                setTransactions(res.data);
+            try {
+                const res = await getUserTransactions({ type: filterCategory });
+                if (res.success) {
+                    setTransactions(res.transactions || []);
+                } else {
+                    setTransactions([]);
+                }
+            } catch (e) {
+                console.error('Failed to fetch activity:', e);
+                setTransactions([]);
             }
             setIsLoading(false);
         };
@@ -90,8 +97,8 @@ export default function ActivityPage() {
                         key={opt.id}
                         onClick={() => setFilterCategory(opt.id)}
                         className={`whitespace-nowrap px-4 py-2 rounded-xl text-sm font-bold transition-all ${filterCategory === opt.id
-                                ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900 shadow-md'
-                                : 'bg-white dark:bg-[#1E293B] text-gray-600 dark:text-gray-400 border border-gray-100 dark:border-gray-800'
+                            ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900 shadow-md'
+                            : 'bg-white dark:bg-[#1E293B] text-gray-600 dark:text-gray-400 border border-gray-100 dark:border-gray-800'
                             }`}
                     >
                         {opt.label}

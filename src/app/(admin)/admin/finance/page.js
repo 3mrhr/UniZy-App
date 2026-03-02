@@ -1,5 +1,7 @@
 'use client';
 
+
+import Link from 'next/link';
 import { DollarSign, TrendingUp, ArrowUpRight, CreditCard, Wallet, Receipt } from 'lucide-react';
 
 const STATS = [
@@ -20,6 +22,14 @@ const RECENT = [
 export default function FinancePage() {
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
+
+            {/* Sub-page Navigation */}
+            <div className="flex flex-wrap gap-3 mb-8">
+                    <Link href="/admin/finance/payouts" className="px-4 py-2 bg-white dark:bg-unizy-dark rounded-xl text-sm font-bold text-gray-600 dark:text-gray-300 hover:bg-brand-50 dark:hover:bg-brand-900/20 hover:text-brand-600 transition-all border border-gray-100 dark:border-white/5">Payouts</Link>
+                    <Link href="/admin/finance/settlements" className="px-4 py-2 bg-white dark:bg-unizy-dark rounded-xl text-sm font-bold text-gray-600 dark:text-gray-300 hover:bg-brand-50 dark:hover:bg-brand-900/20 hover:text-brand-600 transition-all border border-gray-100 dark:border-white/5">Settlements</Link>
+                    <Link href="/admin/finance/reports" className="px-4 py-2 bg-white dark:bg-unizy-dark rounded-xl text-sm font-bold text-gray-600 dark:text-gray-300 hover:bg-brand-50 dark:hover:bg-brand-900/20 hover:text-brand-600 transition-all border border-gray-100 dark:border-white/5">Reports</Link>
+            </div>
+
             <div>
                 <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">Finance & <span className="text-brand-600">Payouts</span></h1>
                 <p className="text-sm font-bold text-gray-500 dark:text-gray-400 mt-1 uppercase tracking-widest">Revenue Tracking & Vendor Settlements</p>

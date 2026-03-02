@@ -3,6 +3,8 @@
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from './auth';
 import { logAdminAction } from './audit';
+import { validatePromoCode } from './promotions';
+import { createNotification } from './notifications';
 
 const SERVICE_CATEGORIES = [
     { id: 'PLUMBER', label: 'Plumber', icon: '🔧' },
@@ -53,10 +55,20 @@ export async function listProviders({ category } = {}) {
     }
 }
 
-export async function bookService({ providerId, date, timeSlot, notes }) {
+export async function bookService({ providerId, date, timeSlot, notes, promoCodeStr }) {
     try {
         const user = await getCurrentUser();
         if (!user) return { error: 'Not authenticated' };
+
+        // Pre-validate promo code outside transaction if present
+        let validPromo = null;
+        if (promoCodeStr) {
+            const promoRes = await validatePromoCode(promoCodeStr, 'SERVICES');
+            if (!promoRes.success || !promoRes.promo) {
+                return { error: promoRes.error || 'Invalid promo code' };
+            }
+            validPromo = promoRes.promo;
+        }
 
         // Wrap in a transaction to ensure both records are created
         const result = await prisma.$transaction(async (tx) => {
@@ -70,8 +82,22 @@ export async function bookService({ providerId, date, timeSlot, notes }) {
                 }
             });
 
-            // Calculate cost or fetch from package (using 0 for demo/quote-based services)
-            const amount = 0;
+            // Calculate cost or fetch from package (using 100 for demo to show discount)
+            let amount = 100;
+            let promoCodeId = null;
+
+            if (validPromo) {
+                promoCodeId = validPromo.id;
+                if (validPromo.discountType === 'PERCENTAGE') {
+                    amount = amount - (amount * (validPromo.discountAmount / 100));
+                } else {
+                    amount = Math.max(0, amount - validPromo.discountAmount);
+                }
+                await tx.promoCode.update({
+                    where: { id: promoCodeId },
+                    data: { currentUses: { increment: 1 } }
+                });
+            }
 
             // Create unified transaction record
             const txnCode = `TXN-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
@@ -83,6 +109,7 @@ export async function bookService({ providerId, date, timeSlot, notes }) {
                     userId: user.id,
                     serviceBookingId: booking.id,
                     amount,
+                    promoCodeId
                 }
             });
 
@@ -93,6 +120,16 @@ export async function bookService({ providerId, date, timeSlot, notes }) {
                     newStatus: 'PENDING',
                     actorId: user.id,
                     reason: 'Initial Booking',
+                }
+            });
+
+            // Notify user
+            await tx.notification.create({
+                data: {
+                    userId: user.id,
+                    title: 'Service Booked',
+                    message: `Your booking for ${date} at ${timeSlot} is confirmed.`,
+                    type: 'SYSTEM'
                 }
             });
 
@@ -176,10 +213,14 @@ export async function getAdminProviders() {
 
 export async function approveProvider(providerId) {
     try {
-        await prisma.serviceProvider.update({
+        const provider = await prisma.serviceProvider.update({
             where: { id: providerId },
             data: { verified: true },
         });
+
+        if (provider.userId) {
+            await createNotification(provider.userId, 'Provider Verified', 'Your service provider account has been approved!', 'SYSTEM');
+        }
 
         await logAdminAction('VERIFY_PROVIDER', 'SERVICES', providerId, { action: 'Admin verified service provider' });
 

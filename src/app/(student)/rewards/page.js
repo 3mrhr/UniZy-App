@@ -1,5 +1,7 @@
 "use client";
 
+import Link from 'next/link';
+
 import React, { useState } from 'react';
 import { useLanguage } from '@/i18n/LanguageProvider';
 import { Gift, Wallet, History, Ticket, ArrowUpRight, TrendingUp, HelpCircle } from 'lucide-react';
@@ -46,6 +48,11 @@ export default function RewardsPage() {
                 </button>
             </div>
 
+            {/* Quick Links */}
+            <div className="flex gap-3 mb-4">
+                <Link href="/rewards/referrals" className="px-4 py-2 bg-amber-50 dark:bg-amber-900/20 text-amber-600 rounded-xl text-sm font-bold hover:bg-amber-100 transition-colors">🔗 Referral Program</Link>
+            </div>
+
             {/* Main Points Card */}
             <div className="bg-gradient-to-br from-[var(--unizy-primary)] to-blue-600 rounded-3xl p-6 sm:p-8 text-white mb-8 shadow-xl shadow-blue-500/20 relative overflow-hidden">
                 {/* Decorative Background Elements */}
@@ -87,8 +94,8 @@ export default function RewardsPage() {
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
                         className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === tab.id
-                                ? 'bg-white dark:bg-[#1E293B] text-[var(--unizy-primary)] shadow-sm'
-                                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                            ? 'bg-white dark:bg-[#1E293B] text-[var(--unizy-primary)] shadow-sm'
+                            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
                             }`}
                     >
                         <tab.icon className={`w-4 h-4 ${activeTab === tab.id ? 'opacity-100' : 'opacity-70'}`} />
@@ -163,8 +170,8 @@ export default function RewardsPage() {
                                 <button
                                     disabled={currentPoints < option.points}
                                     className={`px-4 py-2 rounded-xl text-sm font-bold shadow-sm transition-all shrink-0 ${currentPoints >= option.points
-                                            ? 'bg-[var(--unizy-primary)] text-white hover:opacity-90'
-                                            : 'bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed'
+                                        ? 'bg-[var(--unizy-primary)] text-white hover:opacity-90'
+                                        : 'bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed'
                                         }`}
                                 >
                                     {option.points} pts

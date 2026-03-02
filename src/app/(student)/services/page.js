@@ -31,7 +31,9 @@ export default function ServicesPage() {
     const [bookingDate, setBookingDate] = useState('');
     const [bookingTime, setBookingTime] = useState('');
     const [bookingNotes, setBookingNotes] = useState('');
+    const [promoCode, setPromoCode] = useState('');
     const [booked, setBooked] = useState(false);
+    const [isBooking, setIsBooking] = useState(false);
 
     useEffect(() => {
         async function load() {
@@ -43,15 +45,31 @@ export default function ServicesPage() {
         load();
     }, [category]);
 
-    const handleBook = () => {
-        setBooked(true);
-        setTimeout(() => {
-            setBookingProvider(null);
-            setBooked(false);
-            setBookingDate('');
-            setBookingTime('');
-            setBookingNotes('');
-        }, 2000);
+    const handleBook = async () => {
+        setIsBooking(true);
+        const { bookService } = await import('@/app/actions/services');
+        const res = await bookService({
+            providerId: bookingProvider.id,
+            date: bookingDate,
+            timeSlot: bookingTime,
+            notes: bookingNotes,
+            promoCodeStr: promoCode
+        });
+
+        setIsBooking(false);
+        if (res.success || res.booking) {
+            setBooked(true);
+            setTimeout(() => {
+                setBookingProvider(null);
+                setBooked(false);
+                setBookingDate('');
+                setBookingTime('');
+                setBookingNotes('');
+                setPromoCode('');
+            }, 2000);
+        } else {
+            alert(res.error || 'Failed to book service.');
+        }
     };
 
     return (
@@ -72,8 +90,8 @@ export default function ServicesPage() {
                             key={cat.id}
                             onClick={() => setCategory(cat.id)}
                             className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-bold whitespace-nowrap transition-all ${category === cat.id
-                                    ? 'bg-white dark:bg-[#1E293B] text-brand-600 shadow-lg'
-                                    : 'bg-white/60 dark:bg-white/5 text-gray-500 dark:text-gray-400'
+                                ? 'bg-white dark:bg-[#1E293B] text-brand-600 shadow-lg'
+                                : 'bg-white/60 dark:bg-white/5 text-gray-500 dark:text-gray-400'
                                 }`}
                         >
                             <cat.icon size={16} />
@@ -170,8 +188,12 @@ export default function ServicesPage() {
                                     <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Notes (optional)</label>
                                     <textarea value={bookingNotes} onChange={e => setBookingNotes(e.target.value)} rows={2} placeholder="Describe the issue..." className="w-full px-4 py-3 rounded-2xl bg-gray-50 dark:bg-unizy-navy/50 border-2 border-transparent focus:border-brand-500 outline-none text-gray-900 dark:text-white font-bold resize-none" />
                                 </div>
-                                <button onClick={handleBook} disabled={!bookingDate || !bookingTime} className="w-full py-3.5 bg-brand-600 text-white rounded-2xl font-black hover:bg-brand-700 transition-all shadow-lg shadow-brand-500/30 disabled:opacity-50 disabled:cursor-not-allowed">
-                                    Confirm Booking
+                                <div>
+                                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Promo Code</label>
+                                    <input type="text" value={promoCode} onChange={e => setPromoCode(e.target.value.toUpperCase())} placeholder="OPTIONAL" className="w-full px-4 py-3 rounded-2xl bg-gray-50 dark:bg-unizy-navy/50 border-2 border-transparent focus:border-brand-500 outline-none text-gray-900 dark:text-white font-bold tracking-wider uppercase" />
+                                </div>
+                                <button onClick={handleBook} disabled={!bookingDate || !bookingTime || isBooking} className="w-full py-3.5 bg-brand-600 text-white rounded-2xl font-black hover:bg-brand-700 transition-all shadow-lg shadow-brand-500/30 disabled:opacity-50 disabled:cursor-not-allowed">
+                                    {isBooking ? 'Processing...' : 'Confirm Booking'}
                                 </button>
                             </>
                         )}

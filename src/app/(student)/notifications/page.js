@@ -1,122 +1,111 @@
-"use client";
+'use client';
 
-import React from 'react';
-import { useLanguage } from '@/i18n/LanguageProvider';
-import { Bell, Car, Store, Package, Info, Settings, AlertTriangle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-
-const NOTIFICATIONS = [
-    {
-        id: 'n1',
-        type: 'order',
-        isUnread: true,
-        icon: Package,
-        color: 'bg-orange-100 text-orange-600 dark:bg-orange-900/30',
-        title: 'Order Preparing',
-        arTitle: 'جاري التجهيز',
-        message: 'Burger Bros has started preparing your order.',
-        arMessage: 'بدأ مطعم برجر بروز في تجهيز طلبك.',
-        time: '2m ago'
-    },
-    {
-        id: 'n2',
-        type: 'ride',
-        isUnread: true,
-        icon: Car,
-        color: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30',
-        title: 'Driver Arrived',
-        arTitle: 'وصل السائق',
-        message: 'Your driver Ahmed is waiting at the pickup location.',
-        arMessage: 'السائق أحمد في انتظارك في موقع الالتقاء.',
-        time: '15m ago'
-    },
-    {
-        id: 'n3',
-        type: 'promo',
-        isUnread: false,
-        icon: Store,
-        color: 'bg-green-100 text-green-600 dark:bg-green-900/30',
-        title: 'New Deal Available!',
-        arTitle: 'عرض جديد متاح!',
-        message: 'Get 20% off your next printing job near campus.',
-        arMessage: 'احصل على خصم 20% على طلب الطباعة القادم.',
-        time: '3h ago'
-    },
-    {
-        id: 'n4',
-        type: 'system',
-        isUnread: false,
-        icon: Info,
-        color: 'bg-gray-100 text-gray-600 dark:bg-gray-800',
-        title: 'Update Required',
-        arTitle: 'تحديث مطلوب',
-        message: 'Please update your app to access the new Rewards features.',
-        arMessage: 'يرجى تحديث التطبيق للوصول إلى ميزات المكافآت الجديدة.',
-        time: 'Yesterday'
-    }
-];
+import { useLanguage } from '@/i18n/LanguageProvider';
+import { Bell, Check, Trash2, ArrowLeft, Package, Star, Info, ShieldAlert } from 'lucide-react';
+import { getMyNotifications, markNotificationsAsRead } from '@/app/actions/notifications';
+import toast from 'react-hot-toast';
 
 export default function NotificationsPage() {
     const { language } = useLanguage();
     const isRTL = language === 'ar-EG';
 
+    const [notifications, setNotifications] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        loadNotifications();
+    }, []);
+
+    const loadNotifications = async () => {
+        setIsLoading(true);
+        const res = await getMyNotifications();
+        if (res.success) {
+            setNotifications(res.notifications);
+        } else {
+            toast.error(res.error || 'Failed to load notifications');
+        }
+        setIsLoading(false);
+    };
+
+    const handleMarkAllRead = async () => {
+        const res = await markNotificationsAsRead();
+        if (res.success) {
+            setNotifications(notifications.map(n => ({ ...n, isRead: true })));
+            toast.success('All marked as read');
+        }
+    };
+
+    const handleMarkRead = async (id) => {
+        const res = await markNotificationsAsRead([id]);
+        if (res.success) {
+            setNotifications(notifications.map(n => n.id === id ? { ...n, isRead: true } : n));
+        }
+    };
+
+    const getIconInfo = (type) => {
+        switch (type) {
+            case 'ORDER': return { icon: Package, color: 'text-blue-500', bg: 'bg-blue-100 dark:bg-blue-900/30' };
+            case 'REFERRAL': return { icon: Star, color: 'text-yellow-500', bg: 'bg-yellow-100 dark:bg-yellow-900/30' };
+            case 'SAFETY': return { icon: ShieldAlert, color: 'text-red-500', bg: 'bg-red-100 dark:bg-red-900/30' };
+            default: return { icon: Info, color: 'text-brand-500', bg: 'bg-brand-100 dark:bg-brand-900/30' };
+        }
+    };
+
     return (
-        <main className="min-h-screen pb-24 bg-[var(--unizy-bg-light)] dark:bg-[var(--unizy-bg-dark)] px-4 sm:px-6 lg:px-8 max-w-3xl mx-auto pt-6 transition-colors duration-300">
-
-            {/* Header */}
-            <div className="mb-6 flex justify-between items-center">
-                <div>
-                    <h1 className="text-2xl sm:text-3xl font-extrabold text-[var(--unizy-text-dark)] dark:text-white mb-1">
-                        {isRTL ? 'الإشعارات' : 'Notifications'}
-                    </h1>
-                    <p className="text-[var(--unizy-text-muted)] dark:text-gray-400 text-sm">
-                        {isRTL ? 'لديك إشعارين غير مقروئين' : 'You have 2 unread messages'}
-                    </p>
+        <div className="min-h-screen bg-gray-50 dark:bg-unizy-navy pb-32 transition-colors duration-300" dir={isRTL ? 'rtl' : 'ltr'}>
+            <header className="px-6 py-8 max-w-2xl mx-auto w-full flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                    <Link href="/students" className="w-10 h-10 rounded-full bg-white dark:bg-unizy-dark flex items-center justify-center shadow-sm hover:bg-gray-100 dark:hover:bg-white/5 transition-colors">
+                        <ArrowLeft size={20} className="text-gray-900 dark:text-white" />
+                    </Link>
+                    <h1 className="text-2xl font-black text-gray-900 dark:text-white">Notifications</h1>
                 </div>
-                <Link href="/account" className="w-10 h-10 rounded-full bg-white dark:bg-[#1E293B] border border-gray-200 dark:border-gray-700 flex items-center justify-center text-gray-500 hover:text-[var(--unizy-primary)] transition-colors shadow-sm">
-                    <Settings className="w-5 h-5" />
-                </Link>
-            </div>
+                {notifications.some(n => !n.isRead) && (
+                    <button onClick={handleMarkAllRead} className="text-sm font-bold text-brand-600 hover:text-brand-700 bg-brand-50 dark:bg-brand-900/20 px-4 py-2 rounded-xl transition-colors">
+                        Mark All Read
+                    </button>
+                )}
+            </header>
 
-            {/* Notifications List */}
-            <div className="bg-white dark:bg-[#1E293B] rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
-                {NOTIFICATIONS.map((notif, index) => (
-                    <div
-                        key={notif.id}
-                        className={`p-4 sm:p-5 flex items-start gap-4 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer ${index !== NOTIFICATIONS.length - 1 ? 'border-b border-gray-100 dark:border-gray-800' : ''} ${notif.isUnread ? 'bg-blue-50/30 dark:bg-blue-900/10' : ''}`}
-                    >
-                        <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${notif.color} relative`}>
-                            <notif.icon className="w-6 h-6" />
-                            {notif.isUnread && (
-                                <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 border-2 border-white dark:border-[#1E293B] rounded-full"></span>
-                            )}
-                        </div>
-
-                        <div className="flex-1 min-w-0 pt-1">
-                            <div className="flex justify-between items-start mb-1">
-                                <h3 className={`font-bold text-sm sm:text-base truncate pr-2 ${notif.isUnread ? 'text-[var(--unizy-text-dark)] dark:text-white' : 'text-gray-700 dark:text-gray-300'}`}>
-                                    {isRTL ? notif.arTitle : notif.title}
-                                </h3>
-                                <span className="text-xs text-gray-400 font-medium whitespace-nowrap shrink-0">
-                                    {notif.time}
-                                </span>
-                            </div>
-                            <p className={`text-sm leading-snug ${notif.isUnread ? 'text-gray-600 dark:text-gray-400 font-medium' : 'text-gray-500 dark:text-gray-500'}`}>
-                                {isRTL ? notif.arMessage : notif.message}
-                            </p>
-                        </div>
+            <main className="max-w-2xl mx-auto px-6 w-full">
+                {isLoading ? (
+                    <div className="flex justify-center py-20"><div className="w-8 h-8 rounded-full border-4 border-brand-200 border-t-brand-600 animate-spin"></div></div>
+                ) : notifications.length === 0 ? (
+                    <div className="text-center py-20 bg-white dark:bg-unizy-dark rounded-3xl border border-gray-100 dark:border-white/5 shadow-sm">
+                        <Bell size={48} className="mx-auto text-gray-300 dark:text-gray-600 mb-4" />
+                        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">You're all caught up!</h3>
+                        <p className="text-gray-500">No new notifications at the moment.</p>
                     </div>
-                ))}
-            </div>
+                ) : (
+                    <div className="space-y-4">
+                        {notifications.map((notif) => {
+                            const IconData = getIconInfo(notif.type);
+                            const Icon = IconData.icon;
 
-            {/* Empty State (Hidden, just for logic) */}
-            {NOTIFICATIONS.length === 0 && (
-                <div className="py-20 text-center text-gray-500 dark:text-gray-400">
-                    <Bell className="w-16 h-16 mx-auto mb-4 opacity-20" />
-                    <p className="text-lg">{isRTL ? 'لا توجد إشعارات حتى الآن' : 'No notifications yet'}</p>
-                </div>
-            )}
-
-        </main>
+                            return (
+                                <div key={notif.id} onClick={() => {
+                                    if (!notif.isRead) handleMarkRead(notif.id);
+                                    if (notif.link) window.location.href = notif.link;
+                                }} className={`p-4 rounded-3xl border ${notif.isRead ? 'bg-white dark:bg-unizy-dark border-gray-100 dark:border-white/5 shadow-sm opacity-70' : 'bg-white dark:bg-unizy-dark border-brand-100 dark:border-brand-900/30 shadow-md cursor-pointer hover:border-brand-300 transition-colors'} flex gap-4`}>
+                                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${IconData.bg} ${IconData.color}`}>
+                                        <Icon size={24} />
+                                    </div>
+                                    <div className="flex-1">
+                                        <div className="flex justify-between items-start mb-1">
+                                            <h4 className={`font-bold ${notif.isRead ? 'text-gray-700 dark:text-gray-300' : 'text-gray-900 dark:text-white'}`}>{notif.title}</h4>
+                                            {!notif.isRead && <span className="w-2.5 h-2.5 rounded-full bg-brand-500 shrink-0 mt-1"></span>}
+                                        </div>
+                                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-2 leading-relaxed">{notif.message}</p>
+                                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{new Date(notif.createdAt).toLocaleDateString()}</span>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+            </main>
+        </div>
     );
 }

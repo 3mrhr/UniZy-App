@@ -1,19 +1,13 @@
 "use client";
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Users, ShoppingBag, Truck, Home, Tag,
     TrendingUp, ShieldAlert, AlertCircle,
     ArrowUpRight, ArrowDownRight, MoreVertical,
     Search, Filter, Download, ChevronRight
 } from 'lucide-react';
-
-const STATS = [
-    { label: 'Total Users', value: '1,284', change: '+12%', trend: 'up', icon: Users, color: 'indigo' },
-    { label: 'Daily Orders', value: '342', change: '+18%', trend: 'up', icon: ShoppingBag, color: 'orange' },
-    { label: 'Active Rides', value: '48', change: '-4%', trend: 'down', icon: Truck, color: 'blue' },
-    { label: 'Pending Verifications', value: '23', change: '+2', trend: 'up', icon: ShieldAlert, color: 'red' },
-];
+import { getDashboardAnalytics } from '@/app/actions/analytics';
 
 const RECENT_ALERTS = [
     { id: 1, type: 'MODERATION', title: 'New Listing Flagged', description: 'Listing "Modern Studio nr Campus" flagged for inaccurate pics.', time: '2 mins ago', severity: 'HIGH' },
@@ -22,6 +16,30 @@ const RECENT_ALERTS = [
 ];
 
 export default function SuperadminOverview() {
+    const [statsData, setStatsData] = useState(null);
+
+    useEffect(() => {
+        const fetchStats = async () => {
+            const res = await getDashboardAnalytics();
+            if (res.success) {
+                setStatsData(res.stats);
+            }
+        };
+        fetchStats();
+    }, []);
+
+    const dynamicStats = statsData ? [
+        { label: 'Total Users', value: statsData.users.students + statsData.users.drivers, change: '+2%', trend: 'up', icon: Users, color: 'indigo' },
+        { label: 'Total Orders', value: statsData.orders.total, change: '+5%', trend: 'up', icon: ShoppingBag, color: 'orange' },
+        { label: 'Active Services', value: statsData.orders.active, change: '-1%', trend: 'down', icon: Truck, color: 'blue' },
+        { label: 'Revenue', value: `$${statsData.revenue.toLocaleString()}`, change: '+10%', trend: 'up', icon: TrendingUp, color: 'green' },
+    ] : [
+        { label: 'Total Users', value: '...', change: '', trend: 'up', icon: Users, color: 'indigo' },
+        { label: 'Total Orders', value: '...', change: '', trend: 'up', icon: ShoppingBag, color: 'orange' },
+        { label: 'Active Services', value: '...', change: '', trend: 'down', icon: Truck, color: 'blue' },
+        { label: 'Revenue', value: '...', change: '', trend: 'up', icon: TrendingUp, color: 'green' },
+    ];
+
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
             {/* Breadcrumb / Action Bar */}
@@ -42,7 +60,7 @@ export default function SuperadminOverview() {
 
             {/* Stats Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {STATS.map((stat) => (
+                {dynamicStats.map((stat) => (
                     <div key={stat.label} className="bg-white dark:bg-[#1E293B] p-6 rounded-[2rem] shadow-sm border border-gray-100 dark:border-gray-800 hover:shadow-md transition-all group overflow-hidden relative">
                         {/* Background Decor */}
                         <div className={`absolute -right-4 -bottom-4 w-24 h-24 rounded-full opacity-5 group-hover:scale-150 transition-transform duration-700 bg-${stat.color}-600`}></div>

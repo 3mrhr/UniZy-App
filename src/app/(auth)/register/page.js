@@ -130,6 +130,9 @@ export default function Register() {
                             className="w-full px-5 py-3 rounded-2xl bg-gray-50 dark:bg-unizy-navy/50 border-2 border-transparent focus:bg-white dark:focus:bg-unizy-navy focus:border-brand-500 focus:ring-0 outline-none transition-all text-gray-900 dark:text-white font-bold"
                             placeholder="01012345678"
                             required
+                            minLength={10}
+                            maxLength={15}
+                            pattern="[0-9]+"
                         />
                     </div>
 

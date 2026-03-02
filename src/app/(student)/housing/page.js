@@ -59,6 +59,10 @@ function HousingHomeContent() {
                 <button className="text-gray-600 dark:text-gray-400 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/5 transition-colors bg-gray-50 dark:bg-unizy-navy/50">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path></svg>
                 </button>
+                <div className="flex gap-2 ml-2">
+                    <Link href="/housing/saved" className="px-3 py-1.5 bg-brand-50 dark:bg-brand-900/20 text-brand-600 rounded-xl text-xs font-bold hover:bg-brand-100 transition-colors">❤️ Saved</Link>
+                    <Link href="/housing/compare" className="px-3 py-1.5 bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-300 rounded-xl text-xs font-bold hover:bg-gray-200 transition-colors">⚖️ Compare</Link>
+                </div>
             </header>
 
             {/* Filter Chips */}

@@ -17,6 +17,7 @@ function MerchantDetailContent() {
 
     // Simple frontend cart state
     const [cart, setCart] = useState({});
+    const [promoCode, setPromoCode] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
@@ -76,7 +77,7 @@ function MerchantDetailContent() {
                 vendor: merchant.name,
                 items: itemStrings,
                 vendorId: merchant.id
-            }, cartTotal);
+            }, cartTotal, promoCode);
 
             if (result.success) {
                 router.push(`/activity/tracking/${result.order.id}`);
@@ -222,6 +223,16 @@ function MerchantDetailContent() {
                                 <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">Total</p>
                                 <p className="text-xl md:text-2xl font-black text-gray-900 dark:text-white leading-none">{cartTotal} <span className="text-[10px] text-gray-400 font-bold">EGP</span></p>
                             </div>
+                        </div>
+
+                        <div className="hidden sm:block flex-1 max-w-[150px]">
+                            <input
+                                type="text"
+                                value={promoCode}
+                                onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                                placeholder="PROMO CODE"
+                                className="w-full bg-gray-100 dark:bg-unizy-dark border-none rounded-xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-brand-500 outline-none text-gray-900 dark:text-white uppercase tracking-wider text-center"
+                            />
                         </div>
 
                         <button

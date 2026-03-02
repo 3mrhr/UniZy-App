@@ -20,5 +20,25 @@ export default async function MerchantPage() {
         take: 10
     });
 
-    return <MerchantClient settlements={settlements} />;
+    // Fetch real orders linked to this merchant's meals
+    const orders = await prisma.order.findMany({
+        where: { service: 'DELIVERY' },
+        orderBy: { createdAt: 'desc' },
+        take: 20,
+        include: { user: { select: { name: true } } },
+    });
+
+    // Fetch merchant's meals for menu management
+    const meals = await prisma.meal.findMany({
+        where: { merchantId: user.id },
+        orderBy: { isPopular: 'desc' },
+    });
+
+    // Fetch merchant's deals
+    const deals = await prisma.deal.findMany({
+        where: { merchantId: user.id },
+        orderBy: { createdAt: 'desc' },
+    });
+
+    return <MerchantClient settlements={settlements} dbOrders={orders} dbMeals={meals} dbDeals={deals} />;
 }

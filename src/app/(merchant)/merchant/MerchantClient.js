@@ -4,25 +4,54 @@ import { useState } from 'react';
 import { useLanguage } from '@/i18n/LanguageProvider';
 import ThemeLangControls from '@/components/ThemeLangControls';
 
-export default function MerchantClient({ settlements }) {
+export default function MerchantClient({ settlements, dbOrders = [], dbMeals = [], dbDeals = [] }) {
     const { dict } = useLanguage();
 
     const totalRevenue = settlements.reduce((sum, s) => sum + s.netAmount, 0);
 
-    // Mock orders
-    const [orders, setOrders] = useState([
-        { id: '101', item: 'Double Beef Burger', customer: 'Omar H.', status: 'New', time: '2 mins ago', price: 'EGP 85' },
-        { id: '102', item: 'Crispy Chicken Meal', customer: 'Sara A.', status: 'Preparing', time: '10 mins ago', price: 'EGP 120' },
-        { id: '103', item: 'Cheese Fries x2', customer: 'Youssef K.', status: 'Ready', time: '15 mins ago', price: 'EGP 60' },
-    ]);
+    // Map real orders to UI shape
+    const [orders, setOrders] = useState(() => {
+        if (dbOrders.length > 0) {
+            return dbOrders.map((o, i) => {
+                const details = typeof o.details === 'string' ? JSON.parse(o.details) : (o.details || {});
+                const items = details.items || [];
+                return {
+                    id: o.id,
+                    item: items.join(', ') || `Order #${o.id.slice(-4)}`,
+                    customer: o.user?.name || 'Customer',
+                    status: o.status === 'COMPLETED' ? 'Ready' : o.status === 'PENDING' ? 'New' : 'Preparing',
+                    time: new Date(o.createdAt).toLocaleDateString(),
+                    price: `EGP ${o.total}`,
+                };
+            });
+        }
+        return [];
+    });
 
-    // Mock menu
-    const [menuItems, setMenuItems] = useState([
-        { id: 'm1', name: 'Double Beef Burger', available: true },
-        { id: 'm2', name: 'Crispy Chicken Meal', available: true },
-        { id: 'm3', name: 'Vegan Bowl', available: false },
-        { id: 'm4', name: 'Cheese Fries', available: true },
-    ]);
+    // Map real meals to menu items
+    const [menuItems, setMenuItems] = useState(() => {
+        if (dbMeals.length > 0) {
+            return dbMeals.map(m => ({
+                id: m.id,
+                name: m.name,
+                available: m.status === 'ACTIVE',
+            }));
+        }
+        return [];
+    });
+
+    // Map real deals
+    const [deals, setDeals] = useState(() => {
+        if (dbDeals.length > 0) {
+            return dbDeals.map(d => ({
+                id: d.id,
+                title: d.title,
+                status: d.status === 'ACTIVE' ? 'Active' : 'Paused',
+                redemptions: d.reviews || 0,
+            }));
+        }
+        return [];
+    });
 
     const updateStatus = (id, newStatus) => {
         setOrders(orders.map(o => o.id === id ? { ...o, status: newStatus } : o));
@@ -31,12 +60,6 @@ export default function MerchantClient({ settlements }) {
     const toggleAvailability = (id) => {
         setMenuItems(menuItems.map(m => m.id === id ? { ...m, available: !m.available } : m));
     };
-
-    // Mock Deals
-    const [deals, setDeals] = useState([
-        { id: 'd1', title: '50% Off Second Burger', status: 'Active', redemptions: 12 },
-        { id: 'd2', title: 'Free Drink with Combo', status: 'Paused', redemptions: 45 }
-    ]);
 
     return (
         <div className="min-h-screen bg-rose-50 dark:bg-unizy-navy transition-colors pb-24">

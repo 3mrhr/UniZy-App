@@ -50,6 +50,13 @@ export default function AdminRolesPage() {
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
+
+            {/* Sub-page Navigation */}
+            <div className="flex flex-wrap gap-3 mb-8">
+                    <Link href="/admin/roles-permissions" className="px-4 py-2 bg-white dark:bg-unizy-dark rounded-xl text-sm font-bold text-gray-600 dark:text-gray-300 hover:bg-brand-50 dark:hover:bg-brand-900/20 hover:text-brand-600 transition-all border border-gray-100 dark:border-white/5">Advanced Permissions</Link>
+                    <Link href="/admin/roles-permissions/scopes" className="px-4 py-2 bg-white dark:bg-unizy-dark rounded-xl text-sm font-bold text-gray-600 dark:text-gray-300 hover:bg-brand-50 dark:hover:bg-brand-900/20 hover:text-brand-600 transition-all border border-gray-100 dark:border-white/5">Permission Scopes</Link>
+            </div>
+
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">Role <span className="text-brand-600">Management</span></h1>

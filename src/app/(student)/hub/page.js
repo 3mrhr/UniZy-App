@@ -1,5 +1,7 @@
 "use client";
 
+import Link from 'next/link';
+
 import React, { useState, useEffect, useTransition } from 'react';
 import { useLanguage } from '@/i18n/LanguageProvider';
 import { Users, Megaphone, Edit3, MessageCircle, Heart, Share2, MoreHorizontal, Image as ImageIcon, Flag, Loader2 } from 'lucide-react';
@@ -114,6 +116,11 @@ export default function HubPage() {
                         {isRTL ? 'تواصل مع زملائك في الحرم الجامعي' : 'Connect with your campus community'}
                     </p>
                 </div>
+            </div>
+
+            {/* Quick Links */}
+            <div className="flex gap-3 mb-4">
+                <Link href="/hub/roommate" className="px-4 py-2 bg-purple-50 dark:bg-purple-900/20 text-purple-600 rounded-xl text-sm font-bold hover:bg-purple-100 transition-colors">🏠 Roommate Finder</Link>
             </div>
 
             {/* Tabs */}
