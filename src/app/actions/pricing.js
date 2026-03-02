@@ -21,6 +21,13 @@ async function enforcePricingScope(moduleName) {
     }
 
     if (!hasAccess && user.role !== `ADMIN_${moduleName}`) {
+        // Audit log privilege escalation attempt
+        await logAdminAction('PRIVILEGE_ESCALATION_ATTEMPT', moduleName, null, {
+            attemptedBy: user.id,
+            userRole: user.role,
+            targetModule: moduleName,
+            action: 'PRICING_EDIT',
+        });
         throw new Error(`Forbidden: You do not have pricing authority for the ${moduleName} module.`);
     }
 

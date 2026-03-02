@@ -2,9 +2,9 @@ import { NextResponse } from 'next/server';
 import { getIronSession } from 'iron-session';
 import { cookies } from 'next/headers';
 
-// Needs to match the sessionOptions to read the cookie in Edge
+// Needs to match the sessionOptions in src/lib/session.js exactly
 const sessionOptions = {
-    password: process.env.SESSION_SECRET || 'unizy-super-secret-session-key-2026-change-in-production',
+    password: process.env.SESSION_SECRET || 'unizy-dev-secret-key-that-is-at-least-32-characters-long',
     cookieName: 'unizy_session',
     cookieOptions: {
         secure: process.env.NODE_ENV === 'production',
