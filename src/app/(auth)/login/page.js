@@ -29,17 +29,18 @@ export default function Login() {
 
             // Role-based redirection logic
             const role = result.role || 'STUDENT';
-            if (role.includes('ADMIN')) {
-                router.push('/admin');
-            } else if (role === 'DRIVER') {
-                router.push('/driver');
-            } else if (role === 'PROVIDER' || role === 'LANDLORD') {
-                router.push('/provider');
-            } else if (role === 'MERCHANT') {
-                router.push('/merchant');
-            } else {
-                router.push('/students');
-            }
+            const redirectMap = {
+                'ADMIN_SUPER': '/admin',
+                'ADMIN_DELIVERY': '/admin/delivery',
+                'ADMIN_TRANSPORT': '/admin/transport',
+                'ADMIN_HOUSING': '/admin/housing',
+                'ADMIN_COMMERCE': '/admin/commerce',
+                'DRIVER': '/driver',
+                'PROVIDER': '/provider',
+                'MERCHANT': '/merchant',
+                'STUDENT': '/students',
+            };
+            router.push(redirectMap[role] || (role.includes('ADMIN') ? '/admin' : '/students'));
         } catch (err) {
             setError('An error occurred during login');
             setIsLoading(false);
@@ -105,7 +106,7 @@ export default function Login() {
                             <input type="checkbox" className="w-5 h-5 rounded-lg border-gray-200 dark:border-gray-700 text-brand-600 focus:ring-brand-500 bg-white dark:bg-unizy-navy" />
                             <span className="text-sm font-bold text-gray-600 dark:text-gray-400 group-hover:text-brand-600 transition-colors">Remember me</span>
                         </label>
-                        <span className="text-sm font-black text-brand-600 hover:text-brand-700 uppercase tracking-tighter cursor-pointer" onClick={() => alert('Password reset will be available soon.')}>Forgot?</span>
+                        <Link href="/forgot-password" className="text-sm font-black text-brand-600 hover:text-brand-700 uppercase tracking-tighter">Forgot?</Link>
                     </div>
 
                     <button

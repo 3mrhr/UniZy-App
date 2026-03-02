@@ -1,60 +1,112 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useTransition } from 'react';
 import { useLanguage } from '@/i18n/LanguageProvider';
-import { Users, Megaphone, Edit3, MessageCircle, Heart, Share2, MoreHorizontal, Image as ImageIcon } from 'lucide-react';
-import Image from 'next/image';
+import { Users, Megaphone, Edit3, MessageCircle, Heart, Share2, MoreHorizontal, Image as ImageIcon, Flag, Loader2 } from 'lucide-react';
+import { getPosts, createPost, flagPost } from '@/app/actions/hub';
 
 const HUB_TABS = [
     { id: 'feed', en: 'Community Feed', ar: 'المجتمع', icon: Users },
     { id: 'notices', en: 'Campus Notices', ar: 'إعلانات الحرم', icon: Megaphone },
 ];
 
-const MOCK_POSTS = [
-    {
-        id: 'p1',
-        author: 'Sarah M.',
-        avatar: 'https://ui-avatars.com/api/?name=Sarah+M&background=0D8ABC&color=fff',
-        role: 'Student - Dentistry',
-        time: '2 hours ago',
-        content: 'Does anyone have the past exams for BioPhysics 101? Could really use some help studying for midterms next week! 🙏',
-        arContent: 'حد معاه امتحانات السنين اللي فاتت لمادة البيوفيزياء 101؟ محتاجة مساعدة في المذاكرة للميدتيرم الأسبوع الجاي! 🙏',
-        likes: 12,
-        comments: 5,
-        tag: 'Study Help'
-    },
-    {
-        id: 'p2',
-        author: 'Ahmed Kareem',
-        avatar: 'https://ui-avatars.com/api/?name=Ahmed+Kareem&background=F59E0B&color=fff',
-        role: 'Student - Engineering',
-        time: '5 hours ago',
-        content: 'Found a black wallet near the library entrance. Handed it over to the security desk at gate 2.',
-        arContent: 'لقيت محفظة سودة قريبة من مدخل المكتبة. سلمتها لمكتب الأمن على بوابة 2.',
-        likes: 45,
-        comments: 2,
-        tag: 'Lost & Found'
-    },
-    {
-        id: 'p3',
-        author: 'Nour El-Din',
-        avatar: 'https://ui-avatars.com/api/?name=Nour+E&background=10B981&color=fff',
-        role: 'Student - Pharmacy',
-        time: '1 day ago',
-        content: 'Looking for a 3rd roommate in a furnished apartment near the university (5 mins walk). Rent is super affordable. DM me!',
-        arContent: 'بدور على شريك سكن تالت في شقة مفروشة قريبة من الجامعة (5 دقايق مشي). الإيجار مناسب جداً. ابعتلي رسالة!',
-        image: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80',
-        likes: 28,
-        comments: 14,
-        tag: 'Housing'
-    }
+const CATEGORY_OPTIONS = [
+    { value: 'general', label: 'General' },
+    { value: 'study_help', label: 'Study Help' },
+    { value: 'lost_found', label: 'Lost & Found' },
+    { value: 'housing', label: 'Housing' },
+    { value: 'marketplace', label: 'Marketplace' },
 ];
+
+const TAG_COLORS = {
+    general: 'bg-blue-100 dark:bg-blue-900/20 text-blue-600 border-blue-200 dark:border-blue-800',
+    study_help: 'bg-purple-100 dark:bg-purple-900/20 text-purple-600 border-purple-200 dark:border-purple-800',
+    lost_found: 'bg-yellow-100 dark:bg-yellow-900/20 text-yellow-600 border-yellow-200 dark:border-yellow-800',
+    housing: 'bg-green-100 dark:bg-green-900/20 text-green-600 border-green-200 dark:border-green-800',
+    marketplace: 'bg-orange-100 dark:bg-orange-900/20 text-orange-600 border-orange-200 dark:border-orange-800',
+};
+
+function timeAgo(dateStr) {
+    const now = new Date();
+    const date = new Date(dateStr);
+    const secs = Math.floor((now - date) / 1000);
+    if (secs < 60) return 'just now';
+    if (secs < 3600) return `${Math.floor(secs / 60)}m ago`;
+    if (secs < 86400) return `${Math.floor(secs / 3600)}h ago`;
+    return `${Math.floor(secs / 86400)}d ago`;
+}
 
 export default function HubPage() {
     const { language } = useLanguage();
     const isRTL = language === 'ar-EG';
     const [activeTab, setActiveTab] = useState('feed');
     const [postText, setPostText] = useState('');
+    const [postCategory, setPostCategory] = useState('general');
+    const [posts, setPosts] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [isPending, startTransition] = useTransition();
+    const [reportedIds, setReportedIds] = useState(new Set());
+
+    // Load posts from DB
+    useEffect(() => {
+        async function load() {
+            setLoading(true);
+            const result = await getPosts();
+            if (result.posts && result.posts.length > 0) {
+                setPosts(result.posts);
+            } else {
+                // Seed with demo posts if DB is empty
+                setPosts([
+                    {
+                        id: 'demo-1', content: 'Does anyone have past exams for BioPhysics 101? 🙏',
+                        category: 'study_help', likes: 12, comments: 5, createdAt: new Date(Date.now() - 7200000).toISOString(),
+                        author: { name: 'Sarah M.', university: 'Assiut University' }
+                    },
+                    {
+                        id: 'demo-2', content: 'Found a black wallet near the library entrance. Handed it to security at gate 2.',
+                        category: 'lost_found', likes: 45, comments: 2, createdAt: new Date(Date.now() - 18000000).toISOString(),
+                        author: { name: 'Ahmed Kareem', university: 'Assiut University' }
+                    },
+                    {
+                        id: 'demo-3', content: 'Looking for a 3rd roommate in a furnished apartment near the university (5 mins walk). Rent is super affordable. DM me!',
+                        category: 'housing', likes: 28, comments: 14, createdAt: new Date(Date.now() - 86400000).toISOString(),
+                        author: { name: 'Nour El-Din', university: 'Assiut University' }
+                    },
+                ]);
+            }
+            setLoading(false);
+        }
+        load();
+    }, []);
+
+    const handlePost = () => {
+        if (!postText.trim()) return;
+        startTransition(async () => {
+            const result = await createPost({ content: postText, category: postCategory });
+            if (result.success) {
+                // Add to top of feed optimistically
+                setPosts(prev => [{
+                    id: result.post?.id || Date.now().toString(),
+                    content: postText,
+                    category: postCategory,
+                    likes: 0, comments: 0,
+                    createdAt: new Date().toISOString(),
+                    author: { name: 'You', university: 'Assiut University' }
+                }, ...prev]);
+                setPostText('');
+                setPostCategory('general');
+            }
+        });
+    };
+
+    const handleReport = (postId) => {
+        startTransition(async () => {
+            const result = await flagPost(postId, 'Reported by user');
+            if (result.success || result.error?.includes('Not authenticated')) {
+                setReportedIds(prev => new Set([...prev, postId]));
+            }
+        });
+    };
 
     return (
         <main className="min-h-screen pb-24 bg-[var(--unizy-bg-light)] dark:bg-[var(--unizy-bg-dark)] px-4 sm:px-6 lg:px-8 max-w-3xl mx-auto pt-6 transition-colors duration-300">
@@ -105,81 +157,109 @@ export default function HubPage() {
                             ></textarea>
                         </div>
                         <div className="flex justify-between items-center pl-14 rtl:pl-0 rtl:pr-14">
-                            <button className="text-gray-400 hover:text-[var(--unizy-primary)] transition-colors p-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20">
-                                <ImageIcon className="w-5 h-5" />
-                            </button>
+                            <div className="flex items-center gap-2">
+                                <button className="text-gray-400 hover:text-[var(--unizy-primary)] transition-colors p-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20">
+                                    <ImageIcon className="w-5 h-5" />
+                                </button>
+                                <select
+                                    value={postCategory}
+                                    onChange={(e) => setPostCategory(e.target.value)}
+                                    className="text-xs font-bold bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 rounded-lg px-2 py-1.5 border-0 outline-none appearance-none cursor-pointer"
+                                >
+                                    {CATEGORY_OPTIONS.map(c => (
+                                        <option key={c.value} value={c.value}>{c.label}</option>
+                                    ))}
+                                </select>
+                            </div>
                             <button
+                                onClick={handlePost}
+                                disabled={!postText.trim() || isPending}
                                 className={`px-6 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all ${postText.trim().length > 0
                                     ? 'bg-[var(--unizy-primary)] text-white hover:opacity-90 shadow-md shadow-blue-500/20'
                                     : 'bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed'
                                     }`}
                             >
-                                <Edit3 className="w-4 h-4" />
+                                {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Edit3 className="w-4 h-4" />}
                                 {isRTL ? 'نشر' : 'Post'}
                             </button>
                         </div>
                     </div>
 
+                    {/* Loading */}
+                    {loading && (
+                        <div className="text-center py-12">
+                            <Loader2 className="w-8 h-8 mx-auto animate-spin text-brand-500" />
+                            <p className="text-gray-400 font-bold text-sm mt-3">Loading posts...</p>
+                        </div>
+                    )}
+
                     {/* Feed Stream */}
-                    <div className="space-y-4">
-                        {MOCK_POSTS.map(post => (
-                            <div key={post.id} className="bg-white dark:bg-[#1E293B] rounded-3xl p-5 border border-gray-100 dark:border-gray-800 shadow-sm">
-                                {/* Post Header */}
-                                <div className="flex justify-between items-start mb-3">
-                                    <div className="flex gap-3 items-center">
-                                        <img src={post.avatar} alt={post.author} className="w-10 h-10 rounded-full border border-gray-100 dark:border-gray-700" />
-                                        <div>
-                                            <h3 className="font-bold text-[var(--unizy-text-dark)] dark:text-white text-sm">{post.author}</h3>
-                                            <div className="flex items-center gap-2 text-xs text-gray-500">
-                                                <span>{post.role}</span>
-                                                <span>•</span>
-                                                <span>{post.time}</span>
+                    {!loading && (
+                        <div className="space-y-4">
+                            {posts.map(post => (
+                                <div key={post.id} className="bg-white dark:bg-[#1E293B] rounded-3xl p-5 border border-gray-100 dark:border-gray-800 shadow-sm">
+                                    {/* Post Header */}
+                                    <div className="flex justify-between items-start mb-3">
+                                        <div className="flex gap-3 items-center">
+                                            <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(post.author?.name || 'User')}&background=random&color=fff`} alt={post.author?.name} className="w-10 h-10 rounded-full border border-gray-100 dark:border-gray-700" />
+                                            <div>
+                                                <h3 className="font-bold text-[var(--unizy-text-dark)] dark:text-white text-sm">{post.author?.name || 'Anonymous'}</h3>
+                                                <div className="flex items-center gap-2 text-xs text-gray-500">
+                                                    <span>{post.author?.university || ''}</span>
+                                                    <span>•</span>
+                                                    <span>{timeAgo(post.createdAt)}</span>
+                                                </div>
                                             </div>
                                         </div>
+                                        {/* Report Button */}
+                                        {!reportedIds.has(post.id) ? (
+                                            <button onClick={() => handleReport(post.id)} className="text-gray-400 hover:text-red-500 transition-colors p-1" title="Report post">
+                                                <Flag className="w-4 h-4" />
+                                            </button>
+                                        ) : (
+                                            <span className="text-[10px] font-bold text-red-400 bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded-lg">Reported</span>
+                                        )}
                                     </div>
-                                    <button className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-                                        <MoreHorizontal className="w-5 h-5" />
-                                    </button>
-                                </div>
 
-                                {/* Post Tag */}
-                                <div className="mb-2">
-                                    <span className="inline-block bg-[var(--unizy-primary)] bg-opacity-10 text-[var(--unizy-primary)] text-xs font-bold px-2 py-0.5 rounded border border-[var(--unizy-primary)]/20">
-                                        {post.tag}
-                                    </span>
-                                </div>
-
-                                {/* Post Content */}
-                                <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed mb-4 whitespace-pre-wrap">
-                                    {isRTL ? post.arContent : post.content}
-                                </p>
-
-                                {/* Post Image (if any) */}
-                                {post.image && (
-                                    <div className="rounded-2xl overflow-hidden mb-4 bg-gray-100 dark:bg-gray-800 max-h-64">
-                                        <img src={post.image} alt="Post attachment" className="w-full h-full object-cover" />
+                                    {/* Post Tag */}
+                                    <div className="mb-2">
+                                        <span className={`inline-block text-xs font-bold px-2 py-0.5 rounded border ${TAG_COLORS[post.category] || TAG_COLORS.general}`}>
+                                            {CATEGORY_OPTIONS.find(c => c.value === post.category)?.label || post.category}
+                                        </span>
                                     </div>
-                                )}
 
-                                {/* Post Actions */}
-                                <div className="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-gray-800">
-                                    <div className="flex gap-4">
-                                        <button className="flex items-center gap-1.5 text-gray-500 hover:text-red-500 transition-colors text-sm font-medium group">
-                                            <Heart className="w-5 h-5 group-hover:fill-red-500" />
-                                            <span>{post.likes}</span>
-                                        </button>
+                                    {/* Post Content */}
+                                    <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed mb-4 whitespace-pre-wrap">
+                                        {post.content}
+                                    </p>
+
+                                    {/* Post Image */}
+                                    {post.imageUrl && (
+                                        <div className="rounded-2xl overflow-hidden mb-4 bg-gray-100 dark:bg-gray-800 max-h-64">
+                                            <img src={post.imageUrl} alt="Post attachment" className="w-full h-full object-cover" />
+                                        </div>
+                                    )}
+
+                                    {/* Post Actions */}
+                                    <div className="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-gray-800">
+                                        <div className="flex gap-4">
+                                            <button className="flex items-center gap-1.5 text-gray-500 hover:text-red-500 transition-colors text-sm font-medium group">
+                                                <Heart className="w-5 h-5 group-hover:fill-red-500" />
+                                                <span>{post.likes || 0}</span>
+                                            </button>
+                                            <button className="flex items-center gap-1.5 text-gray-500 hover:text-[var(--unizy-primary)] transition-colors text-sm font-medium">
+                                                <MessageCircle className="w-5 h-5" />
+                                                <span>{post.comments || 0}</span>
+                                            </button>
+                                        </div>
                                         <button className="flex items-center gap-1.5 text-gray-500 hover:text-[var(--unizy-primary)] transition-colors text-sm font-medium">
-                                            <MessageCircle className="w-5 h-5" />
-                                            <span>{post.comments}</span>
+                                            <Share2 className="w-5 h-5" />
                                         </button>
                                     </div>
-                                    <button className="flex items-center gap-1.5 text-gray-500 hover:text-[var(--unizy-primary)] transition-colors text-sm font-medium">
-                                        <Share2 className="w-5 h-5" />
-                                    </button>
                                 </div>
-                            </div>
-                        ))}
-                    </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
             )}
 

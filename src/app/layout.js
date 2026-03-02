@@ -47,6 +47,7 @@ export default function RootLayout({ children }) {
                       <Link href="/students" className="px-4 py-2 text-sm font-bold rounded-xl text-gray-600 dark:text-gray-400 hover:text-brand-600 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-white/5 transition-all">Home</Link>
                       <Link href="/housing" className="px-4 py-2 text-sm font-bold rounded-xl text-gray-600 dark:text-gray-400 hover:text-brand-600 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-white/5 transition-all">Housing</Link>
                       <Link href="/transport" className="px-4 py-2 text-sm font-bold rounded-xl text-gray-600 dark:text-gray-400 hover:text-brand-600 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-white/5 transition-all">Transport</Link>
+                      <Link href="/services" className="px-4 py-2 text-sm font-bold rounded-xl text-gray-600 dark:text-gray-400 hover:text-brand-600 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-white/5 transition-all">Services</Link>
                     </nav>
                     <div className="h-6 w-[1px] bg-gray-200 dark:bg-white/10"></div>
                     <ThemeLangControls />

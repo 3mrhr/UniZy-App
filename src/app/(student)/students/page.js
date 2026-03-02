@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useLanguage } from '@/i18n/LanguageProvider';
-import { Home, Truck, ShoppingBag, Tag, UtensilsCrossed, Users, Search, Gift, Bell, MapPin, ArrowRight, Star, MessageCircle, Package, Calendar } from 'lucide-react';
+import { Home, Truck, ShoppingBag, Tag, UtensilsCrossed, Users, Search, Gift, Bell, MapPin, ArrowRight, Star, MessageCircle, Package, Calendar, Wrench, Sparkles } from 'lucide-react';
 
 const SERVICES = [
   { id: 'housing', label: 'Housing', arLabel: 'سكن', icon: Home, color: 'from-blue-500 to-indigo-600', href: '/housing' },
@@ -13,13 +13,15 @@ const SERVICES = [
   { id: 'deals', label: 'Deals', arLabel: 'عروض', icon: Tag, color: 'from-emerald-500 to-teal-600', href: '/deals' },
   { id: 'meals', label: 'Meals', arLabel: 'وجبات', icon: UtensilsCrossed, color: 'from-amber-500 to-orange-600', href: '/meals' },
   { id: 'hub', label: 'Hub', arLabel: 'المجتمع', icon: Users, color: 'from-purple-500 to-violet-600', href: '/hub' },
+  { id: 'services', label: 'Services', arLabel: 'خدمات', icon: Wrench, color: 'from-rose-500 to-pink-600', href: '/services' },
+  { id: 'cleaning', label: 'Cleaning', arLabel: 'تنظيف', icon: Sparkles, color: 'from-emerald-500 to-teal-600', href: '/services/cleaning' },
 ];
 
 const QUICK_ACTIONS = [
   { label: 'Search', icon: Search, href: '/search', color: 'bg-brand-100 dark:bg-brand-900/20 text-brand-600' },
   { label: 'Rewards', icon: Gift, href: '/rewards', color: 'bg-amber-100 dark:bg-amber-900/20 text-amber-600' },
   { label: 'Parcel', icon: Package, href: '/delivery/parcel', color: 'bg-orange-100 dark:bg-orange-900/20 text-orange-600' },
-  { label: 'Schedule', icon: Calendar, href: '/transport/schedule', color: 'bg-blue-100 dark:bg-blue-900/20 text-blue-600' },
+  { label: 'Cleaning', icon: Sparkles, href: '/services/cleaning', color: 'bg-emerald-100 dark:bg-emerald-900/20 text-emerald-600' },
 ];
 
 export default function StudentHome() {
@@ -149,6 +151,22 @@ export default function StudentHome() {
               <span className="text-[10px] font-bold bg-white/20 px-2 py-0.5 rounded-lg">FREEDEL</span>
             </div>
           </div>
+        </div>
+
+        {/* Home Services Promo */}
+        <div className="mb-8">
+          <Link href="/services" className="block bg-gradient-to-br from-rose-500 to-pink-600 rounded-3xl p-5 text-white hover:shadow-xl hover:shadow-pink-500/20 transition-all">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 bg-white/20 backdrop-blur-xl rounded-2xl flex items-center justify-center shrink-0">
+                <Wrench size={24} className="text-white" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-black text-lg">{isRTL ? 'خدمات منزلية' : 'Home Services'}</h3>
+                <p className="text-pink-100 text-xs font-bold">{isRTL ? 'سباك, كهربائي, نجار والمزيد' : 'Plumber, electrician, carpenter & more'}</p>
+              </div>
+              <ArrowRight size={20} className="text-white/60" />
+            </div>
+          </Link>
         </div>
 
         {/* Hub Preview */}

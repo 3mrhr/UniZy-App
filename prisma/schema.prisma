@@ -42,6 +42,8 @@ model User {
   notifications  Notification[]
   referralsMade  Referral[]  @relation("referrer")
   referralsUsed  Referral[]  @relation("referred")
+  serviceBookings   ServiceBooking[]
+  cleaningBookings  CleaningBooking[]
 }
 
 model HousingListing {
@@ -249,4 +251,94 @@ model Notification {
   user      User     @relation(fields: [userId], references: [id])
 
   createdAt DateTime @default(now())
+}
+
+// ========== Password Reset ==========
+
+model PasswordReset {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  email     String
+  expiresAt DateTime
+  used      Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+}
+
+// ========== Home Services ==========
+
+model ServiceProvider {
+  id          String   @id @default(uuid())
+  name        String
+  phone       String
+  category    String   // PLUMBER, ELECTRICIAN, CARPENTER, AC_TECH, PAINTER, GENERAL
+  description String?
+  priceRange  String?  // e.g. "150-300 EGP"
+  rating      Float    @default(0)
+  reviewCount Int      @default(0)
+  available   Boolean  @default(true)
+  verified    Boolean  @default(false)
+  imageUrl    String?
+  location    String?  @default("Assiut")
+
+  bookings    ServiceBooking[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ServiceBooking {
+  id          String   @id @default(uuid())
+  status      String   @default("PENDING") // PENDING, CONFIRMED, IN_PROGRESS, COMPLETED, CANCELLED
+  date        String   // e.g. "2026-03-15"
+  timeSlot    String   // e.g. "10:00 AM - 12:00 PM"
+  notes       String?
+  rating      Int?     // 1-5 star rating after completion
+  review      String?
+
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+
+  providerId  String
+  provider    ServiceProvider @relation(fields: [providerId], references: [id])
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ========== Housing Cleaning Services ==========
+
+model CleaningPackage {
+  id          String   @id @default(uuid())
+  name        String   // e.g. "Deep Clean", "Weekly Standard", "Move-in/Move-out"
+  description String?
+  price       Float
+  duration    String?  // e.g. "2-3 hours"
+  frequency   String   @default("ONE_TIME") // ONE_TIME, WEEKLY, BI_WEEKLY, MONTHLY
+  includes    String?  // JSON list of what's included
+  active      Boolean  @default(true)
+
+  bookings    CleaningBooking[]
+
+  createdAt   DateTime @default(now())
+}
+
+model CleaningBooking {
+  id          String   @id @default(uuid())
+  status      String   @default("PENDING") // PENDING, CONFIRMED, IN_PROGRESS, COMPLETED, CANCELLED
+  date        String
+  timeSlot    String
+  address     String
+  notes       String?
+  rating      Int?
+  review      String?
+
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+
+  packageId   String
+  package     CleaningPackage @relation(fields: [packageId], references: [id])
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }

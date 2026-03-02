@@ -151,3 +151,72 @@ export async function getCurrentUser() {
     const session = await getSession();
     return session.user || null;
 }
+
+export async function requestPasswordReset(email) {
+    try {
+        const user = await prisma.user.findUnique({ where: { email } });
+        if (!user) {
+            // Don't reveal if email exists — always return success for security
+            return { success: true, message: 'If that email exists, a reset link has been generated.' };
+        }
+
+        // Generate a random token
+        const token = `${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 15)}`;
+
+        // Create reset record (expires in 1 hour)
+        await prisma.passwordReset.create({
+            data: {
+                email,
+                token,
+                expiresAt: new Date(Date.now() + 3600000), // 1 hour
+            }
+        });
+
+        // In production, send email with reset link
+        // For now, return the token directly so the user can use it
+        console.log(`[DEV] Password reset token for ${email}: ${token}`);
+
+        return { success: true, token, message: 'Reset token generated. Check server console in dev mode.' };
+    } catch (error) {
+        console.error('Password reset request error:', error);
+        return { error: 'Failed to process reset request.' };
+    }
+}
+
+export async function resetPassword(token, newPassword) {
+    try {
+        const resetRecord = await prisma.passwordReset.findUnique({ where: { token } });
+
+        if (!resetRecord) {
+            return { error: 'Invalid or expired reset token.' };
+        }
+
+        if (resetRecord.used) {
+            return { error: 'This reset token has already been used.' };
+        }
+
+        if (new Date() > resetRecord.expiresAt) {
+            return { error: 'This reset token has expired. Please request a new one.' };
+        }
+
+        // Hash new password
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+        // Update user password and mark token as used
+        await prisma.$transaction([
+            prisma.user.update({
+                where: { email: resetRecord.email },
+                data: { password: hashedPassword }
+            }),
+            prisma.passwordReset.update({
+                where: { id: resetRecord.id },
+                data: { used: true }
+            })
+        ]);
+
+        return { success: true, message: 'Password updated successfully.' };
+    } catch (error) {
+        console.error('Password reset error:', error);
+        return { error: 'Failed to reset password.' };
+    }
+}

@@ -20,7 +20,11 @@ export default async function AdminSidebar() {
     // Verifications and Support are generally useful for most admins
     navItems.push(
         { label: "Verifications", href: "/admin/verifications", icon: "✅" },
-        { label: "Helpdesk", href: "/admin/support", icon: "🎧" }
+        { label: "Helpdesk", href: "/admin/support", icon: "🎧" },
+        { label: "Hub Moderation", href: "/admin/hub", icon: "💬" },
+        { label: "Campaigns", href: "/admin/campaigns", icon: "📢" },
+        { label: "Home Services", href: "/admin/services", icon: "🔧" },
+        { label: "Cleaning", href: "/admin/cleaning", icon: "✨" },
     );
 
     // Global Admin Only Items
