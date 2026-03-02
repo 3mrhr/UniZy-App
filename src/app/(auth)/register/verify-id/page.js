@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import ThemeLangControls from '@/components/ThemeLangControls';
 import { Camera, FileText, CheckCircle, UploadCloud, ShieldAlert } from 'lucide-react';
 import Image from 'next/image';
 
@@ -51,10 +50,6 @@ export default function VerifyIDPage() {
 
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-unizy-navy flex flex-col items-center justify-center p-6 relative overflow-hidden">
-            <div className="absolute top-6 right-6 z-50">
-                <ThemeLangControls />
-            </div>
-
             <div className="max-w-md w-full relative z-10">
                 <div className="mb-10 text-center animate-fade-in-down">
                     <div className="w-16 h-16 bg-brand-600 rounded-2xl mx-auto flex items-center justify-center mb-6 shadow-xl shadow-brand-500/30">

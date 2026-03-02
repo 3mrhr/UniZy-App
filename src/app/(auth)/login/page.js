@@ -127,11 +127,18 @@ export default function Login() {
 
                 </form>
 
-                {/* Quick Hint for User */}
+                {/* Quick Portal Links */}
                 <div className="mt-8 text-center animate-fade-in delay-500">
-                    <p className="text-[10px] font-black text-gray-400 dark:text-gray-600 uppercase tracking-[0.2em]">
-                        Login as: driver | landlord | merchant
+                    <p className="text-[10px] font-black text-gray-400 dark:text-gray-600 uppercase tracking-[0.2em] mb-1">
+                        Portal Access:
                     </p>
+                    <div className="flex items-center justify-center gap-3 text-[11px] font-black uppercase tracking-wider">
+                        <Link href="/driver" className="text-brand-600 hover:underline">Driver</Link>
+                        <span className="text-gray-300">|</span>
+                        <Link href="/provider" className="text-brand-600 hover:underline">Landlord</Link>
+                        <span className="text-gray-300">|</span>
+                        <Link href="/merchant" className="text-brand-600 hover:underline">Merchant</Link>
+                    </div>
                 </div>
             </div>
         </div>

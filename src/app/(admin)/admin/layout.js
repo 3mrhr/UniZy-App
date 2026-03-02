@@ -15,13 +15,18 @@ const ADMIN_ROLES = {
         color: 'bg-indigo-600',
         links: [
             { label: 'Overview', icon: LayoutDashboard, href: '/admin' },
-            { label: 'User Management', icon: Users, href: '/admin/users' },
-            { label: 'Global Moderation', icon: ShieldAlert, href: '/admin/moderation' },
+            { label: 'Verifications', icon: ShieldAlert, href: '/admin/verifications' },
+            { label: 'Helpdesk', icon: Users, href: '/admin/support' },
+            { label: 'Hub Moderation', icon: Tag, href: '/admin/hub' },
+            { label: 'Campaigns', icon: ShoppingBag, href: '/admin/campaigns' },
             { label: 'Delivery', icon: Truck, href: '/admin/delivery' },
             { label: 'Transport', icon: ShoppingBag, href: '/admin/transport' },
             { label: 'Housing', icon: Home, href: '/admin/housing' },
             { label: 'Commerce', icon: Tag, href: '/admin/commerce' },
-            { label: 'Settings', icon: Settings, href: '/admin/settings' },
+            { label: 'Home Services', icon: Settings, href: '/admin/services' },
+            { label: 'Cleaning', icon: Home, href: '/admin/cleaning' },
+            { label: 'Users & Roles', icon: Users, href: '/admin/roles' },
+            { label: 'Finance', icon: ShoppingBag, href: '/admin/finance' },
         ]
     },
     ADMIN_DELIVERY: {
@@ -125,8 +130,8 @@ export default function AdminLayout({ children }) {
                                     key={link.href}
                                     href={link.href}
                                     className={`flex items-center justify-between px-4 py-3.5 rounded-xl transition-all group ${isActive
-                                            ? 'bg-brand-50 dark:bg-brand-500/10 text-brand-600 dark:text-brand-400'
-                                            : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:text-gray-900 dark:hover:text-white'
+                                        ? 'bg-brand-50 dark:bg-brand-500/10 text-brand-600 dark:text-brand-400'
+                                        : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:text-gray-900 dark:hover:text-white'
                                         }`}
                                 >
                                     <div className="flex items-center gap-3">

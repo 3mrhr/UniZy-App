@@ -62,7 +62,7 @@ export default function LandingPage() {
                         </p>
                         <div className="flex flex-wrap gap-4">
                             <Link
-                                href="/login"
+                                href="/register"
                                 className="bg-brand-600 hover:bg-brand-700 text-white px-8 py-4 rounded-2xl font-bold text-lg shadow-lg shadow-brand-500/25 transition-all hover:scale-105 active:scale-95"
                             >
                                 {t.getStarted}

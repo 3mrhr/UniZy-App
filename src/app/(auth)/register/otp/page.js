@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import ThemeLangControls from '@/components/ThemeLangControls';
 import { ShieldCheck, Smartphone, RefreshCw } from 'lucide-react';
 
 export default function OTPPage() {
@@ -38,10 +37,6 @@ export default function OTPPage() {
 
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-unizy-navy flex flex-col items-center justify-center p-6 relative overflow-hidden">
-            <div className="absolute top-6 right-6 z-50">
-                <ThemeLangControls />
-            </div>
-
             <div className="max-w-md w-full relative z-10 text-center">
                 <div className="w-20 h-20 bg-brand-100 dark:bg-brand-900/30 rounded-full mx-auto flex items-center justify-center mb-6 text-brand-600 animate-bounce">
                     <Smartphone size={40} />
