@@ -2,6 +2,7 @@
 
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from './auth';
+import { computeCommissionSnapshot, computePricingSnapshot, generateTxnCode } from './financial';
 
 // Fetch active meals, optionally filtered by category (tags) or search text
 export async function getActiveMeals(category = null, searchQuery = '') {
@@ -126,19 +127,34 @@ export async function orderMeal({ mealId, quantity = 1, notes = '' }) {
         // Calculate total 
         const totalAmount = meal.price * quantity;
 
-        // Execute unified transaction logging
+        // Compute financial snapshots before transaction
+        const commSnap = await computeCommissionSnapshot('MEALS', 'MERCHANT', totalAmount);
+        const priceSnap = await computePricingSnapshot('MEALS');
+
+        // Execute unified transaction logging with frozen snapshots
         const result = await prisma.$transaction(async (tx) => {
-            const txnCode = `TXN-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
+            const txnCode = generateTxnCode();
 
             const transactionRecord = await tx.transaction.create({
                 data: {
                     txnCode,
                     type: 'MEALS',
                     userId: user.id,
+                    providerId: meal.merchantId,
                     mealId: meal.id,
                     amount: totalAmount,
                     currency: meal.currency,
-                    notes: `Qty: ${quantity}. ${notes}`.trim()
+                    notes: `Qty: ${quantity}. ${notes}`.trim(),
+                    // Frozen pricing snapshot
+                    basePriceSnapshot: priceSnap.basePriceSnapshot,
+                    feeComponentsSnapshot: priceSnap.feeComponentsSnapshot,
+                    zoneSnapshot: priceSnap.zoneSnapshot,
+                    pricingRuleId: priceSnap.pricingRuleId,
+                    // Frozen commission snapshot
+                    commissionRuleId: commSnap.commissionRuleId,
+                    unizyCommissionAmount: commSnap.unizyCommissionAmount,
+                    providerNetAmount: commSnap.providerNetAmount,
+                    promoSubsidyAmount: commSnap.promoSubsidyAmount,
                 }
             });
 

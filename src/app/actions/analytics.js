@@ -4,53 +4,81 @@ import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/app/actions/auth';
 
 /**
- * Fetch overall system intelligence & analytics
+ * Fetch overall system intelligence & analytics.
+ * All numbers are from real database queries — zero hardcoded values.
  */
 export async function getDashboardAnalytics() {
     try {
         const admin = await getCurrentUser();
         if (!admin || !admin.role.includes('ADMIN')) return { success: false, error: 'Unauthorized' };
 
-        // 1. User Metrics
-        const totalStudents = await prisma.user.count({ where: { role: 'STUDENT' } });
-        const totalDrivers = await prisma.user.count({ where: { role: 'DRIVER' } });
-
-        // 2. Order Metrics
-        const orders = await prisma.order.findMany({
-            select: { id: true, status: true, total: true, service: true, createdAt: true }
-        });
+        // Run all queries in parallel for performance
+        const [
+            totalStudents,
+            totalDrivers,
+            totalMerchants,
+            totalProviders,
+            orders,
+            totalTransactions,
+            txnRevenue,
+            txnCommission,
+            bookings,
+            promos,
+            totalTickets,
+            openTickets,
+            activeListings,
+            activeDeals,
+            activeMeals,
+            pendingVerifications,
+        ] = await Promise.all([
+            prisma.user.count({ where: { role: 'STUDENT' } }),
+            prisma.user.count({ where: { role: 'DRIVER' } }),
+            prisma.user.count({ where: { role: 'MERCHANT' } }),
+            prisma.user.count({ where: { role: 'PROVIDER' } }),
+            prisma.order.findMany({
+                select: { id: true, status: true, total: true, service: true, createdAt: true }
+            }),
+            prisma.transaction.count(),
+            prisma.transaction.aggregate({ _sum: { amount: true } }),
+            prisma.transaction.aggregate({ _sum: { unizyCommissionAmount: true } }),
+            prisma.serviceBooking.findMany({ select: { id: true, status: true } }),
+            prisma.promoCode.findMany({ select: { currentUses: true } }),
+            prisma.supportTicket.count(),
+            prisma.supportTicket.count({ where: { status: { in: ['OPEN', 'IN_PROGRESS'] } } }),
+            prisma.housingListing.count({ where: { status: 'ACTIVE' } }),
+            prisma.deal.count({ where: { status: 'ACTIVE' } }),
+            prisma.meal.count({ where: { status: 'ACTIVE' } }),
+            prisma.verificationDocument.count({ where: { status: 'PENDING' } }),
+        ]);
 
         const totalOrders = orders.length;
-        const totalRevenue = orders.reduce((sum, o) => sum + (o.total || 0), 0);
-
         const pendingOrders = orders.filter(o => o.status === 'PENDING').length;
         const activeOrders = orders.filter(o => o.status === 'ACCEPTED' || o.status === 'PICKED_UP').length;
-
-        // Modules breakdown
+        const completedOrders = orders.filter(o => o.status === 'COMPLETED').length;
         const deliveryOrders = orders.filter(o => o.service === 'DELIVERY').length;
         const transportOrders = orders.filter(o => o.service === 'TRANSPORT').length;
 
-        // 3. Service Bookings
-        const bookings = await prisma.serviceBooking.findMany({
-            select: { id: true, status: true }
-        });
         const totalServiceBookings = bookings.length;
-        const pendingServiceBookings = bookings.filter(b => b.status === 'PENDING').length;
-
-        // 4. Promotions Usage
-        const promos = await prisma.promoCode.findMany({
-            select: { currentUses: true }
-        });
         const totalPromoUses = promos.reduce((sum, p) => sum + p.currentUses, 0);
+
+        // Revenue = SUM(Transaction.amount), not Order.total
+        const revenue = txnRevenue._sum.amount || 0;
+        const commission = txnCommission._sum.unizyCommissionAmount || 0;
 
         return {
             success: true,
             stats: {
-                revenue: totalRevenue,
-                orders: { total: totalOrders, pending: pendingOrders, active: activeOrders },
-                users: { students: totalStudents, drivers: totalDrivers },
+                // Revenue from Transaction snapshots (real, not mock)
+                revenue,
+                commission,
+                orders: { total: totalOrders, pending: pendingOrders, active: activeOrders, completed: completedOrders },
+                users: { students: totalStudents, drivers: totalDrivers, merchants: totalMerchants, providers: totalProviders },
                 breakdown: { delivery: deliveryOrders, transport: transportOrders, services: totalServiceBookings },
-                promos: { totalUses: totalPromoUses }
+                promos: { totalUses: totalPromoUses },
+                tickets: { total: totalTickets, open: openTickets },
+                marketplace: { listings: activeListings, deals: activeDeals, meals: activeMeals },
+                transactions: totalTransactions,
+                pendingVerifications,
             }
         };
     } catch (error) {

@@ -456,10 +456,13 @@ model Transaction {
   id              String      @id @default(uuid())
   txnCode         String      @unique // e.g. TXN-2026-XXXXXX
   type            String      // e.g., "HOUSING", "TRANSPORT", "DELIVERY", "DEALS", "MEALS", "SERVICE"
-  status          String      @default("PENDING") // PENDING, CONFIRMED, IN_PROGRESS, COMPLETED, CANCELLED
+  status          String      @default("PENDING") // PENDING, CONFIRMED, IN_PROGRESS, COMPLETED, CANCELLED, REFUNDED
   
   userId          String
   user            User        @relation(fields: [userId], references: [id])
+  
+  // Provider who fulfills this transaction (driver, merchant, landlord, etc.)
+  providerId      String?
   
   // Optional relations to specific modules
   housingId       String?
@@ -478,6 +481,18 @@ model Transaction {
 
   amount          Float       @default(0.0)
   currency        String      @default("EGP")
+  
+  // ===== IMMUTABLE PRICING SNAPSHOT (frozen at creation time) =====
+  basePriceSnapshot     Float?      // Original base price before fees/discounts
+  feeComponentsSnapshot String?     // JSON: fee breakdown at time of transaction
+  zoneSnapshot          String?     // Zone name at time of transaction
+  pricingRuleId         String?     // Which PricingRule was applied (reference, not FK)
+
+  // ===== IMMUTABLE COMMISSION SNAPSHOT (frozen at creation time) =====
+  commissionRuleId      String?     // Which CommissionRule was applied (reference, not FK)
+  unizyCommissionAmount Float       @default(0.0) // UniZy's cut in EGP
+  providerNetAmount     Float       @default(0.0) // Provider's payout in EGP
+  promoSubsidyAmount    Float       @default(0.0) // How much UniZy subsidized for promo
   
   notes           String?
   

@@ -69,8 +69,8 @@ export async function updateRefundStatus(refundId, newStatus) {
 
         const updateData = {
             status: newStatus,
-            approvedById: newStatus === 'APPROVED' ? admin.id : null,
-            processedAt: newStatus === 'PROCESSED' ? new Date() : null,
+            approvedById: newStatus === 'APPROVED' ? admin.id : refund.approvedById,
+            processedAt: newStatus === 'PROCESSED' ? new Date() : refund.processedAt,
         };
 
         const updatedRefund = await prisma.refund.update({
@@ -78,10 +78,35 @@ export async function updateRefundStatus(refundId, newStatus) {
             data: updateData
         });
 
-        // Optionally update the payment if fully processed
-        if (newStatus === 'PROCESSED') {
+        // ===== FINANCIAL CASCADE when refund is PROCESSED =====
+        if (newStatus === 'PROCESSED' && refund.transaction) {
+            const txn = refund.transaction;
+
+            // 1. Update Transaction status → REFUNDED
+            await prisma.transaction.update({
+                where: { id: txn.id },
+                data: {
+                    status: 'REFUNDED',
+                    // Reverse commission amounts (zero them out for full refunds)
+                    unizyCommissionAmount: refund.type === 'FULL' ? 0 : Math.max(0, txn.unizyCommissionAmount - (txn.unizyCommissionAmount * (refund.amount / txn.amount))),
+                    providerNetAmount: refund.type === 'FULL' ? 0 : Math.max(0, txn.providerNetAmount - (txn.providerNetAmount * (refund.amount / txn.amount))),
+                },
+            });
+
+            // 2. Log status transition in TransactionHistory
+            await prisma.transactionHistory.create({
+                data: {
+                    transactionId: txn.id,
+                    oldStatus: txn.status,
+                    newStatus: 'REFUNDED',
+                    actorId: admin.id,
+                    reason: `Refund ${refund.type} processed: ${refund.reason}`,
+                },
+            });
+
+            // 3. Update Payment status if applicable
             const payment = await prisma.payment.findFirst({
-                where: { transactionId: refund.transactionId, status: 'PAID' }
+                where: { transactionId: txn.id, status: 'PAID' }
             });
             if (payment && refund.type === 'FULL') {
                 await prisma.payment.update({
@@ -89,6 +114,32 @@ export async function updateRefundStatus(refundId, newStatus) {
                     data: { status: 'REFUNDED' }
                 });
             }
+
+            // 4. Adjust related Settlement if one exists
+            if (txn.providerId) {
+                const settlement = await prisma.settlement.findFirst({
+                    where: {
+                        providerId: txn.providerId,
+                        periodStart: { lte: txn.createdAt },
+                        periodEnd: { gte: txn.createdAt },
+                    },
+                });
+
+                if (settlement) {
+                    const refundRatio = refund.amount / txn.amount;
+                    await prisma.settlement.update({
+                        where: { id: settlement.id },
+                        data: {
+                            grossAmount: Math.max(0, settlement.grossAmount - refund.amount),
+                            commissionAmount: Math.max(0, settlement.commissionAmount - (txn.unizyCommissionAmount * refundRatio)),
+                            netAmount: Math.max(0, settlement.netAmount - (txn.providerNetAmount * refundRatio)),
+                        },
+                    });
+                }
+            }
+
+            // 5. Stub: Reverse reward points (Phase 3 dependency)
+            // TODO: When RewardTransaction model exists, reverse earned points here
         }
 
         // Audit Log

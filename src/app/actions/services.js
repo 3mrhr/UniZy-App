@@ -5,6 +5,7 @@ import { getCurrentUser } from './auth';
 import { logAdminAction } from './audit';
 import { validatePromoCode } from './promotions';
 import { createNotification } from './notifications';
+import { computeCommissionSnapshot, computePricingSnapshot, generateTxnCode } from './financial';
 
 const SERVICE_CATEGORIES = [
     { id: 'PLUMBER', label: 'Plumber', icon: '🔧' },
@@ -99,17 +100,33 @@ export async function bookService({ providerId, date, timeSlot, notes, promoCode
                 });
             }
 
-            // Create unified transaction record
-            const txnCode = `TXN-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
+            // Compute financial snapshots
+            const promoDiscount = validPromo ? (100 - amount) : 0;
+            const commSnap = await computeCommissionSnapshot('SERVICE', 'PROVIDER', amount, promoDiscount);
+            const priceSnap = await computePricingSnapshot('SERVICES');
+
+            // Create unified transaction record with frozen snapshots
+            const txnCode = generateTxnCode();
 
             const transactionRecord = await tx.transaction.create({
                 data: {
                     txnCode,
                     type: 'SERVICE',
                     userId: user.id,
+                    providerId: providerId,
                     serviceBookingId: booking.id,
                     amount,
-                    promoCodeId
+                    promoCodeId,
+                    // Frozen pricing snapshot
+                    basePriceSnapshot: priceSnap.basePriceSnapshot,
+                    feeComponentsSnapshot: priceSnap.feeComponentsSnapshot,
+                    zoneSnapshot: priceSnap.zoneSnapshot,
+                    pricingRuleId: priceSnap.pricingRuleId,
+                    // Frozen commission snapshot
+                    commissionRuleId: commSnap.commissionRuleId,
+                    unizyCommissionAmount: commSnap.unizyCommissionAmount,
+                    providerNetAmount: commSnap.providerNetAmount,
+                    promoSubsidyAmount: commSnap.promoSubsidyAmount,
                 }
             });
 

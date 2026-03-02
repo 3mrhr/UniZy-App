@@ -3,6 +3,7 @@
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from './auth';
 import { revalidatePath } from 'next/cache';
+import { computeCommissionSnapshot, computePricingSnapshot, generateTxnCode } from './financial';
 
 /**
  * Fetch all active deals, optionally filtered by category and search term.
@@ -224,18 +225,34 @@ export async function redeemDeal(dealId) {
 
         if (!deal) return { success: false, error: 'Deal not found.' };
 
-        // Execute unified transaction logging
+        // Compute financial snapshots before transaction
+        const dealAmount = deal.discountPrice || deal.originalPrice || 0;
+        const commSnap = await computeCommissionSnapshot('DEALS', 'MERCHANT', dealAmount);
+        const priceSnap = await computePricingSnapshot('DEALS');
+
+        // Execute unified transaction logging with frozen snapshots
         const result = await prisma.$transaction(async (tx) => {
-            const txnCode = `TXN-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
+            const txnCode = generateTxnCode();
 
             const transactionRecord = await tx.transaction.create({
                 data: {
                     txnCode,
                     type: 'DEALS',
                     userId: user.id,
+                    providerId: deal.merchantId,
                     dealId: deal.id,
-                    amount: deal.discountPrice || deal.originalPrice || 0,
+                    amount: dealAmount,
                     currency: deal.currency,
+                    // Frozen pricing snapshot
+                    basePriceSnapshot: priceSnap.basePriceSnapshot,
+                    feeComponentsSnapshot: priceSnap.feeComponentsSnapshot,
+                    zoneSnapshot: priceSnap.zoneSnapshot,
+                    pricingRuleId: priceSnap.pricingRuleId,
+                    // Frozen commission snapshot
+                    commissionRuleId: commSnap.commissionRuleId,
+                    unizyCommissionAmount: commSnap.unizyCommissionAmount,
+                    providerNetAmount: commSnap.providerNetAmount,
+                    promoSubsidyAmount: commSnap.promoSubsidyAmount,
                 }
             });
 

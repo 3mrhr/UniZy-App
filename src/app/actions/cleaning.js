@@ -2,6 +2,7 @@
 
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from './auth';
+import { computeCommissionSnapshot, computePricingSnapshot, generateTxnCode } from './financial';
 
 export async function listPackages() {
     try {
@@ -49,8 +50,12 @@ export async function bookCleaning({ packageId, date, timeSlot, address, notes }
                 }
             });
 
-            // Create unified transaction record
-            const txnCode = `TXN-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
+            // Compute financial snapshots
+            const commSnap = await computeCommissionSnapshot('CLEANING', 'CLEANER', pkg.price);
+            const priceSnap = await computePricingSnapshot('CLEANING');
+
+            // Create unified transaction record with frozen snapshots
+            const txnCode = generateTxnCode();
 
             const transactionRecord = await tx.transaction.create({
                 data: {
@@ -59,6 +64,16 @@ export async function bookCleaning({ packageId, date, timeSlot, address, notes }
                     userId: user.id,
                     cleaningBookingId: booking.id,
                     amount: pkg.price,
+                    // Frozen pricing snapshot
+                    basePriceSnapshot: priceSnap.basePriceSnapshot,
+                    feeComponentsSnapshot: priceSnap.feeComponentsSnapshot,
+                    zoneSnapshot: priceSnap.zoneSnapshot,
+                    pricingRuleId: priceSnap.pricingRuleId,
+                    // Frozen commission snapshot
+                    commissionRuleId: commSnap.commissionRuleId,
+                    unizyCommissionAmount: commSnap.unizyCommissionAmount,
+                    providerNetAmount: commSnap.providerNetAmount,
+                    promoSubsidyAmount: commSnap.promoSubsidyAmount,
                 }
             });
 

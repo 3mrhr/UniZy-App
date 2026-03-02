@@ -29,15 +29,15 @@ export default function SuperadminOverview() {
     }, []);
 
     const dynamicStats = statsData ? [
-        { label: 'Total Users', value: statsData.users.students + statsData.users.drivers, change: '+2%', trend: 'up', icon: Users, color: 'indigo' },
-        { label: 'Total Orders', value: statsData.orders.total, change: '+5%', trend: 'up', icon: ShoppingBag, color: 'orange' },
-        { label: 'Active Services', value: statsData.orders.active, change: '-1%', trend: 'down', icon: Truck, color: 'blue' },
-        { label: 'Revenue', value: `$${statsData.revenue.toLocaleString()}`, change: '+10%', trend: 'up', icon: TrendingUp, color: 'green' },
+        { label: 'Total Users', value: (statsData.users.students + statsData.users.drivers + (statsData.users.merchants || 0) + (statsData.users.providers || 0)).toLocaleString(), change: '', trend: 'up', icon: Users, color: 'indigo' },
+        { label: 'Total Orders', value: statsData.orders.total.toLocaleString(), change: '', trend: 'up', icon: ShoppingBag, color: 'orange' },
+        { label: 'Revenue (EGP)', value: `${Math.round(statsData.revenue).toLocaleString()}`, change: '', trend: 'up', icon: TrendingUp, color: 'green' },
+        { label: 'Commission (EGP)', value: `${Math.round(statsData.commission || 0).toLocaleString()}`, change: '', trend: 'up', icon: TrendingUp, color: 'emerald' },
     ] : [
         { label: 'Total Users', value: '...', change: '', trend: 'up', icon: Users, color: 'indigo' },
         { label: 'Total Orders', value: '...', change: '', trend: 'up', icon: ShoppingBag, color: 'orange' },
-        { label: 'Active Services', value: '...', change: '', trend: 'down', icon: Truck, color: 'blue' },
-        { label: 'Revenue', value: '...', change: '', trend: 'up', icon: TrendingUp, color: 'green' },
+        { label: 'Revenue (EGP)', value: '...', change: '', trend: 'up', icon: TrendingUp, color: 'green' },
+        { label: 'Commission (EGP)', value: '...', change: '', trend: 'up', icon: TrendingUp, color: 'emerald' },
     ];
 
     return (

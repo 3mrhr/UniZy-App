@@ -6,6 +6,7 @@ import { revalidatePath } from 'next/cache';
 import { completeReferralIfEligible } from './referrals';
 import { validatePromoCode } from './promotions';
 import { createNotification } from './notifications';
+import { computeCommissionSnapshot, computePricingSnapshot, generateTxnCode } from './financial';
 
 export async function createOrder(service, details, total, promoCodeStr = null) {
     try {
@@ -38,6 +39,12 @@ export async function createOrder(service, details, total, promoCodeStr = null) 
             }
         }
 
+        // Compute financial snapshots BEFORE creating records
+        const promoDiscount = parseFloat(total) - finalTotal;
+        const providerType = service === 'TRANSPORT' ? 'DRIVER' : 'MERCHANT';
+        const commissionSnapshot = await computeCommissionSnapshot(service, providerType, finalTotal, promoDiscount);
+        const pricingSnapshot = await computePricingSnapshot(service);
+
         const order = await prisma.order.create({
             data: {
                 service,
@@ -46,6 +53,38 @@ export async function createOrder(service, details, total, promoCodeStr = null) 
                 status: 'PENDING',
                 userId: user.id,
                 promoCodeId
+            }
+        });
+
+        // Create unified Transaction record with frozen snapshots
+        const txnCode = generateTxnCode();
+        const txnRecord = await prisma.transaction.create({
+            data: {
+                txnCode,
+                type: service,
+                userId: user.id,
+                amount: finalTotal,
+                providerId: null, // Set when driver/merchant accepts
+                promoCodeId,
+                // Frozen pricing snapshot
+                basePriceSnapshot: pricingSnapshot.basePriceSnapshot,
+                feeComponentsSnapshot: pricingSnapshot.feeComponentsSnapshot,
+                zoneSnapshot: pricingSnapshot.zoneSnapshot,
+                pricingRuleId: pricingSnapshot.pricingRuleId,
+                // Frozen commission snapshot
+                commissionRuleId: commissionSnapshot.commissionRuleId,
+                unizyCommissionAmount: commissionSnapshot.unizyCommissionAmount,
+                providerNetAmount: commissionSnapshot.providerNetAmount,
+                promoSubsidyAmount: commissionSnapshot.promoSubsidyAmount,
+            }
+        });
+
+        await prisma.transactionHistory.create({
+            data: {
+                transactionId: txnRecord.id,
+                newStatus: 'PENDING',
+                actorId: user.id,
+                reason: `${service} order placed`,
             }
         });
 
@@ -61,9 +100,9 @@ export async function createOrder(service, details, total, promoCodeStr = null) 
         } else {
             revalidatePath('/delivery');
         }
-        revalidatePath('/activity'); // Revalidate the Activity Center
+        revalidatePath('/activity');
 
-        return { success: true, order };
+        return { success: true, order, transaction: txnRecord };
     } catch (error) {
         console.error('Failed to create order:', error);
         return { error: 'Failed to create the order.' };
