@@ -2,11 +2,14 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { Calendar, Clock, Users, Phone, FileText, ChevronLeft, MapPin, Star } from 'lucide-react';
+import { useParams } from 'next/navigation';
+import { createHousingRequest } from '@/app/actions/housing';
+import toast from 'react-hot-toast';
 
-export default function ViewingRequestPage({ params }) {
+export default function ViewingRequestPage() {
     const router = useRouter();
+    const { id: listingId } = useParams();
     const [form, setForm] = useState({
         preferredDate: '',
         preferredTime: '',
@@ -20,11 +23,22 @@ export default function ViewingRequestPage({ params }) {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setIsSubmitting(true);
-        // Mock submission
-        setTimeout(() => {
+
+        const message = `Date: ${form.preferredDate}
+Time: ${form.preferredTime}
+Attendees: ${form.attendees}
+Contact: ${form.contactNumber}
+Notes: ${form.notes}`;
+
+        const res = await createHousingRequest(listingId, 'VIEWING', message);
+
+        if (res.error) {
+            toast.error(res.error);
+            setIsSubmitting(false);
+        } else {
             setIsSubmitting(false);
             setIsSuccess(true);
-        }, 1500);
+        }
     };
 
     if (isSuccess) {

@@ -92,20 +92,21 @@ export async function registerUser(data) {
             const referrer = await prisma.user.findUnique({
                 where: { referralCode: referralCode }
             });
-            if (referrer) {
-                // Award points to both parties
-                await prisma.$transaction([
-                    prisma.referral.create({
-                        data: {
-                            code: referralCode,
-                            referrerId: referrer.id,
-                            referredId: newUser.id,
-                            pointsAwarded: 50,
-                        }
-                    }),
-                    prisma.user.update({ where: { id: referrer.id }, data: { points: { increment: 50 } } }),
-                    prisma.user.update({ where: { id: newUser.id }, data: { points: { increment: 25 } } }),
-                ]);
+
+            // Basic Fraud Prevention: Block self-referral (highly unlikely via code but good to have)
+            // and check if referrer exists.
+            if (referrer && referrer.id !== newUser.id) {
+                // Create a PENDING referral record.
+                // Points will be awarded only after the new user completes their first transaction.
+                await prisma.referral.create({
+                    data: {
+                        code: referralCode,
+                        referrerId: referrer.id,
+                        referredId: newUser.id,
+                        status: 'PENDING',
+                        pointsAwarded: 50, // This is the reward for the referrer
+                    }
+                });
             }
         }
 

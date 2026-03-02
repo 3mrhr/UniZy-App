@@ -11,7 +11,7 @@ export default function Navigation() {
 
     const navItems = [
         { label: t.home || 'Home', href: '/students', icon: '🏠' },
-        { label: t.services || 'Services', href: '/students#services', icon: '⚡' },
+        { label: t.services || 'Services', href: '/explore', icon: '⚡' },
         { label: t.hub || 'Hub', href: '/hub', icon: '👥' },
         { label: t.activity || 'Activity', href: '/activity', icon: '📋' },
         { label: t.account || 'Account', href: '/account', icon: '👤' },

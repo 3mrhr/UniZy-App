@@ -258,3 +258,41 @@ export async function redeemDeal(dealId) {
         return { success: false, error: 'Failed to redeem deal.' };
     }
 }
+
+/**
+ * Fetch a student's history of redeemed deals
+ */
+export async function getRedemptionHistory() {
+    try {
+        const user = await getCurrentUser();
+        if (!user || user.role !== 'STUDENT') {
+            return { success: false, error: 'Unauthorized.' };
+        }
+
+        const history = await prisma.transaction.findMany({
+            where: {
+                userId: user.id,
+                type: 'DEALS',
+            },
+            include: {
+                deal: {
+                    select: {
+                        id: true,
+                        title: true,
+                        description: true,
+                        image: true,
+                        merchantId: true
+                    }
+                }
+            },
+            orderBy: {
+                createdAt: 'desc'
+            }
+        });
+
+        return { success: true, history };
+    } catch (error) {
+        console.error('Error fetching redemption history:', error);
+        return { success: false, error: 'Failed to fetch history.' };
+    }
+}

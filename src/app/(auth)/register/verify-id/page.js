@@ -4,6 +4,9 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Camera, FileText, CheckCircle, UploadCloud, ShieldAlert } from 'lucide-react';
 import Image from 'next/image';
+import { uploadVerificationDocument } from '@/app/actions/verification';
+import { getCurrentUser } from '@/app/actions/auth';
+import { toast } from 'react-hot-toast';
 
 export default function VerifyIDPage() {
     const router = useRouter();
@@ -21,14 +24,29 @@ export default function VerifyIDPage() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setIsLoading(true);
-        // Mock upload and verification
-        setTimeout(() => {
+
+        try {
+            const user = await getCurrentUser();
+            if (!user) throw new Error("Please log in first");
+
+            // Mock Cloudinary URL for the MVP since Cloudinary isn't configured yet
+            const mockFileUrl = "https://images.unsplash.com/photo-1544813545-4827b64fcacb?w=400&q=80";
+
+            const res = await uploadVerificationDocument(user.id, "STUDENT_ID", mockFileUrl);
+
+            if (res.success) {
+                setIsComplete(true);
+                setTimeout(() => {
+                    router.push('/students');
+                }, 2000);
+            } else {
+                toast.error(res.error || "Failed to upload document");
+            }
+        } catch (error) {
+            toast.error(error.message);
+        } finally {
             setIsLoading(false);
-            setIsComplete(true);
-            setTimeout(() => {
-                router.push('/students');
-            }, 2000);
-        }, 2000);
+        }
     };
 
     if (isComplete) {

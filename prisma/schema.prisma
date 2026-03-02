@@ -25,6 +25,7 @@ model User {
   gender       String?
   referralCode String?  @unique
   isVerified   Boolean  @default(false)
+  verificationStatus String @default("UNVERIFIED") // UNVERIFIED, PENDING, VERIFIED, REJECTED
   profileImage String?
 
   points    Int      @default(0) // UniZy rewards
@@ -36,6 +37,8 @@ model User {
   orders         Order[]
   reviews        Review[]
   supportTickets SupportTicket[]
+  assignedTickets SupportTicket[] @relation("AssignedAgent")
+  ticketMessages  TicketMessage[]
   deals          Deal[]
   savedDeals     SavedDeal[]
   meals          Meal[]
@@ -54,6 +57,14 @@ model User {
   providerSettlements Settlement[] @relation("ProviderSettlements")
   payoutsProcessed  Payout[]    @relation("PayoutProcessor")
   driverDispatches  Dispatch[]  @relation("DriverDispatches")
+  
+  // Phase 44 back-relations
+  savedHousing    SavedHousing[]   @relation("SavedHousing")
+  housingRequests HousingRequest[] @relation("HousingRequests")
+  
+  // Phase 46: Trust & Safety
+  reportsSubmitted Report[] @relation("Reporter")
+  reportsAgainst   Report[] @relation("TargetUser")
 }
 
 model HousingListing {
@@ -64,8 +75,11 @@ model HousingListing {
   type        String // Shared, Studio, Apartment
   status      String @default("PENDING") // PENDING, ACTIVE, REJECTED, RENTED
   location    String
-  images      String // JSON stringified array of URLs
-  amenities   String // JSON stringified array of strings
+  savedBy      SavedHousing[]
+  requests     HousingRequest[]
+  
+  images      String // JSON string array
+  amenities   String // JSON string array of strings
   contact     String
 
   providerId String
@@ -79,9 +93,10 @@ model HousingListing {
 
 model VerificationDocument {
   id      String @id @default(uuid())
-  type    String // STUDENT_ID, DRIVERS_LICENSE, DEED
+  type    String // STUDENT_ID, DRIVERS_LICENSE, VEHICLE_REGISTRATION, BUSINESS_LICENSE, FOOD_PERMIT, DEED
   status  String @default("PENDING") // PENDING, VERIFIED, REJECTED
   fileUrl String
+  rejectionReason String?
 
   userId String
   user   User   @relation(fields: [userId], references: [id])
@@ -124,17 +139,37 @@ model Review {
 }
 
 model SupportTicket {
-  id       String @id @default(uuid())
-  subject  String
-  category String
-  status   String @default("OPEN") // OPEN, IN_PROGRESS, RESOLVED
-  priority String @default("LOW") // LOW, MEDIUM, HIGH
+  id              String   @id @default(uuid())
+  subject         String
+  description     String   @default("")
+  category        String   // HOUSING, TRANSPORT, DELIVERY, DEALS, MEALS, OTHER
+  priority        String   @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
+  status          String   @default("OPEN")   // OPEN, IN_PROGRESS, RESOLVED, CLOSED
+  
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+  
+  assignedAgentId String?
+  assignedAgent   User?    @relation("AssignedAgent", fields: [assignedAgentId], references: [id])
+  
+  messages        TicketMessage[]
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
 
-  userId String
-  user   User   @relation(fields: [userId], references: [id])
-
+model TicketMessage {
+  id        String   @id @default(uuid())
+  content   String
+  isAdmin   Boolean  @default(false)
+  
+  ticketId  String
+  ticket    SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  
+  senderId  String
+  sender    User     @relation(fields: [senderId], references: [id])
+  
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }
 
 model Deal {
@@ -276,6 +311,18 @@ model PasswordReset {
   id        String   @id @default(uuid())
   token     String   @unique
   email     String
+  expiresAt DateTime
+  used      Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+}
+
+// ========== OTP Verification ==========
+
+model OTP {
+  id        String   @id @default(uuid())
+  identifier String  // email or phone
+  code      String   // 6 digits
   expiresAt DateTime
   used      Boolean  @default(false)
 
@@ -588,3 +635,81 @@ model Dispatch {
   updatedAt       DateTime    @updatedAt
 }
 
+// ========== Phase 42: SLA Rules & Monitoring ==========
+
+model SLARule {
+  id               String      @id @default(uuid())
+  module           String      // "TRANSPORT", "DELIVERY", "HOUSING", "SUPPORT"
+  metric           String      // "ASSIGNMENT_TIME", "RESPONSE_TIME", "RESOLUTION_TIME"
+  thresholdMinutes Int
+  breachAction     String      // "ALERT_ADMIN", "AUTO_CANCEL", "ESCALATE"
+  active           Boolean     @default(true)
+  breaches         SLABreach[]
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+}
+
+model SLABreach {
+  id         String    @id @default(uuid())
+  ruleId     String
+  rule       SLARule   @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  targetId   String    // ID of the breached transaction/order
+  status     String    @default("OPEN") // "OPEN", "RESOLVED"
+  resolvedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+}
+
+// ========== Phase 44: End-to-End Tracking Models ==========
+
+model SavedHousing {
+  id               String          @id @default(uuid())
+  userId           String
+  user             User            @relation("SavedHousing", fields: [userId], references: [id])
+  housingListingId String
+  listing          HousingListing  @relation(fields: [housingListingId], references: [id])
+  
+  createdAt        DateTime        @default(now())
+
+  @@unique([userId, housingListingId])
+}
+
+model HousingRequest {
+  id               String          @id @default(uuid())
+  userId           String
+  user             User            @relation("HousingRequests", fields: [userId], references: [id])
+  housingListingId String
+  listing          HousingListing  @relation(fields: [housingListingId], references: [id])
+  
+  type             String          // VIEWING, BOOKING, INQUIRY
+  status           String          @default("PENDING") // PENDING, APPROVED, REJECTED, COMPLETED
+  message          String?         // Optional message from the requester
+  date             DateTime?       // Requested date for viewing
+
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+}
+
+// ========== Phase 46: Trust, Reporting, and Abuse Handling ==========
+
+model Report {
+  id          String   @id @default(uuid())
+  type        String   // HOUSING, MERCHANT, DRIVER, HUB_POST, USER
+  targetId    String   // ID of the listing, merchant, post, etc.
+  
+  reason      String   // SCAM, HARASSMENT, INACCURATE, OFFENSIVE, OTHER
+  details     String?  // Additional context from the reporter
+  
+  status      String   @default("PENDING") // PENDING, INVESTIGATING, RESOLVED, DISMISSED
+  actionTaken String?  // WARNING, CONTENT_REMOVED, USER_BANNED, NONE
+  
+  reporterId  String
+  reporter    User     @relation("Reporter", fields: [reporterId], references: [id])
+  
+  // Optional: If the report is specifically against a user
+  targetUserId String?
+  targetUser   User?    @relation("TargetUser", fields: [targetUserId], references: [id])
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

@@ -143,9 +143,9 @@ export default function DealsPage() {
                                 className={`w-full bg-white dark:bg-unizy-dark border-none rounded-2xl py-4 shadow-lg text-sm font-medium focus:outline-none focus:ring-4 focus:ring-brand-500/30 text-gray-900 dark:text-white transition-all ${isRTL ? 'pr-12 pl-4' : 'pl-12 pr-4'}`}
                             />
                         </div>
-                        <button className="bg-white dark:bg-unizy-dark p-4 rounded-2xl shadow-lg border-none text-gray-700 dark:text-gray-300 hover:text-brand-600 dark:hover:text-brand-400 transition-colors shrink-0">
-                            <Settings2 className="w-5 h-5" />
-                        </button>
+                        <Link href="/deals/history" className="bg-white dark:bg-unizy-dark p-4 rounded-2xl shadow-lg border-none text-gray-700 dark:text-gray-300 hover:text-brand-600 dark:hover:text-brand-400 transition-colors shrink-0 flex items-center justify-center" title="Redemption History">
+                            <Clock className="w-5 h-5" />
+                        </Link>
                     </div>
                 </div>
             </header>

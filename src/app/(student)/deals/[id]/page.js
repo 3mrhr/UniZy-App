@@ -45,6 +45,8 @@ export default function DealDetailsPage({ params }) {
     const [isLoading, setIsLoading] = useState(true);
     const [isSaved, setIsSaved] = useState(false);
     const [codeCopied, setCodeCopied] = useState(false);
+    const [isRedeemed, setIsRedeemed] = useState(false);
+    const [isRedeeming, setIsRedeeming] = useState(false);
 
     useEffect(() => {
         const fetchDealDetails = async () => {
@@ -74,8 +76,28 @@ export default function DealDetailsPage({ params }) {
         }
     }, [dealId]);
 
-    const handleCopyCode = () => {
+    const handleRevealAndCopy = async () => {
         if (!deal?.promoCode) return;
+
+        // Track redemption if not already redeemed this session
+        if (!isRedeemed && !isRedeeming) {
+            setIsRedeeming(true);
+            try {
+                const { redeemDeal } = await import('@/app/actions/deals');
+                const res = await redeemDeal(deal.id);
+                if (res.success) {
+                    setIsRedeemed(true);
+                    import('react-hot-toast').then(({ toast }) => toast.success("Deal redeemed successfully!"));
+                } else {
+                    import('react-hot-toast').then(({ toast }) => toast.error(res.error || "Failed to log redemption"));
+                }
+            } catch (err) {
+                console.error("Redemption error", err);
+            } finally {
+                setIsRedeeming(false);
+            }
+        }
+
         navigator.clipboard.writeText(deal.promoCode);
         setCodeCopied(true);
         setTimeout(() => setCodeCopied(false), 2000);
@@ -213,19 +235,27 @@ export default function DealDetailsPage({ params }) {
                         In-Store Redemption Code
                     </h3>
                     <p className="text-sm font-medium text-brand-700/80 dark:text-brand-200/60 mb-6 max-w-sm z-10">
-                        Show this exclusive promo code to the cashier before paying to instantly apply your student discount.
+                        {isRedeemed ? 'Show this exclusive promo code to the cashier before paying.' : 'Tap to reveal and copy your exclusive student promo code. This will be logged to your account.'}
                     </p>
 
-                    <div className="relative group w-full max-w-xs cursor-pointer z-10" onClick={handleCopyCode}>
+                    <div className="relative group w-full max-w-xs cursor-pointer z-10" onClick={handleRevealAndCopy}>
                         <div className="absolute inset-0 bg-brand-500 bg-opacity-20 rounded-[1.5rem] blur-xl group-hover:bg-opacity-30 transition-all"></div>
-                        <div className="relative flex items-center justify-between bg-white dark:bg-unizy-dark border-2 border-dashed border-brand-500 rounded-[1.5rem] py-4 px-6 shadow-md transition-transform group-active:scale-95">
-                            <span className="font-mono text-2xl font-black tracking-widest text-brand-600 dark:text-brand-400 w-full text-center">
-                                {deal.promoCode || 'UNIZY50'}
-                            </span>
-                            {codeCopied ? (
-                                <CheckCircle2 className="w-6 h-6 text-green-500 absolute right-4" />
+                        <div className={`relative flex items-center justify-between bg-white dark:bg-unizy-dark border-2 border-dashed ${isRedeemed ? 'border-green-500' : 'border-brand-500'} rounded-[1.5rem] py-4 px-6 shadow-md transition-transform group-active:scale-95`}>
+                            {isRedeeming ? (
+                                <div className="w-full flex justify-center py-1">
+                                    <div className="w-6 h-6 border-2 border-brand-200 border-t-brand-600 rounded-full animate-spin"></div>
+                                </div>
                             ) : (
-                                <Copy className="w-6 h-6 text-brand-400 group-hover:text-brand-600 absolute right-4 transition-colors" />
+                                <>
+                                    <span className={`font-mono text-2xl font-black tracking-widest ${isRedeemed ? 'text-green-600 dark:text-green-400' : 'text-brand-600 dark:text-brand-400'} w-full text-center ${!isRedeemed ? 'blur-sm select-none' : ''}`}>
+                                        {!isRedeemed ? '••••••••' : (deal.promoCode || 'UNIZY50')}
+                                    </span>
+                                    {codeCopied ? (
+                                        <CheckCircle2 className="w-6 h-6 text-green-500 absolute right-4" />
+                                    ) : (
+                                        <Copy className="w-6 h-6 text-brand-400 group-hover:text-brand-600 absolute right-4 transition-colors" />
+                                    )}
+                                </>
                             )}
                         </div>
                     </div>

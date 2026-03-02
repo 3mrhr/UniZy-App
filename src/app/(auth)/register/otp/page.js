@@ -1,11 +1,24 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ShieldCheck, Smartphone, RefreshCw } from 'lucide-react';
+import { verifyOTP, requestOTP } from '@/app/actions/verification';
+import { toast } from 'react-hot-toast';
 
 export default function OTPPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen bg-gray-50 dark:bg-unizy-navy flex items-center justify-center p-6"><div className="w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full animate-spin"></div></div>}>
+            <OTPForm />
+        </Suspense>
+    );
+}
+
+function OTPForm() {
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const phone = searchParams.get('phone') || '';
+
     const [otp, setOtp] = useState(['', '', '', '', '', '']);
     const [timer, setTimer] = useState(59);
     const [isLoading, setIsLoading] = useState(false);
@@ -29,10 +42,29 @@ export default function OTPPage() {
     const handleVerify = async (e) => {
         e.preventDefault();
         setIsLoading(true);
-        // Mock verification
-        setTimeout(() => {
+        const code = otp.join('');
+
+        const res = await verifyOTP(phone, code);
+
+        if (res?.success) {
+            toast.success("Phone verified successfully!");
             router.push('/register/verify-id');
-        }, 1500);
+        } else {
+            toast.error(res?.error || "Invalid OTP code.");
+            setIsLoading(false);
+        }
+    };
+
+    const handleResend = async () => {
+        setIsLoading(true);
+        const res = await requestOTP(phone);
+        setIsLoading(false);
+        if (res?.success) {
+            toast.success("OTP sent again!");
+            setTimer(59);
+        } else {
+            toast.error("Failed to resend OTP.");
+        }
     };
 
     return (
@@ -79,7 +111,7 @@ export default function OTPPage() {
                             Didn't receive code? {timer > 0 ? (
                                 <span className="text-brand-500">Wait {timer}s</span>
                             ) : (
-                                <button type="button" className="text-brand-600 hover:underline flex items-center gap-1 mx-auto">
+                                <button type="button" onClick={handleResend} className="text-brand-600 hover:underline flex items-center gap-1 mx-auto">
                                     <RefreshCw size={14} /> Resend OTP
                                 </button>
                             )}

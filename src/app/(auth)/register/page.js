@@ -6,6 +6,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import ThemeLangControls from '@/components/ThemeLangControls';
 import { registerUser } from '@/app/actions/auth';
+import { requestOTP } from '@/app/actions/verification';
 
 export default function Register() {
     const router = useRouter();
@@ -45,9 +46,11 @@ export default function Register() {
                 return;
             }
 
-            // Phase 16: Redirect to OTP verification for new students
+            // Phase 16 & 41: Redirect to OTP verification for new students
             if (result.role === 'STUDENT') {
-                router.push('/register/otp');
+                // Trigger OTP request
+                await requestOTP(phone);
+                router.push(`/register/otp?phone=${encodeURIComponent(phone)}`);
             } else {
                 // Other roles go to their hubs
                 const newRole = result.role;

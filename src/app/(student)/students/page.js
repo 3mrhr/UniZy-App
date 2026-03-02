@@ -41,7 +41,7 @@ export default function StudentHome() {
               <p className="text-brand-200 text-sm font-bold">{isRTL ? 'مرحباً 👋' : 'Welcome back 👋'}</p>
               <h1 className="text-3xl font-black text-white tracking-tight">Omar</h1>
             </div>
-            <div className="flex gap-3">
+            <div className="hidden sm:flex gap-3">
               <Link href="/notifications" className="w-11 h-11 bg-white/10 backdrop-blur-xl rounded-2xl flex items-center justify-center hover:bg-white/20 transition-all relative">
                 <Bell size={20} className="text-white" />
                 <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full border-2 border-brand-700 flex items-center justify-center text-[8px] font-black text-white">3</span>
@@ -52,8 +52,8 @@ export default function StudentHome() {
             </div>
           </div>
 
-          {/* Search Bar */}
-          <Link href="/search" className="flex items-center gap-3 bg-white/10 backdrop-blur-xl border border-white/10 rounded-2xl px-5 py-4 hover:bg-white/15 transition-all group">
+          {/* Search Bar - hidden on mobile since MobileHeader has one */}
+          <Link href="/search" className="hidden sm:flex items-center gap-3 bg-white/10 backdrop-blur-xl border border-white/10 rounded-2xl px-5 py-4 hover:bg-white/15 transition-all group">
             <Search size={18} className="text-white/60" />
             <span className="text-white/60 font-bold text-sm">{isRTL ? 'ابحث عن سكن، طعام، عروض...' : 'Search housing, food, deals...'}</span>
             <ArrowRight size={16} className="text-white/40 ml-auto group-hover:translate-x-1 transition-transform" />

@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import Navigation from "@/components/Navigation";
+import MobileHeader from "@/components/MobileHeader";
 import ThemeProvider from "@/components/ThemeProvider";
 import LanguageProvider from "@/i18n/LanguageProvider";
 import ThemeLangControls from "@/components/ThemeLangControls";
@@ -54,6 +55,9 @@ export default function RootLayout({ children }) {
                   </div>
                 </header>
               )}
+
+              {/* Mobile Header - Only for authenticated students on mobile */}
+              <MobileHeader />
 
               <main className="flex-1">
                 {children}

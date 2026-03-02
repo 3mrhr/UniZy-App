@@ -1,26 +1,28 @@
 import Link from "next/link";
 import Image from "next/image";
 
-import { getHousingListingById } from '@/app/actions/housing';
+import { getHousingListingById, checkIsSaved } from '@/app/actions/housing';
 import { getReviewsForHousing } from '@/app/actions/reviews';
+import SaveButton from './SaveButton';
+import ReportButton from '@/components/ReportButton';
 
 export default async function ListingDetails({ params }) {
     const { id } = await params;
     const listingData = await getHousingListingById(id);
     const reviewData = await getReviewsForHousing(id);
 
-    // Provide robust fallbacks if db empty or id missing
-    const listing = listingData || {
-        id,
-        title: "Cozy Studio near Science Faculty (Mock)",
-        price: 1500,
-        type: "Studio",
-        location: "Al Zahraa, New Assiut",
-        description: "A perfect quiet studio for a dedicated student. Recently renovated with new appliances. High-speed internet included in rent. 2 months minimum stay.",
-        images: "[\"https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800&q=80\"]",
-        amenities: "[\"WiFi\", \"AC\"]",
-        provider: { name: "Ahmed Hassan" }
-    };
+    if (!listingData) {
+        return (
+            <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-gray-50 text-center">
+                <h1 className="text-2xl font-bold text-gray-900 mb-2">Listing Not Found</h1>
+                <p className="text-gray-500 mb-6">This property might have been removed or is no longer available.</p>
+                <Link href="/housing" className="bg-brand-600 text-white px-6 py-3 rounded-xl font-bold">Back to Housing</Link>
+            </div>
+        );
+    }
+
+    const listing = listingData;
+    const isSaved = await checkIsSaved(id);
 
     let images = [];
     try { images = JSON.parse(listing.images); } catch (e) { }
@@ -39,9 +41,7 @@ export default async function ListingDetails({ params }) {
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7"></path></svg>
             </Link>
 
-            <button className="absolute top-6 right-6 z-20 bg-white/20 hover:bg-white/40 backdrop-blur-md p-3 rounded-full text-white shadow-lg transition-colors border border-white/30">
-                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
-            </button>
+            <SaveButton listingId={id} initialSaved={isSaved} />
 
             {/* Hero Image Gallery (Simplified for MVP) */}
             <div className="relative h-72 w-full bg-gray-900 overflow-hidden rounded-b-3xl">
@@ -129,14 +129,19 @@ export default async function ListingDetails({ params }) {
                             </div>
                         </div>
                     </div>
-                    <button className="bg-white p-2 rounded-full shadow-sm text-brand-600 border border-gray-100 hover:bg-gray-50 transition-colors">
+                    <a href={`https://wa.me/${listing.provider?.phone}?text=Hi, I am interested in your property on UniZy: ${listing.title}`} target="_blank" rel="noopener noreferrer" className="bg-white p-2 rounded-full shadow-sm text-brand-600 border border-gray-100 hover:bg-gray-50 transition-colors">
                         💬
-                    </button>
+                    </a>
                 </section>
 
                 {/* Real Reviews Stream */}
                 <section className="mb-12">
-                    <h2 className="text-lg font-bold text-gray-900 mb-4">Guest Reviews</h2>
+                    <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-lg font-bold text-gray-900">Guest Reviews</h2>
+                        <Link href={`/housing/${id}/review`} className="text-xs font-bold text-brand-600 bg-brand-50 px-3 py-1.5 rounded-xl hover:bg-brand-100 transition-colors">
+                            Write Review
+                        </Link>
+                    </div>
                     <div className="space-y-4">
                         {reviewData.reviews && reviewData.reviews.length > 0 ? (
                             reviewData.reviews.map(review => (
@@ -168,6 +173,11 @@ export default async function ListingDetails({ params }) {
                     </div>
                 </section>
 
+                {/* Report Listing */}
+                <div className="flex justify-center mb-8">
+                    <ReportButton type="HOUSING" targetId={id} targetUserId={listing.providerId} />
+                </div>
+
                 {/* Additional Spacing for Fixed Bottom Bar on Desktop */}
                 <div className="h-24 md:h-12"></div>
 
@@ -180,9 +190,14 @@ export default async function ListingDetails({ params }) {
                         <p className="text-xs text-gray-500 font-medium mb-0.5">Total per month</p>
                         <p className="text-xl md:text-3xl font-extrabold text-gray-900">{listing.price} <span className="text-sm font-medium text-gray-500">EGP</span></p>
                     </div>
-                    <button className="bg-brand-600 hover:bg-brand-700 text-white px-8 md:px-12 py-3.5 md:py-4 rounded-2xl font-bold shadow-lg shadow-brand-500/30 transition-all active:scale-95 text-lg">
-                        Request Viewing
-                    </button>
+                    <div className="flex gap-2">
+                        <Link href={`/housing/${id}/viewing`} className="bg-white text-gray-900 border border-gray-200 hover:bg-gray-50 px-4 md:px-6 py-3.5 md:py-4 rounded-2xl font-bold shadow-sm transition-all active:scale-95 text-sm md:text-base text-center">
+                            Viewing
+                        </Link>
+                        <Link href={`/housing/${id}/booking`} className="bg-gray-900 hover:bg-black text-white px-6 md:px-12 py-3.5 md:py-4 rounded-2xl font-bold shadow-lg transition-all active:scale-95 text-sm md:text-base text-center">
+                            Book Now
+                        </Link>
+                    </div>
                 </div>
             </div>
 

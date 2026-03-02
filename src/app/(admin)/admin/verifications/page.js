@@ -1,12 +1,57 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { getPendingVerifications, approveVerification, rejectVerification } from "@/app/actions/verification";
+import { toast } from "react-hot-toast";
 import Image from "next/image";
 
 export default function AdminVerifications() {
-    const verifications = [
-        { id: "VER-8921", user: "Omar Ahmed", type: "Student ID", uploaded: "10 mins ago", status: "Pending", documentPreview: "https://images.unsplash.com/photo-1544813545-4827b64fcacb?w=400&q=80" },
-        { id: "VER-8922", user: "Ahmed Hassan", type: "Landlord Title Deed", uploaded: "1 hour ago", status: "Pending", documentPreview: "https://images.unsplash.com/photo-1554188249-1dcbd4618e4a?w=400&q=80" },
-        { id: "VER-8923", user: "Mohamed S.", type: "Driver License", uploaded: "2 hours ago", status: "Approved", documentPreview: "https://images.unsplash.com/photo-1621252179027-94459d278660?w=400&q=80" },
-        { id: "VER-8919", user: "Ali G.", type: "National ID", uploaded: "1 day ago", status: "Rejected", documentPreview: "https://images.unsplash.com/photo-1614850715649-1d0106293cb1?w=400&q=80" },
-    ];
+    const [pendingDocs, setPendingDocs] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [activeTab, setActiveTab] = useState("STUDENT"); // STUDENT, DRIVER, PROVIDER, MERCHANT
+    const [actionLoading, setActionLoading] = useState(null);
+
+    useEffect(() => {
+        fetchDocs();
+    }, []);
+
+    const fetchDocs = async () => {
+        setLoading(true);
+        const res = await getPendingVerifications();
+        if (res?.success) {
+            setPendingDocs(res.verifications);
+        } else {
+            toast.error("Failed to fetch pending verifications");
+        }
+        setLoading(false);
+    };
+
+    const handleApprove = async (docId) => {
+        setActionLoading(docId);
+        const res = await approveVerification(docId, "ADMIN_OVERRIDE"); // Assuming admin logic is handled by session usually
+        if (res?.success) {
+            toast.success("Document approved");
+            await fetchDocs();
+        } else {
+            toast.error(res?.error || "Error approving");
+        }
+        setActionLoading(null);
+    };
+
+    const handleReject = async (docId) => {
+        const reason = window.prompt("Rejection reason (optional):") || "Invalid document";
+        setActionLoading(docId);
+        const res = await rejectVerification(docId, "ADMIN_OVERRIDE", reason);
+        if (res?.success) {
+            toast.success("Document rejected");
+            await fetchDocs();
+        } else {
+            toast.error(res?.error || "Error rejecting");
+        }
+        setActionLoading(null);
+    };
+
+    const filteredDocs = pendingDocs.filter((doc) => doc.user?.role === activeTab);
 
     return (
         <div className="flex flex-col gap-6 h-full">
@@ -19,89 +64,82 @@ export default function AdminVerifications() {
                 </div>
             </div>
 
-            {/* Grid Layout for Queue vs Preview */}
-            <div className="flex gap-8 flex-1 min-h-[600px]">
-
-                {/* Queue List (Left Side) */}
-                <div className="w-1/3 bg-white rounded-2xl shadow-sm border border-slate-100 flex flex-col overflow-hidden">
-                    <div className="p-4 border-b border-slate-100 bg-slate-50">
-                        <h2 className="font-bold text-slate-800 text-sm flex justify-between">
-                            Pending Queue <span className="bg-brand-100 text-brand-700 px-2 py-0.5 rounded-md text-xs">2</span>
-                        </h2>
-                    </div>
-                    <div className="flex-1 overflow-y-auto w-full p-2 space-y-2">
-                        {verifications.map((item, i) => (
-                            <div key={item.id} className={`p-4 rounded-xl border flex flex-col gap-2 cursor-pointer transition-all ${i === 0 ? 'bg-brand-50 border-brand-200 shadow-inner' : 'bg-white border-slate-100 hover:border-brand-200'}`}>
-                                <div className="flex justify-between items-start">
-                                    <span className="text-xs font-mono font-bold text-slate-500">{item.id}</span>
-                                    <span className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded ${item.status === 'Pending' ? 'bg-amber-100 text-amber-700' :
-                                            item.status === 'Approved' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                                        }`}>{item.status}</span>
-                                </div>
-                                <div>
-                                    <p className="font-bold text-slate-900 text-sm">{item.user}</p>
-                                    <p className="text-xs font-medium text-slate-600 mt-0.5">{item.type}</p>
-                                </div>
-                                <p className="text-xs text-slate-400 mt-1">Uploaded {item.uploaded}</p>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Document Preview (Right Side) */}
-                <div className="flex-1 bg-white rounded-2xl shadow-sm border border-slate-100 flex flex-col overflow-hidden">
-
-                    {/* Viewer Header */}
-                    <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                        <div>
-                            <h2 className="font-bold text-slate-900">Reviewing: Omar Ahmed</h2>
-                            <p className="text-sm text-slate-500">Student ID Verification</p>
-                        </div>
-                        <div className="flex gap-2 text-sm">
-                            <span className="font-medium text-slate-600">University:</span>
-                            <span className="font-bold text-slate-900">Assiut University</span>
-                        </div>
-                    </div>
-
-                    {/* Viewer Area */}
-                    <div className="flex-1 bg-slate-100 relative p-8 flex items-center justify-center">
-                        <div className="absolute inset-0 pattern-dots text-slate-200 opacity-50"></div>
-
-                        <div className="w-[500px] h-[320px] bg-white rounded-xl shadow-lg relative p-2 border-2 border-slate-300">
-                            <div className="w-full h-full relative bg-slate-200 rounded-lg overflow-hidden">
-                                <Image
-                                    src={verifications[0].documentPreview}
-                                    alt="Document Preview"
-                                    fill
-                                    className="object-cover"
-                                />
-                            </div>
-                            {/* Mock Watermark/Overlay */}
-                            <div className="absolute top-4 left-4 bg-black/60 backdrop-blur-sm text-white px-3 py-1.5 rounded text-xs font-mono">
-                                Scan Quality: 94%
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="p-5 border-t border-slate-100 bg-white flex justify-between items-center">
-                        <button className="text-slate-500 font-medium text-sm hover:text-slate-800 transition-colors">
-                            Flag as Suspicious
-                        </button>
-                        <div className="flex gap-3">
-                            <button className="px-6 py-2.5 rounded-xl font-bold bg-white border border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 transition-colors shadow-sm">
-                                Reject Document
-                            </button>
-                            <button className="px-8 py-2.5 rounded-xl font-bold bg-green-600 border border-green-600 text-white hover:bg-green-700 transition-colors shadow-md shadow-green-500/20">
-                                Approve
-                            </button>
-                        </div>
-                    </div>
-
-                </div>
-
+            {/* Tabs */}
+            <div className="flex gap-4 border-b border-slate-200 pb-0">
+                {["STUDENT", "DRIVER", "PROVIDER", "MERCHANT"].map((role) => (
+                    <button
+                        key={role}
+                        onClick={() => setActiveTab(role)}
+                        className={`px-6 py-3 font-semibold text-sm transition-all border-b-2 ${activeTab === role
+                                ? "border-brand-600 text-brand-700 bg-brand-50 rounded-t-lg"
+                                : "border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50 rounded-t-lg"
+                            }`}
+                    >
+                        {role}s
+                    </button>
+                ))}
             </div>
 
+            {loading ? (
+                <div className="flex-1 flex items-center justify-center text-slate-400">Loading documents...</div>
+            ) : filteredDocs.length === 0 ? (
+                <div className="flex-1 flex items-center justify-center bg-white rounded-2xl shadow-sm border border-slate-100 p-12 text-center text-slate-500">
+                    No pending {activeTab.toLowerCase()} verifications found.
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {filteredDocs.map((doc) => (
+                        <div key={doc.id} className="bg-white rounded-2xl shadow-sm border border-slate-100 flex flex-col overflow-hidden">
+                            <div className="p-4 border-b border-slate-100 bg-slate-50">
+                                <h3 className="font-bold text-slate-900">{doc.user?.name}</h3>
+                                <p className="text-xs text-slate-500">{doc.user?.email} • {doc.user?.phone || 'No phone'}</p>
+                            </div>
+
+                            {/* Document Preview */}
+                            <div className="w-full h-48 bg-slate-200 relative">
+                                {doc.fileUrl ? (
+                                    <Image
+                                        src={doc.fileUrl}
+                                        alt={doc.type}
+                                        fill
+                                        className="object-cover"
+                                    />
+                                ) : (
+                                    <div className="flex items-center justify-center h-full text-slate-400">No Image Preview</div>
+                                )}
+                            </div>
+
+                            <div className="p-4 flex flex-col gap-4 flex-1">
+                                <div>
+                                    <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded bg-brand-100 text-brand-700">
+                                        {doc.type.replace('_', ' ')}
+                                    </span>
+                                </div>
+                                <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-brand-600 hover:underline">
+                                    View Full Document ↗
+                                </a>
+
+                                <div className="flex gap-2 mt-auto pt-2">
+                                    <button
+                                        onClick={() => handleReject(doc.id)}
+                                        disabled={actionLoading === doc.id}
+                                        className="flex-1 px-4 py-2 border border-red-200 text-red-600 hover:bg-red-50 rounded-xl transition-all disabled:opacity-50 text-sm font-semibold shadow-sm"
+                                    >
+                                        Reject
+                                    </button>
+                                    <button
+                                        onClick={() => handleApprove(doc.id)}
+                                        disabled={actionLoading === doc.id}
+                                        className="flex-1 px-4 py-2 bg-green-600 text-white hover:bg-green-700 rounded-xl transition-all disabled:opacity-50 text-sm font-semibold shadow-md shadow-green-500/20"
+                                    >
+                                        {actionLoading === doc.id ? "Working..." : "Approve"}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
         </div>
     );
 }

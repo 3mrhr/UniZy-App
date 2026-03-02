@@ -4,6 +4,7 @@ import React, { useState, useEffect, useTransition } from 'react';
 import { useLanguage } from '@/i18n/LanguageProvider';
 import { Users, Megaphone, Edit3, MessageCircle, Heart, Share2, MoreHorizontal, Image as ImageIcon, Flag, Loader2 } from 'lucide-react';
 import { getPosts, createPost, flagPost } from '@/app/actions/hub';
+import ReportButton from '@/components/ReportButton';
 
 const HUB_TABS = [
     { id: 'feed', en: 'Community Feed', ar: 'المجتمع', icon: Users },
@@ -97,15 +98,7 @@ export default function HubPage() {
                 setPostCategory('general');
             }
         });
-    };
 
-    const handleReport = (postId) => {
-        startTransition(async () => {
-            const result = await flagPost(postId, 'Reported by user');
-            if (result.success || result.error?.includes('Not authenticated')) {
-                setReportedIds(prev => new Set([...prev, postId]));
-            }
-        });
     };
 
     return (
@@ -212,13 +205,11 @@ export default function HubPage() {
                                             </div>
                                         </div>
                                         {/* Report Button */}
-                                        {!reportedIds.has(post.id) ? (
-                                            <button onClick={() => handleReport(post.id)} className="text-gray-400 hover:text-red-500 transition-colors p-1" title="Report post">
-                                                <Flag className="w-4 h-4" />
-                                            </button>
-                                        ) : (
-                                            <span className="text-[10px] font-bold text-red-400 bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded-lg">Reported</span>
-                                        )}
+                                        <ReportButton
+                                            type="HUB_POST"
+                                            targetId={post.id}
+                                            targetUserId={post.authorId}
+                                        />
                                     </div>
 
                                     {/* Post Tag */}

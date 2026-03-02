@@ -4,37 +4,58 @@ import { useState } from 'react';
 import Link from "next/link";
 import Image from "next/image";
 import { useLanguage } from '@/i18n/LanguageProvider';
+import { useRouter } from 'next/navigation';
 
 export default function TransportPage() {
     const { dict } = useLanguage();
     const t = dict?.landing?.transport || "Transport";
     const homeDict = dict?.home || {};
+    const router = useRouter();
 
     const [pickup, setPickup] = useState('My Current Location');
     const [destination, setDestination] = useState('');
     const [selectedVehicle, setSelectedVehicle] = useState('standard');
     const [isBooking, setIsBooking] = useState(false);
 
-    const vehicles = [
+    const [vehicles, setVehicles] = useState([
         { id: 'standard', name: 'Standard', price: 'EGP 45', time: '3 min', icon: '🚗' },
         { id: 'premium', name: 'Premium', price: 'EGP 75', time: '5 min', icon: '✨' },
         { id: 'scooter', name: 'Scooter', price: 'EGP 25', time: '2 min', icon: '🛵' },
         { id: 'bus', name: 'Shuttle Bus', price: 'EGP 10', time: '12 min', icon: '🚌' },
-    ];
+    ]);
+
+    // Simple debounce to fetch estimate when destination is typed
+    import('react').then(React => {
+        React.useEffect(() => {
+            if (destination.length > 3) {
+                const fetchEstimates = async () => {
+                    const { getRideEstimate } = await import('@/app/actions/orders');
+                    const updated = await Promise.all(vehicles.map(async (v) => {
+                        const res = await getRideEstimate(pickup, destination, v.name);
+                        return { ...v, price: res.success ? `EGP ${res.price}` : v.price };
+                    }));
+                    setVehicles(updated);
+                };
+                const timeoutId = setTimeout(fetchEstimates, 1000);
+                return () => clearTimeout(timeoutId);
+            }
+        }, [destination, pickup]);
+    });
 
     const handleBook = async () => {
         if (!destination) return alert('Please enter a destination');
         setIsBooking(true);
         const selected = vehicles.find(v => v.id === selectedVehicle);
+        const priceNum = parseFloat(selected.price.replace('EGP ', ''));
+
         const { createOrder } = await import('@/app/actions/orders');
         const result = await createOrder('TRANSPORT', {
             pickup, destination, vehicle: selected.name
-        }, parseFloat(selected.price.replace('EGP ', '')));
+        }, priceNum);
 
         setIsBooking(false);
         if (result.success) {
-            alert('Booking assigned successfully! Track it in your Activity Center.');
-            setDestination('');
+            router.push(`/activity/tracking/${result.order.id}`);
         } else {
             alert(result.error || 'Failed to book');
         }
@@ -51,10 +72,10 @@ export default function TransportPage() {
                 <h1 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight leading-none">{homeDict.transport || "Transport"}</h1>
             </header>
 
-            <main className="flex-1 px-6 max-w-7xl mx-auto w-full grid lg:grid-cols-3 gap-8 pb-24">
+            <main className="flex-1 px-6 max-w-xl mx-auto w-full flex flex-col gap-8 pb-24">
 
-                {/* Left Panel: Booking Form */}
-                <div className="lg:col-span-1 flex flex-col gap-6 animate-fade-in-up">
+                {/* Booking Form */}
+                <div className="flex flex-col gap-6 animate-fade-in-up">
                     <div className="bg-white dark:bg-unizy-dark p-6 rounded-[2rem] shadow-xl shadow-gray-200/50 dark:shadow-none border border-gray-100 dark:border-white/5">
                         <div className="space-y-4">
                             <div className="relative">
@@ -109,18 +130,6 @@ export default function TransportPage() {
                             {isBooking ? 'Booking...' : `Book ${vehicles.find(v => v.id === selectedVehicle)?.name}`}
                         </button>
                     </div>
-                </div>
-
-                {/* Right Panel: Map Mockup (Coming Soon) */}
-                <div className="lg:col-span-2 relative min-h-[400px] lg:min-h-full bg-gray-50 dark:bg-unizy-navy/50 border border-dashed border-gray-300 dark:border-gray-700 rounded-[3rem] overflow-hidden flex flex-col items-center justify-center p-8 text-center animate-fade-in delay-200">
-                    <div className="w-20 h-20 bg-brand-50 dark:bg-brand-500/10 rounded-full flex items-center justify-center mb-6">
-                        <span className="text-4xl">🗺️</span>
-                    </div>
-                    <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-2 tracking-tight">Live Map Tracking</h2>
-                    <div className="bg-brand-500 text-white text-xs font-black uppercase tracking-widest px-3 py-1 rounded-full mb-4 inline-block">Coming Soon</div>
-                    <p className="text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
-                        We are currently integrating live GPS tracking for drivers. This feature will be available in an upcoming update!
-                    </p>
                 </div>
 
             </main>

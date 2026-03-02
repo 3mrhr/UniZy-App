@@ -3,6 +3,7 @@
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/app/actions/auth';
 import { revalidatePath } from 'next/cache';
+import { completeReferralIfEligible } from './referrals';
 
 export async function createOrder(service, details, total) {
     try {
@@ -20,6 +21,9 @@ export async function createOrder(service, details, total) {
                 userId: user.id
             }
         });
+
+        // Trigger referral completion if this is the student's first order
+        await completeReferralIfEligible(user.id);
 
         // Revalidate relevant pages
         if (service === 'TRANSPORT') {
@@ -142,5 +146,111 @@ export async function updateOrderStatus(orderId, newStatus) {
     } catch (error) {
         console.error('Failed to update order status:', error);
         return { error: 'Failed to update order status.' };
+    }
+}
+
+export async function getRideEstimate(pickup, destination, vehicle) {
+    try {
+        // Fallback pricing
+        const basePrices = {
+            'Standard': 45,
+            'Premium': 75,
+            'Scooter': 25,
+            'Shuttle Bus': 10
+        };
+
+        let price = basePrices[vehicle] || 50;
+
+        // Try to fetch pricing rule from Phase 35
+        const rule = await prisma.pricingRule.findFirst({
+            where: { module: 'TRANSPORT', isActive: true, serviceType: vehicle }
+        });
+
+        if (rule && rule.basePrice) {
+            price = rule.basePrice;
+        }
+
+        // Apply a small random distance multiplier for demo (1.0 to 1.5)
+        const multiplier = 1 + (Math.random() * 0.5);
+        let finalPrice = price * multiplier;
+
+        return { success: true, price: Math.ceil(finalPrice) };
+    } catch (error) {
+        console.error('Failed to get ride estimate:', error);
+        return { success: false, error: 'Failed to get ride estimate.' };
+    }
+}
+
+export async function cancelOrder(orderId) {
+    try {
+        const user = await getCurrentUser();
+        if (!user) return { error: 'Unauthorized.' };
+
+        const order = await prisma.order.findUnique({ where: { id: orderId } });
+        if (!order || order.userId !== user.id) return { error: 'Order not found.' };
+
+        if (order.status !== 'PENDING' && order.status !== 'ACCEPTED') {
+            return { error: 'Cannot cancel an order in progress.' };
+        }
+
+        const cancelled = await prisma.order.update({
+            where: { id: orderId },
+            data: { status: 'CANCELLED' }
+        });
+
+        revalidatePath('/activity');
+        revalidatePath(`/activity/tracking/${orderId}`);
+        return { success: true, order: cancelled };
+    } catch (error) {
+        console.error('Failed to cancel order:', error);
+        return { error: 'Failed to cancel order.' };
+    }
+}
+
+export async function triggerSOS(orderId) {
+    try {
+        const user = await getCurrentUser();
+        if (!user) return { error: 'Unauthorized.' };
+
+        // Create a critical support ticket
+        const ticket = await prisma.supportTicket.create({
+            data: {
+                subject: `EMERGENCY ALERT: Order ${orderId}`,
+                category: 'SAFETY',
+                priority: 'HIGH',
+                status: 'OPEN',
+                userId: user.id
+            }
+        });
+
+        return { success: true, ticket };
+    } catch (error) {
+        console.error('Failed to trigger SOS:', error);
+        return { error: 'Failed to trigger SOS.' };
+    }
+}
+
+export async function pollOrderStatus(orderId) {
+    try {
+        const user = await getCurrentUser();
+        if (!user) return { error: 'Unauthorized.' };
+
+        const order = await prisma.order.findUnique({
+            where: { id: orderId },
+            include: {
+                driver: {
+                    select: { name: true, phone: true }
+                }
+            }
+        });
+
+        if (!order || order.userId !== user.id) {
+            return { error: 'Order not found.' };
+        }
+
+        return { success: true, order };
+    } catch (error) {
+        console.error('Failed to fetch order status:', error);
+        return { error: 'Failed to fetch order status.' };
     }
 }

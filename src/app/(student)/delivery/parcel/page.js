@@ -25,30 +25,37 @@ export default function ParcelDeliveryPage() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setIsSubmitting(true);
-        setTimeout(() => {
+
+        try {
+            const { createOrder } = await import('@/app/actions/orders');
+            // Mock a flat rate sum for the MVP, or this would query `PricingRule` based on size in the future
+            let estimatedPrice = 50.0;
+            if (form.size === 'medium') estimatedPrice = 80.0;
+            if (form.size === 'large') estimatedPrice = 120.0;
+
+            const result = await createOrder('DELIVERY', {
+                type: 'PARCEL',
+                pickup: form.pickupAddress,
+                dropoff: form.dropoffAddress,
+                details: form,
+                items: [`1x ${form.size} Parcel (${form.itemDescription})`]
+            }, estimatedPrice);
+
+            if (result.success) {
+                router.push(`/activity/tracking/${result.order.id}`);
+            } else {
+                import('react-hot-toast').then(({ toast }) => toast.error(result.error || 'Failed to submit parcel'));
+                setIsSubmitting(false);
+            }
+        } catch (error) {
+            console.error('Parcel submission error:', error);
+            import('react-hot-toast').then(({ toast }) => toast.error('An error occurred'));
             setIsSubmitting(false);
-            setIsSuccess(true);
-        }, 1500);
+        }
     };
 
-    if (isSuccess) {
-        return (
-            <div className="min-h-screen bg-gray-50 dark:bg-unizy-navy flex items-center justify-center p-6">
-                <div className="text-center animate-fade-in">
-                    <div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full mx-auto flex items-center justify-center mb-6">
-                        <CheckCircle className="text-green-500" size={40} />
-                    </div>
-                    <h1 className="text-3xl font-black text-gray-900 dark:text-white mb-2">Parcel Submitted!</h1>
-                    <p className="text-gray-500 dark:text-gray-400 font-medium max-w-xs mx-auto mb-8">
-                        A rider will be assigned shortly. You can track the status in your Activity page.
-                    </p>
-                    <Link href="/activity" className="bg-brand-600 text-white font-bold px-8 py-3 rounded-2xl hover:bg-brand-700 transition-all">
-                        Track Delivery
-                    </Link>
-                </div>
-            </div>
-        );
-    }
+    // Note: the success UI block below is now bypassed as we route directly to tracking upon success. 
+    // Kept here in case we want an interstitial animation later.
 
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-unizy-navy pb-24">

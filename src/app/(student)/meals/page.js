@@ -2,8 +2,10 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/i18n/LanguageProvider';
-import { Clock, Info, Search, Star, UtensilsCrossed, CalendarDays, Wallet, ChefHat, Heart, ChevronRight, Leaf } from 'lucide-react';
+import { Clock, Info, Search, Star, UtensilsCrossed, CalendarDays, Wallet, ChefHat, Heart, ChevronRight, Leaf, X } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 const MEAL_CATEGORIES = [
     { id: 'daily', en: 'Daily Offers', ar: 'عروض اليوم', icon: CalendarDays },
@@ -19,6 +21,10 @@ export default function MealsPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [meals, setMeals] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
+
+    const router = useRouter();
+    const [selectedMeal, setSelectedMeal] = useState(null);
+    const [isOrdering, setIsOrdering] = useState(false);
 
     React.useEffect(() => {
         const fetchMeals = async () => {
@@ -43,7 +49,25 @@ export default function MealsPage() {
         return () => clearTimeout(timeoutId);
     }, [activeCategory, searchQuery]);
 
-    // Removed filteredMeals mapping since search is managed on server side.
+    const handleOrder = async (meal) => {
+        setIsOrdering(true);
+        try {
+            const { orderMeal } = await import('@/app/actions/meals');
+            const res = await orderMeal({ mealId: meal.id, quantity: 1 });
+            if (res.success) {
+                toast.success(isRTL ? "تم الطلب بنجاح!" : "Order placed successfully!");
+                setSelectedMeal(null);
+                // Optionally route to activity tracking: router.push('/activity');
+            } else {
+                toast.error(res.error || (isRTL ? "حدث خطأ أثناء الطلب" : "Failed to place order"));
+            }
+        } catch (err) {
+            toast.error(isRTL ? "حدث خطأ أثناء الطلب" : "Failed to place order");
+            console.error(err);
+        } finally {
+            setIsOrdering(false);
+        }
+    };
 
     return (
         <main className="min-h-screen pb-24 bg-[var(--unizy-bg-light)] dark:bg-[var(--unizy-bg-dark)] px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto pt-6 transition-colors duration-300">
@@ -78,12 +102,12 @@ export default function MealsPage() {
             {/* Subscription Banner (Upsell) */}
             <div className="bg-gradient-to-r from-orange-500 to-amber-500 rounded-2xl p-5 mb-8 text-white flex items-center justify-between shadow-lg shadow-orange-500/20">
                 <div>
-                    <h3 className="font-bold text-lg mb-1">{isRTL ? 'خطط الوجبات الأسبوعية' : 'Weekly Meal Plans'}</h3>
-                    <p className="text-orange-50 text-sm">{isRTL ? 'وفر حتى 30% مع الاشتراك الشهري.' : 'Save up to 30% with a monthly subscription.'}</p>
+                    <h3 className="font-bold text-lg mb-1">{isRTL ? 'خطط الوجبات الأسبوعية' : 'Meal Plans'}</h3>
+                    <p className="text-orange-50 text-sm">{isRTL ? 'وفر حتى 30% مع الاشتراك الشهري.' : 'Save up to 30% and never worry about cooking.'}</p>
                 </div>
-                <button className="bg-white text-orange-600 px-4 py-2 rounded-xl text-sm font-bold shadow-sm hover:scale-105 transition-transform shrink-0">
+                <Link href="/meals/plans" className="bg-white text-orange-600 px-4 py-2 rounded-xl text-sm font-bold shadow-sm hover:scale-105 transition-transform shrink-0">
                     {isRTL ? 'اشترك الآن' : 'Subscribe'}
-                </button>
+                </Link>
             </div>
 
             {/* Categories */}
@@ -174,8 +198,8 @@ export default function MealsPage() {
                                     <span className="text-xl font-bold text-[var(--unizy-text-dark)] dark:text-white">{meal.price}</span>
                                     <span className="text-sm text-gray-500 font-medium">{meal.currency}</span>
                                 </div>
-                                <button className="bg-orange-50 dark:bg-orange-500/10 text-orange-600 hover:bg-orange-500 hover:text-white font-medium px-4 py-2 rounded-xl transition-colors">
-                                    {isRTL ? 'إضافة للسلة' : 'Add to Cart'}
+                                <button onClick={() => setSelectedMeal(meal)} className="bg-orange-50 dark:bg-orange-500/10 text-orange-600 hover:bg-orange-500 hover:text-white font-medium px-4 py-2 rounded-xl transition-colors">
+                                    {isRTL ? 'شراء' : 'Order'}
                                 </button>
                             </div>
                         </div>
@@ -190,6 +214,45 @@ export default function MealsPage() {
                 )}
             </div>
 
+            {/* Quick Checkout Modal */}
+            {selectedMeal && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-white dark:bg-unizy-dark rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl animate-fade-in-up">
+                        <div className="relative h-40 bg-gray-100 dark:bg-gray-800">
+                            {selectedMeal.image ? (
+                                <img src={selectedMeal.image} alt={selectedMeal.name} className="w-full h-full object-cover" />
+                            ) : (
+                                <div className="w-full h-full flex items-center justify-center bg-orange-50 dark:bg-orange-900/20">
+                                    <UtensilsCrossed className="w-12 h-12 text-orange-200 dark:text-orange-800" />
+                                </div>
+                            )}
+                            <button onClick={() => setSelectedMeal(null)} className="absolute top-4 right-4 w-8 h-8 bg-black/50 text-white rounded-full flex items-center justify-center hover:bg-black/70">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <div className="p-6">
+                            <h3 className="font-bold text-xl text-gray-900 dark:text-white mb-1">{isRTL ? (selectedMeal.arName || selectedMeal.name) : selectedMeal.name}</h3>
+                            <p className="text-sm text-gray-500 mb-6">{selectedMeal.merchant?.name}</p>
+
+                            <div className="flex justify-between items-center mb-6 py-4 border-y border-gray-100 dark:border-white/5">
+                                <span className="font-bold text-gray-700 dark:text-gray-300">{isRTL ? 'المجموع' : 'Total'}</span>
+                                <span className="text-2xl font-black text-gray-900 dark:text-white">{selectedMeal.price} <span className="text-sm font-bold text-gray-400">{selectedMeal.currency}</span></span>
+                            </div>
+
+                            <button
+                                onClick={() => handleOrder(selectedMeal)}
+                                disabled={isOrdering}
+                                className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 rounded-2xl transition-all shadow-lg shadow-orange-500/30 flex justify-center items-center disabled:opacity-70 disabled:cursor-not-allowed">
+                                {isOrdering ? (
+                                    <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                                ) : (
+                                    isRTL ? 'تأكيد الطلب' : 'Confirm Order'
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </main>
     );
 }

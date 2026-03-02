@@ -1,126 +1,218 @@
-"use client";
+'use client';
 
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import {
+    MessageCircle,
+    Search,
+    ChevronRight,
+    Plus,
+    Clock,
+    CheckCircle2,
+    AlertCircle,
+    Info,
+    HelpCircle,
+    FileText,
+    Shield
+} from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageProvider';
-import { HelpCircle, MessageSquare, Phone, FileText, ChevronRight, AlertCircle, Search, Send } from 'lucide-react';
+import { getStudentTickets } from '@/app/actions/support';
+import toast from 'react-hot-toast';
 
-const FAQ_CATEGORIES = [
-    { id: '1', icon: FileText, en: 'App Usage Guides', ar: 'أدلة استخدام التطبيق' },
-    { id: '2', icon: HelpCircle, en: 'Payments & Rewards', ar: 'المدفوعات والمكافآت' },
-    { id: '3', icon: AlertCircle, en: 'Cancellations', ar: 'الإلغاء والاسترداد' },
+const FAQ = [
+    {
+        q: 'How do I track my delivery order?',
+        a: 'Go to the Activity section in the bottom navigation to see all active and past orders.'
+    },
+    {
+        q: 'Can I cancel a housing viewing?',
+        a: 'Yes, go to your Activity center, select the housing request, and tap "Cancel".'
+    },
+    {
+        q: 'How do I redeem a promo code?',
+        a: 'Browse the Deals section, tap on a deal you like, and click "Reveal Code".'
+    }
 ];
 
-export default function SupportPage() {
+export default function SupportDashboard() {
     const { language } = useLanguage();
     const isRTL = language === 'ar-EG';
-    const [showTicketForm, setShowTicketForm] = useState(false);
+    const [tickets, setTickets] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [searchQuery, setSearchQuery] = useState('');
+
+    useEffect(() => {
+        fetchTickets();
+    }, []);
+
+    const fetchTickets = async () => {
+        setIsLoading(true);
+        const res = await getStudentTickets();
+        if (res.success) {
+            setTickets(res.tickets);
+        } else {
+            toast.error(res.error || 'Failed to fetch tickets');
+        }
+        setIsLoading(false);
+    };
+
+    const getStatusIcon = (status) => {
+        switch (status) {
+            case 'RESOLVED':
+            case 'CLOSED':
+                return <CheckCircle2 className="w-4 h-4 text-green-500" />;
+            case 'IN_PROGRESS':
+                return <Clock className="w-4 h-4 text-orange-500" />;
+            default:
+                return <AlertCircle className="w-4 h-4 text-blue-500" />;
+        }
+    };
 
     return (
-        <main className="min-h-screen pb-24 bg-[var(--unizy-bg-light)] dark:bg-[var(--unizy-bg-dark)] px-4 sm:px-6 lg:px-8 max-w-3xl mx-auto pt-6 transition-colors duration-300">
-
+        <div className="min-h-screen bg-gray-50 dark:bg-unizy-navy pb-32">
             {/* Header */}
-            <div className="mb-8 text-center sm:text-left">
-                <h1 className="text-3xl font-extrabold text-[var(--unizy-text-dark)] dark:text-white mb-3">
-                    {isRTL ? 'مركز المساعدة ودعم الطلاب' : 'Help & Support Center'}
-                </h1>
-                <p className="text-[var(--unizy-text-muted)] dark:text-gray-400 max-w-xl">
-                    {isRTL ? 'نحن هنا لمساعدتك في أي وقت. كيف يمكننا خدمتك اليوم؟' : 'We are here to help you anytime. How can we assist you today?'}
-                </p>
-            </div>
+            <header className="bg-white dark:bg-unizy-dark pt-12 pb-8 px-6 border-b border-gray-100 dark:border-white/5">
+                <div className="max-w-4xl mx-auto">
+                    <h1 className="text-3xl font-black text-gray-900 dark:text-white mb-2">
+                        {isRTL ? 'مركز المساعدة' : 'Help Center'}
+                    </h1>
+                    <p className="text-gray-500 dark:text-gray-400 font-medium">
+                        {isRTL ? 'كيف يمكننا مساعدتك اليوم؟' : 'How can we help you today?'}
+                    </p>
 
-            {/* Search Bar */}
-            <div className="relative mb-8">
-                <Search className={`absolute top-1/2 -translate-y-1/2 ${isRTL ? 'right-4' : 'left-4'} w-5 h-5 text-gray-400`} />
-                <input
-                    type="text"
-                    placeholder={isRTL ? 'ابحث في قواعد المعرفة...' : 'Search knowledge base...'}
-                    className={`w-full bg-white dark:bg-[#1E293B] border border-gray-200 dark:border-gray-700 rounded-2xl py-4 ${isRTL ? 'pr-12 pl-4' : 'pl-12 pr-4'} text-[var(--unizy-text-dark)] dark:text-white focus:outline-none focus:ring-2 focus:ring-[var(--unizy-primary)] transition-all shadow-sm`}
-                />
-            </div>
+                    <div className="mt-8 relative">
+                        <Search className={`absolute top-1/2 -translate-y-1/2 ${isRTL ? 'right-4' : 'left-4'} w-5 h-5 text-gray-400`} />
+                        <input
+                            type="text"
+                            placeholder={isRTL ? 'ابحث عن حلول...' : 'Search for solutions...'}
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className={`w-full bg-gray-50 dark:bg-white/5 border-none rounded-2xl py-4 ${isRTL ? 'pr-12 pl-4' : 'pl-12 pr-4'} text-gray-900 dark:text-white focus:ring-2 focus:ring-unizy-primary transition-all shadow-sm`}
+                        />
+                    </div>
+                </div>
+            </header>
 
-            {/* Quick Contact Options */}
-            <div className="grid grid-cols-2 gap-4 mb-10">
-                <button
-                    onClick={() => setShowTicketForm(true)}
-                    className="bg-[var(--unizy-primary)] text-white p-4 rounded-2xl flex flex-col items-center justify-center gap-2 hover:bg-blue-600 transition-colors shadow-md shadow-blue-500/20"
-                >
-                    <MessageSquare className="w-6 h-6" />
-                    <span className="font-bold text-sm">{isRTL ? 'فتح تذكرة دعم' : 'Open Ticket'}</span>
-                </button>
+            <main className="max-w-4xl mx-auto px-4 py-8">
+                {/* Support Actions */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-12">
+                    <Link href="/support/new" className="group bg-unizy-primary p-6 rounded-3xl shadow-xl shadow-unizy-primary/20 hover:scale-[1.02] transition-all">
+                        <div className="flex justify-between items-start mb-4">
+                            <div className="bg-white/20 p-3 rounded-2xl">
+                                <Plus className="w-6 h-6 text-white" />
+                            </div>
+                            <ChevronRight className={`w-5 h-5 text-white/50 group-hover:translate-x-1 transition-transform ${isRTL ? 'rotate-180' : ''}`} />
+                        </div>
+                        <h3 className="text-white font-bold text-lg mb-1">{isRTL ? 'تذكرة جديدة' : 'Open New Ticket'}</h3>
+                        <p className="text-white/70 text-sm">{isRTL ? 'أرسل طلباً لفريق الدعم' : 'Send a request to our support team'}</p>
+                    </Link>
 
-                <button className="bg-white dark:bg-[#1E293B] text-[var(--unizy-text-dark)] dark:text-white border border-gray-200 dark:border-gray-700 p-4 rounded-2xl flex flex-col items-center justify-center gap-2 hover:shadow-md transition-all">
-                    <Phone className="w-6 h-6 text-green-500" />
-                    <span className="font-bold text-sm">{isRTL ? 'اتصال طارئ' : 'Emergency Call'}</span>
-                </button>
-            </div>
+                    <Link href="/activity" className="group bg-white dark:bg-unizy-dark p-6 rounded-3xl border border-gray-100 dark:border-white/5 hover:scale-[1.02] transition-all">
+                        <div className="flex justify-between items-start mb-4">
+                            <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-2xl">
+                                <Clock className="w-6 h-6 text-blue-500" />
+                            </div>
+                            <ChevronRight className={`w-5 h-5 text-gray-300 dark:text-white/20 group-hover:translate-x-1 transition-transform ${isRTL ? 'rotate-180' : ''}`} />
+                        </div>
+                        <h3 className="text-gray-900 dark:text-white font-bold text-lg mb-1">{isRTL ? 'طلباتك الحالية' : 'Recent Orders'}</h3>
+                        <p className="text-gray-500 dark:text-gray-400 text-sm">{isRTL ? 'تحقق من حالة طلباتك' : 'Check the status of your activities'}</p>
+                    </Link>
+                </div>
 
-            {/* FAQ Categories */}
-            {!showTicketForm ? (
-                <div>
-                    <h2 className="text-lg font-bold text-[var(--unizy-text-dark)] dark:text-white mb-4">
-                        {isRTL ? 'الأسئلة الشائعة' : 'Frequently Asked Questions'}
-                    </h2>
+                {/* My Tickets Section */}
+                <section className="mb-12">
+                    <div className="flex items-center justify-between mb-6">
+                        <h2 className="text-xl font-black text-gray-900 dark:text-white">
+                            {isRTL ? 'تذاكري' : 'My Support Tickets'}
+                        </h2>
+                        <span className="text-xs font-bold text-unizy-primary uppercase tracking-widest">{tickets.length} {isRTL ? 'تذاكر' : 'Tickets'}</span>
+                    </div>
+
                     <div className="space-y-3">
-                        {FAQ_CATEGORIES.map((cat) => (
-                            <button key={cat.id} className="w-full bg-white dark:bg-[#1E293B] p-4 rounded-2xl border border-gray-100 dark:border-gray-800 flex items-center justify-between hover:shadow-sm transition-shadow group">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-xl bg-gray-50 dark:bg-gray-800 flex items-center justify-center text-[var(--unizy-primary)]">
-                                        <cat.icon className="w-5 h-5" />
+                        {isLoading ? (
+                            [1, 2].map(i => (
+                                <div key={i} className="h-24 bg-white dark:bg-unizy-dark rounded-3xl animate-pulse border border-gray-100 dark:border-white/5"></div>
+                            ))
+                        ) : tickets.length > 0 ? (
+                            tickets.map((ticket) => (
+                                <Link
+                                    key={ticket.id}
+                                    href={`/support/${ticket.id}`}
+                                    className="block bg-white dark:bg-unizy-dark p-5 rounded-3xl border border-gray-100 dark:border-white/5 hover:shadow-lg transition-all"
+                                >
+                                    <div className="flex justify-between items-start gap-4">
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                {getStatusIcon(ticket.status)}
+                                                <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+                                                    {ticket.category}
+                                                </span>
+                                            </div>
+                                            <h4 className="text-gray-900 dark:text-white font-bold truncate">
+                                                {ticket.subject}
+                                            </h4>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-1">
+                                                {ticket.description}
+                                            </p>
+                                        </div>
+                                        <div className="text-right shrink-0">
+                                            <span className={`text-[10px] font-black px-2 py-1 rounded-md mb-2 block ${ticket.priority === 'URGENT' ? 'bg-red-50 text-red-500 dark:bg-red-950/20' :
+                                                    ticket.priority === 'HIGH' ? 'bg-orange-50 text-orange-500 dark:bg-orange-950/20' :
+                                                        'bg-gray-100 text-gray-500 dark:bg-white/5'
+                                                }`}>
+                                                {ticket.priority}
+                                            </span>
+                                            <p className="text-[10px] font-bold text-gray-400">
+                                                {new Date(ticket.createdAt).toLocaleDateString()}
+                                            </p>
+                                        </div>
                                     </div>
-                                    <span className="font-medium text-[var(--unizy-text-dark)] dark:text-white">
-                                        {isRTL ? cat.ar : cat.en}
-                                    </span>
+                                </Link>
+                            ))
+                        ) : (
+                            <div className="text-center py-12 bg-white dark:bg-unizy-dark rounded-3xl border border-dashed border-gray-200 dark:border-white/10">
+                                <div className="bg-gray-50 dark:bg-white/5 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <HelpCircle className="w-8 h-8 text-gray-300" />
                                 </div>
-                                <ChevronRight className={`w-5 h-5 text-gray-400 group-hover:text-[var(--unizy-primary)] transition-colors ${isRTL ? 'rotate-180' : ''}`} />
-                            </button>
+                                <h4 className="text-gray-900 dark:text-white font-bold mb-1">{isRTL ? 'لا توجد تذاكر حالياً' : 'No tickets open'}</h4>
+                                <p className="text-gray-500 text-sm">{isRTL ? 'سنقوم بمراجعة طلباتك هنا بمجرد إرسالها' : 'Any support requests you make will appear here'}</p>
+                            </div>
+                        )}
+                    </div>
+                </section>
+
+                {/* FAQ Section */}
+                <section>
+                    <h2 className="text-xl font-black text-gray-900 dark:text-white mb-6">
+                        {isRTL ? 'الأسئلة المتكررة' : 'Common Questions'}
+                    </h2>
+                    <div className="space-y-4">
+                        {FAQ.map((item, i) => (
+                            <div key={i} className="bg-white dark:bg-unizy-dark p-6 rounded-3xl border border-gray-100 dark:border-white/5">
+                                <h4 className="font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+                                    <span className="w-6 h-6 rounded-lg bg-unizy-primary/10 text-unizy-primary flex items-center justify-center text-xs">Q</span>
+                                    {isRTL ? item.q_ar || item.q : item.q}
+                                </h4>
+                                <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed pl-8">
+                                    {isRTL ? item.a_ar || item.a : item.a}
+                                </p>
+                            </div>
                         ))}
                     </div>
+                </section>
+
+                {/* Other Help Links */}
+                <div className="mt-12 grid grid-cols-2 gap-4">
+                    <button className="flex flex-col items-center p-6 bg-white dark:bg-unizy-dark rounded-3xl border border-gray-100 dark:border-white/5 gap-3 transition-colors hover:bg-gray-50">
+                        <Shield className="w-8 h-8 text-unizy-primary" />
+                        <span className="text-sm font-bold text-gray-900 dark:text-white">{isRTL ? 'الأمان' : 'Safety'}</span>
+                    </button>
+                    <button className="flex flex-col items-center p-6 bg-white dark:bg-unizy-dark rounded-3xl border border-gray-100 dark:border-white/5 gap-3 transition-colors hover:bg-gray-50">
+                        <FileText className="w-8 h-8 text-unizy-primary" />
+                        <span className="text-sm font-bold text-gray-900 dark:text-white">{isRTL ? 'الشروط' : 'Terms'}</span>
+                    </button>
                 </div>
-            ) : (
-                /* Submit Ticket Form */
-                <div className="bg-white dark:bg-[#1E293B] p-6 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-lg animate-fade-in">
-                    <div className="flex items-center justify-between mb-6">
-                        <h2 className="text-xl font-bold text-[var(--unizy-text-dark)] dark:text-white flex items-center gap-2">
-                            <MessageSquare className="w-6 h-6 text-[var(--unizy-primary)]" />
-                            {isRTL ? 'تفاصيل التذكرة' : 'Ticket Details'}
-                        </h2>
-                        <button onClick={() => setShowTicketForm(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-sm font-medium">
-                            {isRTL ? 'إلغاء' : 'Cancel'}
-                        </button>
-                    </div>
-
-                    <form className="space-y-5" onSubmit={(e) => { e.preventDefault(); alert('Ticket Submitted'); setShowTicketForm(false); }}>
-                        <div>
-                            <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
-                                {isRTL ? 'نوع المشكلة' : 'Issue Category'}
-                            </label>
-                            <select className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-[var(--unizy-text-dark)] dark:text-white focus:ring-2 focus:ring-[var(--unizy-primary)] outline-none">
-                                <option>{isRTL ? 'مشكلة في طلب طعام' : 'Food Order Issue'}</option>
-                                <option>{isRTL ? 'مشكلة في مشوار' : 'Ride Issue'}</option>
-                                <option>{isRTL ? 'استفسار سكن' : 'Housing Inquiry'}</option>
-                                <option>{isRTL ? 'أخرى' : 'Other'}</option>
-                            </select>
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
-                                {isRTL ? 'الوصف' : 'Description'}
-                            </label>
-                            <textarea
-                                rows={4}
-                                placeholder={isRTL ? 'اشرح مشكلتك بالتفصيل...' : 'Explain your issue in detail...'}
-                                className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-[var(--unizy-text-dark)] dark:text-white focus:ring-2 focus:ring-[var(--unizy-primary)] outline-none resize-none"
-                            ></textarea>
-                        </div>
-
-                        <button type="submit" className="w-full bg-[var(--unizy-primary)] text-white py-3.5 rounded-xl font-bold shadow-md hover:bg-blue-600 transition-colors flex items-center justify-center gap-2">
-                            <Send className={`w-5 h-5 ${isRTL ? 'rotate-180' : ''}`} />
-                            {isRTL ? 'إرسال التذكرة' : 'Submit Ticket'}
-                        </button>
-                    </form>
-                </div>
-            )}
-
-        </main>
+            </main>
+        </div>
     );
 }
