@@ -4,6 +4,8 @@ import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from './auth';
 import { logAdminAction } from './audit';
 import { revalidatePath } from 'next/cache';
+import { reverseRewardPoints } from './rewards-engine';
+import { creditWallet } from './wallet';
 
 /**
  * Get all refund requests (Admin specific)
@@ -138,8 +140,13 @@ export async function updateRefundStatus(refundId, newStatus) {
                 }
             }
 
-            // 5. Stub: Reverse reward points (Phase 3 dependency)
-            // TODO: When RewardTransaction model exists, reverse earned points here
+            // 5. Reverse reward points (via rewards engine)
+            await reverseRewardPoints(txn.userId, txn.id);
+
+            // 6. Credit wallet if refund goes to wallet
+            if (refund.type === 'FULL') {
+                await creditWallet(txn.userId, refund.amount, `Refund for transaction ${txn.txnCode || txn.id}`, txn.id);
+            }
         }
 
         // Audit Log

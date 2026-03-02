@@ -1,0 +1,232 @@
+'use server';
+
+import { prisma } from '@/lib/prisma';
+import { getCurrentUser } from './auth';
+import { logAdminAction } from './audit';
+
+// ===== CONSTANTS =====
+const POINTS_PER_EGP = 0.1; // 1 EGP = 0.1 reward points
+const POINTS_EXPIRY_MONTHS = 6; // Points expire after 6 months
+
+// ===== CORE FUNCTIONS =====
+
+/**
+ * Get a user's reward balance (derived from ledger, not a stored field).
+ * Balance = SUM(EARN + ADMIN_ADJUST) - SUM(SPEND) - SUM(REVERSE) - SUM(EXPIRE)
+ */
+export async function getRewardBalance(userId = null) {
+    try {
+        const user = userId ? { id: userId } : await getCurrentUser();
+        if (!user) return { error: 'Not authenticated' };
+
+        const earned = await prisma.rewardTransaction.aggregate({
+            where: { userId: user.id, type: { in: ['EARN', 'ADMIN_ADJUST'] }, points: { gt: 0 } },
+            _sum: { points: true },
+        });
+        const deducted = await prisma.rewardTransaction.aggregate({
+            where: { userId: user.id, type: { in: ['SPEND', 'REVERSE', 'EXPIRE'] } },
+            _sum: { points: true },
+        });
+
+        const totalEarned = earned._sum.points || 0;
+        const totalDeducted = Math.abs(deducted._sum.points || 0);
+        const balance = Math.max(0, totalEarned - totalDeducted);
+
+        // Get recent history
+        const history = await prisma.rewardTransaction.findMany({
+            where: { userId: user.id },
+            orderBy: { createdAt: 'desc' },
+            take: 20,
+        });
+
+        return {
+            success: true,
+            balance: Math.round(balance * 100) / 100,
+            totalEarned: Math.round(totalEarned * 100) / 100,
+            totalSpent: Math.round(totalDeducted * 100) / 100,
+            history,
+        };
+    } catch (error) {
+        console.error('Reward balance error:', error);
+        return { error: 'Failed to fetch reward balance.' };
+    }
+}
+
+/**
+ * Earn reward points from a completed payment.
+ * Called when Payment.status → PAID.
+ * @param {string} userId
+ * @param {number} amountPaid - EGP amount
+ * @param {string} transactionId - Reference to the financial transaction
+ */
+export async function earnRewardPoints(userId, amountPaid, transactionId) {
+    try {
+        const points = Math.round(amountPaid * POINTS_PER_EGP * 100) / 100;
+        if (points <= 0) return { success: true, points: 0 };
+
+        const expiresAt = new Date();
+        expiresAt.setMonth(expiresAt.getMonth() + POINTS_EXPIRY_MONTHS);
+
+        await prisma.rewardTransaction.create({
+            data: {
+                type: 'EARN',
+                points,
+                description: `Earned from payment of ${amountPaid} EGP`,
+                userId,
+                transactionId,
+                expiresAt,
+            },
+        });
+
+        return { success: true, points };
+    } catch (error) {
+        console.error('Earn points error:', error);
+        return { error: 'Failed to earn points.' };
+    }
+}
+
+/**
+ * Spend reward points (redeem).
+ * @param {number} pointsToSpend
+ * @param {string} description - What the points are being spent on
+ */
+export async function spendRewardPoints(pointsToSpend, description = 'Reward redemption') {
+    try {
+        const user = await getCurrentUser();
+        if (!user) return { error: 'Not authenticated' };
+
+        const balanceResult = await getRewardBalance(user.id);
+        if (balanceResult.error) return balanceResult;
+
+        if (balanceResult.balance < pointsToSpend) {
+            return { error: `Insufficient points. Available: ${balanceResult.balance}` };
+        }
+
+        await prisma.rewardTransaction.create({
+            data: {
+                type: 'SPEND',
+                points: -Math.abs(pointsToSpend),
+                description,
+                userId: user.id,
+            },
+        });
+
+        return { success: true, spent: pointsToSpend, newBalance: balanceResult.balance - pointsToSpend };
+    } catch (error) {
+        console.error('Spend points error:', error);
+        return { error: 'Failed to spend points.' };
+    }
+}
+
+/**
+ * Reverse reward points on refund.
+ * Called from refund cascade.
+ * @param {string} userId
+ * @param {string} transactionId - Original transaction being refunded
+ */
+export async function reverseRewardPoints(userId, transactionId) {
+    try {
+        // Find all EARN entries for this transaction
+        const earnEntries = await prisma.rewardTransaction.findMany({
+            where: { userId, transactionId, type: 'EARN' },
+        });
+
+        if (earnEntries.length === 0) return { success: true, reversed: 0 };
+
+        const totalToReverse = earnEntries.reduce((sum, e) => sum + e.points, 0);
+
+        await prisma.rewardTransaction.create({
+            data: {
+                type: 'REVERSE',
+                points: -Math.abs(totalToReverse),
+                description: `Reversed due to refund on transaction ${transactionId}`,
+                userId,
+                transactionId,
+            },
+        });
+
+        return { success: true, reversed: totalToReverse };
+    } catch (error) {
+        console.error('Reverse points error:', error);
+        return { error: 'Failed to reverse points.' };
+    }
+}
+
+/**
+ * Expire old reward points (cron-job callable).
+ * Finds all EARN entries past their expiresAt that haven't been expired yet.
+ */
+export async function expireOldPoints() {
+    try {
+        const now = new Date();
+
+        const expirableEntries = await prisma.rewardTransaction.findMany({
+            where: {
+                type: 'EARN',
+                expired: false,
+                expiresAt: { lte: now },
+                points: { gt: 0 },
+            },
+        });
+
+        let totalExpired = 0;
+
+        for (const entry of expirableEntries) {
+            // Check if points from this entry are still available (not already spent/reversed)
+            await prisma.rewardTransaction.create({
+                data: {
+                    type: 'EXPIRE',
+                    points: -entry.points,
+                    description: `Points expired (earned on ${entry.createdAt.toISOString().split('T')[0]})`,
+                    userId: entry.userId,
+                    transactionId: entry.transactionId,
+                },
+            });
+
+            await prisma.rewardTransaction.update({
+                where: { id: entry.id },
+                data: { expired: true },
+            });
+
+            totalExpired += entry.points;
+        }
+
+        return { success: true, entriesExpired: expirableEntries.length, totalPoints: totalExpired };
+    } catch (error) {
+        console.error('Expire points error:', error);
+        return { error: 'Failed to expire points.' };
+    }
+}
+
+/**
+ * Admin: Manually adjust a user's reward points.
+ */
+export async function adminAdjustPoints(userId, points, reason) {
+    try {
+        const admin = await getCurrentUser();
+        if (!admin || !admin.role?.startsWith('ADMIN')) {
+            return { error: 'Only admins can adjust points.' };
+        }
+
+        await prisma.rewardTransaction.create({
+            data: {
+                type: 'ADMIN_ADJUST',
+                points,
+                description: `Admin adjustment: ${reason}`,
+                userId,
+                adminId: admin.id,
+            },
+        });
+
+        await logAdminAction('ADJUST_REWARD_POINTS', 'REWARDS', userId, {
+            points,
+            reason,
+            adjustedBy: admin.id,
+        });
+
+        return { success: true };
+    } catch (error) {
+        console.error('Admin adjust error:', error);
+        return { error: 'Failed to adjust points.' };
+    }
+}

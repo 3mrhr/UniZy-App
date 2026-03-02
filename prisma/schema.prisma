@@ -576,10 +576,16 @@ model Payment {
   amount          Float       @default(0)
   currency        String      @default("EGP")
   method          String      // COD, CASH, CARD, WALLET
-  status          String      @default("PENDING") // PENDING, PAID, FAILED, REFUNDED
+  status          String      @default("PENDING") // PENDING, PAID, FAILED, REFUNDED, EXPIRED
+  
+  // Payment gateway fields
+  idempotencyKey  String?     @unique // Prevents double charges
+  gatewayRef      String?     // External reference from Paymob/Stripe
+  gatewayProvider String?     // "PAYMOB", "STRIPE", "CASH", etc.
   
   paidAt          DateTime?
   failedReason    String?
+  expiresAt       DateTime?   // Auto-cancel after this time
   
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
@@ -755,3 +761,56 @@ model Report {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
+
+// ========== Phase 3: Rewards Engine ==========
+
+model RewardTransaction {
+  id              String   @id @default(uuid())
+  type            String   // EARN, SPEND, REVERSE, EXPIRE, ADMIN_ADJUST
+  points          Float    // Positive for earn, negative for spend/reverse/expire
+  description     String?  // "Earned from TXN-2026-XXXXXX" etc.
+  
+  userId          String
+  
+  // Reference to the original financial transaction (nullable for admin adjustments)
+  transactionId   String?
+  
+  // Admin who made the adjustment (for ADMIN_ADJUST type)
+  adminId         String?
+  
+  // Expiry tracking
+  expiresAt       DateTime? // When these earned points expire
+  expired         Boolean   @default(false) // Whether this batch has been expired
+  
+  createdAt       DateTime @default(now())
+}
+
+// ========== Phase 3: Wallet System ==========
+
+model Wallet {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  balance   Float    @default(0.0)
+  currency  String   @default("EGP")
+  
+  walletTransactions WalletTransaction[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model WalletTransaction {
+  id          String   @id @default(uuid())
+  type        String   // TOP_UP, SPEND, REFUND_CREDIT, WITHDRAWAL
+  amount      Float    // Positive for credit, negative for debit
+  description String?
+  
+  walletId    String
+  wallet      Wallet   @relation(fields: [walletId], references: [id])
+  
+  // Reference to the original transaction (for SPEND / REFUND_CREDIT)
+  transactionId String?
+  
+  createdAt   DateTime @default(now())
+}
+
