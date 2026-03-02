@@ -527,6 +527,7 @@ model Zone {
   
   pricingRules PricingRule[]
   commissionRules CommissionRule[]
+  driverZones DriverZone[]
   
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
@@ -704,8 +705,23 @@ model SLABreach {
   targetId   String    // ID of the breached transaction/order
   status     String    @default("OPEN") // "OPEN", "RESOLVED"
   resolvedAt DateTime?
+  resolvedById String? // Admin who resolved it
+  notes      String?   // Resolution notes
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
+}
+
+// ========== Phase 4: Driver-Zone Linking ==========
+
+model DriverZone {
+  id        String   @id @default(uuid())
+  driverId  String
+  zoneId    String
+  zone      Zone     @relation(fields: [zoneId], references: [id])
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  
+  @@unique([driverId, zoneId])
 }
 
 // ========== Phase 44: End-to-End Tracking Models ==========
