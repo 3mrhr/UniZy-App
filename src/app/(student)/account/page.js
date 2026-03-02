@@ -26,9 +26,14 @@ export default function AccountPage() {
             ]
         },
         {
-            title: isRTL ? 'الأمان' : 'Security',
+            title: isRTL ? 'القانونية والسياسات' : 'Legal & Policies',
             items: [
-                { id: 'privacy', icon: Shield, en: 'Privacy & Security', ar: 'الخصوصية والأمان' },
+                { id: 'terms', href: '/terms', icon: Shield, en: 'Terms of Service', ar: 'شروط الخدمة' },
+                { id: 'privacy', href: '/privacy', icon: Shield, en: 'Privacy Policy', ar: 'سياسة الخصوصية' },
+                { id: 'refund', href: '/legal/refund-policy', icon: Shield, en: 'Refund Policy', ar: 'سياسة الاسترجاع' },
+                { id: 'community', href: '/legal/community-guidelines', icon: Shield, en: 'Community Guidelines', ar: 'إرشادات المجتمع' },
+                { id: 'rewards', href: '/legal/rewards-rules', icon: Shield, en: 'Rewards Rules', ar: 'قواعد المكافآت' },
+                { id: 'cancellation', href: '/legal/cancellation-policy', icon: Shield, en: 'Cancellation Policy', ar: 'سياسة الإلغاء' },
             ]
         }
     ];
@@ -64,7 +69,7 @@ export default function AccountPage() {
                         </h2>
                         <div className="bg-white dark:bg-[#1E293B] rounded-3xl border border-gray-100 dark:border-gray-800 overflow-hidden divide-y divide-gray-100 dark:divide-gray-800">
                             {section.items.map((item) => (
-                                <div key={item.id} className="flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer transition-colors group">
+                                <Link href={item.href || `/account/${item.id}`} key={item.id} className="flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer transition-colors group">
                                     <div className="flex items-center gap-3">
                                         <div className="w-10 h-10 rounded-xl bg-gray-50 dark:bg-gray-800 flex items-center justify-center text-gray-500 group-hover:text-[var(--unizy-primary)] group-hover:bg-blue-50 dark:group-hover:bg-blue-900/20 transition-colors">
                                             <item.icon className="w-5 h-5" />
@@ -74,7 +79,7 @@ export default function AccountPage() {
                                         </span>
                                     </div>
                                     <ChevronRight className={`w-5 h-5 text-gray-300 group-hover:text-[var(--unizy-primary)] transition-colors ${isRTL ? 'rotate-180' : ''}`} />
-                                </div>
+                                </Link>
                             ))}
                         </div>
                     </div>
