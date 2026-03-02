@@ -2,14 +2,16 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, CheckCircle2, Circle, Clock, Receipt, MapPin, Building, Package, User } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Circle, Clock, Receipt, MapPin, Building, Package, User, CreditCard, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import { getTransactionDetails } from '@/app/actions/transactions';
+import { getPaymentByTransaction } from '@/app/actions/payments';
 
 export default function TransactionDetailsPage() {
     const params = useParams();
     const router = useRouter();
     const [transaction, setTransaction] = useState(null);
+    const [payment, setPayment] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
@@ -18,6 +20,12 @@ export default function TransactionDetailsPage() {
                 const res = await getTransactionDetails(params.id);
                 if (res.success) {
                     setTransaction(res.transaction);
+
+                    // fetch payment
+                    const paymentRes = await getPaymentByTransaction(res.transaction.id);
+                    if (paymentRes.payment) {
+                        setPayment(paymentRes.payment);
+                    }
                 }
                 setIsLoading(false);
             }
@@ -156,6 +164,58 @@ export default function TransactionDetailsPage() {
 
                 {renderSpecificDetails()}
             </div>
+
+            {/* Payment / Receipt Section */}
+            {payment && (
+                <div>
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 pl-1 flex items-center gap-2">
+                        <CreditCard className="w-5 h-5 text-gray-400" />
+                        Payment Details
+                    </h3>
+                    <div className="bg-white dark:bg-[#1E293B] rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-800">
+                        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                            <div>
+                                <p className="text-sm text-gray-500 mb-1">Status</p>
+                                <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold tracking-wider uppercase
+                                    ${payment.status === 'PAID' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
+                                        payment.status === 'FAILED' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
+                                            'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'}`}
+                                >
+                                    {payment.status === 'PAID' && <CheckCircle2 className="w-3 h-3" />}
+                                    {payment.status === 'FAILED' && <XCircle className="w-3 h-3" />}
+                                    {payment.status === 'PENDING' && <Clock className="w-3 h-3" />}
+                                    {payment.status}
+                                </span>
+                            </div>
+
+                            <div>
+                                <p className="text-sm text-gray-500 mb-1">Method</p>
+                                <p className="font-semibold text-gray-900 dark:text-white">
+                                    {payment.method === 'COD' ? 'Cash on Delivery' : payment.method}
+                                </p>
+                            </div>
+
+                            <div>
+                                <p className="text-sm text-gray-500 mb-1">Amount</p>
+                                <p className="font-bold text-gray-900 dark:text-white">
+                                    {payment.amount} {payment.currency}
+                                </p>
+                            </div>
+                        </div>
+
+                        {payment.paidAt && (
+                            <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800 text-sm text-gray-500">
+                                Paid on: {new Date(payment.paidAt).toLocaleString('en-EG', { dateStyle: 'medium', timeStyle: 'short' })}
+                            </div>
+                        )}
+                        {payment.failedReason && (
+                            <div className="mt-4 pt-4 border-t border-red-100 dark:border-gray-800 text-sm text-red-600 dark:text-red-400">
+                                Issue: {payment.failedReason}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
 
             {/* Timeline View */}
             <div>

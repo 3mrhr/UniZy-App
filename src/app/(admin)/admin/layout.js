@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
     LayoutDashboard, Users, ShoppingBag, Truck,
     Home, Tag, Utensils, ShieldAlert, LogOut,
-    Menu, X, Bell, Settings, ChevronRight, MapPin, DollarSign, Percent
+    Menu, X, Bell, Settings, ChevronRight, MapPin, DollarSign, Percent, CreditCard
 } from 'lucide-react';
 
 const ADMIN_ROLES = {
@@ -25,6 +25,7 @@ const ADMIN_ROLES = {
             { label: 'Commerce', icon: Tag, href: '/admin/commerce' },
             { label: 'Home Services', icon: Settings, href: '/admin/services' },
             { label: 'Transactions', icon: ShoppingBag, href: '/admin/transactions' },
+            { label: 'Payments', icon: CreditCard, href: '/admin/payments' },
             { label: 'Global Pricing', icon: DollarSign, href: '/admin/pricing' },
             { label: 'Revenue & Commissions', icon: Percent, href: '/admin/commissions' },
             { label: 'Zones Map', icon: MapPin, href: '/admin/zones' },

@@ -47,6 +47,13 @@ model User {
   cleaningBookings  CleaningBooking[]
   auditLogs         AuditLog[]  @relation("AdminAuditLogs")
   transactions      Transaction[]
+  
+  // Phase 38-40 back-relations
+  refundRequests    Refund[]    @relation("RefundRequests")
+  refundApprovals   Refund[]    @relation("RefundApprovals")
+  providerSettlements Settlement[] @relation("ProviderSettlements")
+  payoutsProcessed  Payout[]    @relation("PayoutProcessor")
+  driverDispatches  Dispatch[]  @relation("DriverDispatches")
 }
 
 model HousingListing {
@@ -93,6 +100,8 @@ model Order {
   userId   String
   user     User    @relation(fields: [userId], references: [id])
   driverId String?
+
+  dispatches Dispatch[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -399,6 +408,9 @@ model Transaction {
   notes           String?
   
   history         TransactionHistory[]
+  payments        Payment[]
+  refunds         Refund[]
+  dispatches      Dispatch[]
 
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
@@ -465,3 +477,114 @@ model CommissionRule {
   createdAt             DateTime    @default(now())
   updatedAt             DateTime    @updatedAt
 }
+
+model Payment {
+  id              String      @id @default(uuid())
+  
+  transactionId   String
+  transaction     Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  
+  amount          Float       @default(0)
+  currency        String      @default("EGP")
+  method          String      // COD, CASH, CARD, WALLET
+  status          String      @default("PENDING") // PENDING, PAID, FAILED, REFUNDED
+  
+  paidAt          DateTime?
+  failedReason    String?
+  
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+
+// ========== Phase 38: Refunds & Adjustments ==========
+
+model Refund {
+  id              String      @id @default(uuid())
+  
+  transactionId   String
+  transaction     Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  
+  amount          Float
+  currency        String      @default("EGP")
+  type            String      @default("FULL") // FULL, PARTIAL
+  reason          String
+  status          String      @default("REQUESTED") // REQUESTED, APPROVED, REJECTED, PROCESSED
+  
+  requestedById   String
+  requestedBy     User        @relation("RefundRequests", fields: [requestedById], references: [id])
+  
+  approvedById    String?
+  approvedBy      User?       @relation("RefundApprovals", fields: [approvedById], references: [id])
+  
+  processedAt     DateTime?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+
+// ========== Phase 39: Settlement & Payout Engine ==========
+
+model Settlement {
+  id              String      @id @default(uuid())
+  
+  providerId      String
+  provider        User        @relation("ProviderSettlements", fields: [providerId], references: [id])
+  
+  periodStart     DateTime
+  periodEnd       DateTime
+  
+  grossAmount     Float       @default(0)
+  commissionAmount Float      @default(0)
+  netAmount       Float       @default(0)
+  currency        String      @default("EGP")
+  
+  status          String      @default("PENDING") // PENDING, PROCESSING, PAID, FAILED
+  
+  payouts         Payout[]
+  
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+
+model Payout {
+  id              String      @id @default(uuid())
+  
+  settlementId    String
+  settlement      Settlement  @relation(fields: [settlementId], references: [id], onDelete: Cascade)
+  
+  amount          Float
+  currency        String      @default("EGP")
+  method          String      // BANK_TRANSFER, MOBILE_WALLET, CASH
+  reference       String?     // External transaction reference
+  status          String      @default("PENDING") // PENDING, PROCESSING, PAID, FAILED
+  
+  processedById   String?
+  processedBy     User?       @relation("PayoutProcessor", fields: [processedById], references: [id])
+  
+  paidAt          DateTime?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+
+// ========== Phase 40: Dispatch System ==========
+
+model Dispatch {
+  id              String      @id @default(uuid())
+  
+  orderId         String
+  order           Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  
+  transactionId   String?
+  transaction     Transaction? @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  
+  driverId        String?
+  driver          User?       @relation("DriverDispatches", fields: [driverId], references: [id])
+  
+  status          String      @default("PENDING") // PENDING, ASSIGNED, ACCEPTED, DECLINED, FAILED, COMPLETED, CANCELLED
+  assignedById    String?     // ID of the admin who manually assigned, if applicable
+  delayReason     String?
+  isOverride      Boolean     @default(false)
+  
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+

@@ -1,0 +1,150 @@
+'use server';
+
+import { prisma } from '@/lib/prisma';
+import { getCurrentUser } from './auth';
+import { logAdminAction } from './audit';
+import { revalidatePath } from 'next/cache';
+
+/**
+ * Get all refund requests (Admin specific)
+ */
+export async function getRefunds({ page = 1, limit = 20, status = null } = {}) {
+    try {
+        const user = await getCurrentUser();
+        if (!user || (!user.role?.startsWith('ADMIN_') && user.role !== 'ADMIN_SUPER')) {
+            return { error: 'Unauthorized. Admin only.' };
+        }
+
+        const skip = (page - 1) * limit;
+        const where = status ? { status } : {};
+
+        const refunds = await prisma.refund.findMany({
+            where,
+            skip,
+            take: limit,
+            orderBy: { createdAt: 'desc' },
+            include: {
+                transaction: {
+                    include: {
+                        user: {
+                            select: { name: true, email: true, phone: true }
+                        }
+                    }
+                },
+                requestedBy: true,
+                approvedBy: true,
+            }
+        });
+
+        const total = await prisma.refund.count({ where });
+
+        return { refunds, total, totalPages: Math.ceil(total / limit) };
+    } catch (error) {
+        console.error('Error fetching refunds:', error);
+        return { error: error.message };
+    }
+}
+
+/**
+ * Approve or Reject a Refund Request
+ */
+export async function updateRefundStatus(refundId, newStatus) {
+    try {
+        const admin = await getCurrentUser();
+        if (!admin || (!admin.role?.startsWith('ADMIN_') && admin.role !== 'ADMIN_SUPER')) {
+            return { error: 'Unauthorized.' };
+        }
+
+        const refund = await prisma.refund.findUnique({
+            where: { id: refundId },
+            include: { transaction: true }
+        });
+
+        if (!refund) return { error: 'Refund request not found.' };
+
+        const validStatuses = ['APPROVED', 'REJECTED', 'PROCESSED'];
+        if (!validStatuses.includes(newStatus)) {
+            return { error: 'Invalid status.' };
+        }
+
+        const updateData = {
+            status: newStatus,
+            approvedById: newStatus === 'APPROVED' ? admin.id : null,
+            processedAt: newStatus === 'PROCESSED' ? new Date() : null,
+        };
+
+        const updatedRefund = await prisma.refund.update({
+            where: { id: refundId },
+            data: updateData
+        });
+
+        // Optionally update the payment if fully processed
+        if (newStatus === 'PROCESSED') {
+            const payment = await prisma.payment.findFirst({
+                where: { transactionId: refund.transactionId, status: 'PAID' }
+            });
+            if (payment && refund.type === 'FULL') {
+                await prisma.payment.update({
+                    where: { id: payment.id },
+                    data: { status: 'REFUNDED' }
+                });
+            }
+        }
+
+        // Audit Log
+        await logAdminAction(
+            `Marked Refund ${refundId} as ${newStatus}`,
+            'FINANCE',
+            refundId,
+            { previousStatus: refund.status, newStatus }
+        );
+
+        revalidatePath('/admin/refunds');
+        return { success: true, refund: updatedRefund };
+    } catch (error) {
+        console.error('Error updating refund status:', error);
+        return { error: error.message };
+    }
+}
+
+/**
+ * Create a new Refund Request (Support Agent or Admin)
+ */
+export async function createRefundRequest({ transactionId, amount, type, reason }) {
+    try {
+        const user = await getCurrentUser();
+        if (!user) return { error: 'Unauthorized' };
+
+        // Validate transaction exists
+        const transaction = await prisma.transaction.findUnique({
+            where: { id: transactionId }
+        });
+
+        if (!transaction) return { error: 'Transaction not found.' };
+
+        // Ensure no duplicate active requests exist
+        const existingRef = await prisma.refund.findFirst({
+            where: {
+                transactionId,
+                status: { in: ['REQUESTED', 'APPROVED'] }
+            }
+        });
+
+        if (existingRef) return { error: 'An active refund request already exists for this transaction.' };
+
+        const refund = await prisma.refund.create({
+            data: {
+                transactionId,
+                amount: parseFloat(amount),
+                type,
+                reason,
+                requestedById: user.id
+            }
+        });
+
+        return { success: true, refund };
+    } catch (error) {
+        console.error('Error creating refund:', error);
+        return { error: error.message };
+    }
+}
