@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
     LayoutDashboard, Users, ShoppingBag, Truck,
     Home, Tag, Utensils, ShieldAlert, LogOut,
-    Menu, X, Bell, Settings, ChevronRight
+    Menu, X, Bell, Settings, ChevronRight, MapPin, DollarSign
 } from 'lucide-react';
 
 const ADMIN_ROLES = {
@@ -24,8 +24,13 @@ const ADMIN_ROLES = {
             { label: 'Housing', icon: Home, href: '/admin/housing' },
             { label: 'Commerce', icon: Tag, href: '/admin/commerce' },
             { label: 'Home Services', icon: Settings, href: '/admin/services' },
-            { label: 'Cleaning', icon: Home, href: '/admin/cleaning' },
-            { label: 'Users & Roles', icon: Users, href: '/admin/roles' },
+            { label: 'Transactions', icon: ShoppingBag, href: '/admin/transactions' },
+            { label: 'Global Pricing', icon: DollarSign, href: '/admin/pricing' },
+            { label: 'Zones Map', icon: MapPin, href: '/admin/zones' },
+            { label: 'Roles & Permissions', icon: Users, href: '/admin/roles-permissions' },
+            { label: 'Permission Scopes', icon: ShieldAlert, href: '/admin/roles-permissions/scopes' },
+            { label: 'Staff Management', icon: Users, href: '/admin/staff' },
+            { label: 'Audit Logs', icon: Users, href: '/admin/audit-logs' },
             { label: 'Finance', icon: ShoppingBag, href: '/admin/finance' },
         ]
     },
@@ -36,6 +41,7 @@ const ADMIN_ROLES = {
             { label: 'Overview', icon: LayoutDashboard, href: '/admin/delivery' },
             { label: 'Vendors', icon: Users, href: '/admin/delivery/vendors' },
             { label: 'Live Orders', icon: Truck, href: '/admin/delivery/orders' },
+            { label: 'Pricing & Fees', icon: DollarSign, href: '/admin/delivery/pricing' },
             { label: 'Analytics', icon: ShieldAlert, href: '/admin/delivery/analytics' },
         ]
     },
@@ -46,6 +52,7 @@ const ADMIN_ROLES = {
             { label: 'Overview', icon: LayoutDashboard, href: '/admin/transport' },
             { label: 'Fleet', icon: ShoppingBag, href: '/admin/transport/fleet' },
             { label: 'Live Rides', icon: Users, href: '/admin/transport/rides' },
+            { label: 'Pricing & Fares', icon: DollarSign, href: '/admin/transport/pricing' },
             { label: 'Analytics', icon: ShieldAlert, href: '/admin/transport/analytics' },
         ]
     },
@@ -56,6 +63,7 @@ const ADMIN_ROLES = {
             { label: 'Overview', icon: LayoutDashboard, href: '/admin/housing' },
             { label: 'Verifications', icon: ShieldAlert, href: '/admin/housing/verifications' },
             { label: 'Listings', icon: Home, href: '/admin/housing/listings' },
+            { label: 'Pricing & Fees', icon: DollarSign, href: '/admin/housing/pricing' },
             { label: 'Analytics', icon: Users, href: '/admin/housing/analytics' },
         ]
     },
@@ -67,6 +75,7 @@ const ADMIN_ROLES = {
             { label: 'Deals', icon: Tag, href: '/admin/commerce/deals' },
             { label: 'Meals', icon: Utensils, href: '/admin/commerce/meals' },
             { label: 'Merchants', icon: Users, href: '/admin/commerce/merchants' },
+            { label: 'Pricing Rules', icon: DollarSign, href: '/admin/commerce/pricing' },
         ]
     }
 };

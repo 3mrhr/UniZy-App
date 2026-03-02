@@ -207,3 +207,54 @@ export async function createDeal(dealData) {
         return { success: false, error: 'Failed to create deal' };
     }
 }
+
+/**
+ * Redeem a deal (Student capability)
+ */
+export async function redeemDeal(dealId) {
+    try {
+        const user = await getCurrentUser();
+        if (!user || user.role !== 'STUDENT') {
+            return { success: false, error: 'Only students can redeem deals.' };
+        }
+
+        const deal = await prisma.deal.findUnique({
+            where: { id: dealId }
+        });
+
+        if (!deal) return { success: false, error: 'Deal not found.' };
+
+        // Execute unified transaction logging
+        const result = await prisma.$transaction(async (tx) => {
+            const txnCode = `TXN-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
+
+            const transactionRecord = await tx.transaction.create({
+                data: {
+                    txnCode,
+                    type: 'DEALS',
+                    userId: user.id,
+                    dealId: deal.id,
+                    amount: deal.discountPrice || deal.originalPrice || 0,
+                    currency: deal.currency,
+                }
+            });
+
+            await tx.transactionHistory.create({
+                data: {
+                    transactionId: transactionRecord.id,
+                    newStatus: 'CONFIRMED',
+                    actorId: user.id,
+                    reason: 'Student redeemed deal',
+                }
+            });
+
+            return transactionRecord;
+        });
+
+        revalidatePath(`/deals/${dealId}`);
+        return { success: true, transaction: result };
+    } catch (error) {
+        console.error('Error redeeming deal:', error);
+        return { success: false, error: 'Failed to redeem deal.' };
+    }
+}

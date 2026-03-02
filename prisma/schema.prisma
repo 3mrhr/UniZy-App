@@ -16,6 +16,7 @@ model User {
   email     String   @unique
   password  String // bcrypt hashed
   phone     String?
+  scopes    String? // JSON array for module-admin scopes (e.g. ["HOUSING", "TRANSPORT"])
   
   // Phase 16: Expanded Profile
   university   String?  @default("Assiut University")
@@ -44,6 +45,8 @@ model User {
   referralsUsed  Referral[]  @relation("referred")
   serviceBookings   ServiceBooking[]
   cleaningBookings  CleaningBooking[]
+  auditLogs         AuditLog[]  @relation("AdminAuditLogs")
+  transactions      Transaction[]
 }
 
 model HousingListing {
@@ -60,6 +63,8 @@ model HousingListing {
 
   providerId String
   provider   User   @relation(fields: [providerId], references: [id])
+
+  transactions Transaction[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -145,7 +150,8 @@ model Deal {
   merchantId String
   merchant   User   @relation(fields: [merchantId], references: [id])
 
-  savedBy   SavedDeal[]
+  savedBy      SavedDeal[]
+  transactions Transaction[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -181,6 +187,8 @@ model Meal {
   merchantId  String
   merchant    User     @relation(fields: [merchantId], references: [id])
   
+  transactions Transaction[]
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -302,6 +310,8 @@ model ServiceBooking {
   providerId  String
   provider    ServiceProvider @relation(fields: [providerId], references: [id])
 
+  transactions Transaction[]
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -339,6 +349,100 @@ model CleaningBooking {
   packageId   String
   package     CleaningPackage @relation(fields: [packageId], references: [id])
 
+  transactions Transaction[]
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+// ========== Phase 32: Audit Logs ==========
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  action    String   // e.g., "UPDATE_ROLE", "APPROVE_LISTING", "PRICE_CHANGE"
+  module    String   // e.g., "USERS", "HOUSING", "TRANSPORT", "FINANCE"
+  targetId  String?  // ID of the affected user, listing, or order
+  details   String?  // JSON stringified additional info
+
+  adminId   String
+  admin     User     @relation("AdminAuditLogs", fields: [adminId], references: [id])
+
+  createdAt DateTime @default(now())
+}
+
+// ========== Phase 33-34: Core Transaction Engine ==========
+
+model Transaction {
+  id              String      @id @default(uuid())
+  txnCode         String      @unique // e.g. TXN-2026-XXXXXX
+  type            String      // e.g., "HOUSING", "TRANSPORT", "DELIVERY", "DEALS", "MEALS", "SERVICE"
+  status          String      @default("PENDING") // PENDING, CONFIRMED, IN_PROGRESS, COMPLETED, CANCELLED
+  
+  userId          String
+  user            User        @relation(fields: [userId], references: [id])
+  
+  // Optional relations to specific modules
+  housingId       String?
+  housing         HousingListing? @relation(fields: [housingId], references: [id], onDelete: SetNull)
+  serviceBookingId String?
+  serviceBooking  ServiceBooking? @relation(fields: [serviceBookingId], references: [id], onDelete: SetNull)
+  cleaningBookingId String?
+  cleaningBooking CleaningBooking? @relation(fields: [cleaningBookingId], references: [id], onDelete: SetNull)
+  dealId          String?
+  deal            Deal?           @relation(fields: [dealId], references: [id], onDelete: SetNull)
+  mealId          String?
+  meal            Meal?           @relation(fields: [mealId], references: [id], onDelete: SetNull)
+
+  amount          Float       @default(0.0)
+  currency        String      @default("EGP")
+  
+  notes           String?
+  
+  history         TransactionHistory[]
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+
+model TransactionHistory {
+  id              String      @id @default(uuid())
+  transactionId   String
+  transaction     Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  
+  oldStatus       String?
+  newStatus       String
+  actorId         String      // User ID of who made the change
+  reason          String?     // Optional explanation for the change (e.g. cancellation reason)
+
+  createdAt       DateTime    @default(now())
+}
+
+
+model Zone {
+  id          String        @id @default(uuid())
+  name        String        @unique
+  city        String?
+  isActive    Boolean       @default(true)
+  
+  pricingRules PricingRule[]
+  
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model PricingRule {
+  id            String      @id @default(uuid())
+  module        String      // HOUSING, TRANSPORT, DELIVERY, DEALS, MEALS, SERVICES, CLEANING
+  serviceType   String      // BASE_FARE, LISTING_FEE, COMMISSION, DELIV_FEE, etc.
+  basePrice     Float       @default(0)
+  feeComponents String?     // JSON string for complex fee structures
+  
+  zoneId        String?     // Optional: If null, applies globally
+  zone          Zone?       @relation(fields: [zoneId], references: [id], onDelete: SetNull)
+  
+  effectiveDate DateTime    @default(now())
+  isActive      Boolean     @default(true)
+  
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 }

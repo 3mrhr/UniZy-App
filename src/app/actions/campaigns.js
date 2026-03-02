@@ -2,6 +2,7 @@
 
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from './auth';
+import { logAdminAction } from './audit';
 
 export async function createCampaign({ title, message, targetRole, targetUni, scheduledAt }) {
     try {
@@ -73,6 +74,13 @@ export async function sendCampaign(campaignId) {
             where: { id: campaignId },
             data: { status: 'SENT', sentAt: new Date() }
         });
+
+        await logAdminAction(
+            'SEND_CAMPAIGN',
+            'MARKETING',
+            campaignId,
+            { recipients: targetUsers.length, title: campaign.title }
+        );
 
         return { success: true, recipientCount: targetUsers.length };
     } catch (error) {

@@ -33,18 +33,49 @@ export async function bookCleaning({ packageId, date, timeSlot, address, notes }
         const user = await getCurrentUser();
         if (!user) return { error: 'Not authenticated' };
 
-        const booking = await prisma.cleaningBooking.create({
-            data: {
-                userId: user.id,
-                packageId,
-                date,
-                timeSlot,
-                address,
-                notes: notes || null,
-            }
+        // Fetch package to get the correct price
+        const pkg = await prisma.cleaningPackage.findUnique({ where: { id: packageId } });
+        if (!pkg) return { error: 'Cleaning package not found' };
+
+        const result = await prisma.$transaction(async (tx) => {
+            const booking = await tx.cleaningBooking.create({
+                data: {
+                    userId: user.id,
+                    packageId,
+                    date,
+                    timeSlot,
+                    address,
+                    notes: notes || null,
+                }
+            });
+
+            // Create unified transaction record
+            const txnCode = `TXN-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
+
+            const transactionRecord = await tx.transaction.create({
+                data: {
+                    txnCode,
+                    type: 'CLEANING',
+                    userId: user.id,
+                    cleaningBookingId: booking.id,
+                    amount: pkg.price,
+                }
+            });
+
+            // Log initial history state
+            await tx.transactionHistory.create({
+                data: {
+                    transactionId: transactionRecord.id,
+                    newStatus: 'PENDING',
+                    actorId: user.id,
+                    reason: 'Initial Cleaning Booking',
+                }
+            });
+
+            return booking;
         });
 
-        return { success: true, booking };
+        return { success: true, booking: result };
     } catch (error) {
         console.error('Book cleaning error:', error);
         return { error: 'Failed to book cleaning.' };

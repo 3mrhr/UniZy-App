@@ -2,6 +2,7 @@
 
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from './auth';
+import { logAdminAction } from './audit';
 
 export async function createPost({ content, category, imageUrl }) {
     try {
@@ -85,6 +86,8 @@ export async function deletePost(postId) {
             data: { status: 'REMOVED' }
         });
 
+        await logAdminAction('REMOVE_POST', 'HUB', postId, { action: 'Admin removed flagged post' });
+
         return { success: true };
     } catch (error) {
         console.error('Delete post error:', error);
@@ -134,6 +137,8 @@ export async function approvePost(postId) {
             where: { id: postId },
             data: { status: 'ACTIVE', isFlagged: false, flagReason: null }
         });
+
+        await logAdminAction('APPROVE_POST', 'HUB', postId, { action: 'Admin restored flagged post' });
 
         return { success: true };
     } catch (error) {

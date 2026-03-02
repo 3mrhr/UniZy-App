@@ -2,6 +2,7 @@
 
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from './auth';
+import { logAdminAction } from './audit';
 
 const SERVICE_CATEGORIES = [
     { id: 'PLUMBER', label: 'Plumber', icon: '🔧' },
@@ -57,17 +58,48 @@ export async function bookService({ providerId, date, timeSlot, notes }) {
         const user = await getCurrentUser();
         if (!user) return { error: 'Not authenticated' };
 
-        const booking = await prisma.serviceBooking.create({
-            data: {
-                userId: user.id,
-                providerId,
-                date,
-                timeSlot,
-                notes: notes || null,
-            }
+        // Wrap in a transaction to ensure both records are created
+        const result = await prisma.$transaction(async (tx) => {
+            const booking = await tx.serviceBooking.create({
+                data: {
+                    userId: user.id,
+                    providerId,
+                    date,
+                    timeSlot,
+                    notes: notes || null,
+                }
+            });
+
+            // Calculate cost or fetch from package (using 0 for demo/quote-based services)
+            const amount = 0;
+
+            // Create unified transaction record
+            const txnCode = `TXN-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
+
+            const transactionRecord = await tx.transaction.create({
+                data: {
+                    txnCode,
+                    type: 'SERVICE',
+                    userId: user.id,
+                    serviceBookingId: booking.id,
+                    amount,
+                }
+            });
+
+            // Log initial history state
+            await tx.transactionHistory.create({
+                data: {
+                    transactionId: transactionRecord.id,
+                    newStatus: 'PENDING',
+                    actorId: user.id,
+                    reason: 'Initial Booking',
+                }
+            });
+
+            return booking;
         });
 
-        return { success: true, booking };
+        return { success: true, booking: result };
     } catch (error) {
         console.error('Book service error:', error);
         return { error: 'Failed to book service.' };
@@ -148,6 +180,9 @@ export async function approveProvider(providerId) {
             where: { id: providerId },
             data: { verified: true },
         });
+
+        await logAdminAction('VERIFY_PROVIDER', 'SERVICES', providerId, { action: 'Admin verified service provider' });
+
         return { success: true };
     } catch (error) {
         return { error: 'Failed to approve provider.' };

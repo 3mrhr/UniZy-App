@@ -108,3 +108,56 @@ export async function createMeal(data) {
         return { success: false, error: "Failed to create meal" };
     }
 }
+
+// Student: Order a Meal
+export async function orderMeal({ mealId, quantity = 1, notes = '' }) {
+    try {
+        const user = await getCurrentUser(); // Assumes auth.js exists
+        if (!user || user.role !== 'STUDENT') {
+            return { success: false, error: 'Only students can order meals.' };
+        }
+
+        const meal = await prisma.meal.findUnique({
+            where: { id: mealId }
+        });
+
+        if (!meal) return { success: false, error: 'Meal not found.' };
+        if (meal.status !== 'ACTIVE') return { success: false, error: 'Meal is currently unavailable.' };
+
+        // Calculate total 
+        const totalAmount = meal.price * quantity;
+
+        // Execute unified transaction logging
+        const result = await prisma.$transaction(async (tx) => {
+            const txnCode = `TXN-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
+
+            const transactionRecord = await tx.transaction.create({
+                data: {
+                    txnCode,
+                    type: 'MEALS',
+                    userId: user.id,
+                    mealId: meal.id,
+                    amount: totalAmount,
+                    currency: meal.currency,
+                    notes: `Qty: ${quantity}. ${notes}`.trim()
+                }
+            });
+
+            await tx.transactionHistory.create({
+                data: {
+                    transactionId: transactionRecord.id,
+                    newStatus: 'PENDING',
+                    actorId: user.id,
+                    reason: 'Student placed meal order',
+                }
+            });
+
+            return transactionRecord;
+        });
+
+        return { success: true, transaction: result };
+    } catch (error) {
+        console.error('Error ordering meal:', error);
+        return { success: false, error: 'Failed to place meal order.' };
+    }
+}

@@ -6,22 +6,6 @@ import bcrypt from 'bcryptjs';
 
 export async function loginUser(username, password) {
     try {
-        // --- 🚀 Dev-mode bypass for role testing ---
-        const roleString = username.toUpperCase();
-
-        if (roleString.includes('ADMIN') || roleString === 'DRIVER' || roleString === 'LANDLORD' || roleString === 'MERCHANT') {
-            const role = roleString === 'LANDLORD' ? 'PROVIDER' : (roleString.includes('ADMIN') ? roleString : roleString);
-            const mockUser = {
-                id: `${roleString.toLowerCase()}-mock-id`,
-                name: username,
-                email: `${username}@unizy.com`,
-                role,
-            };
-            const session = await getSession();
-            session.user = mockUser;
-            await session.save();
-            return { success: true, role: mockUser.role };
-        }
         // -----------------------------------------------------------------
 
         // Standard DB check
@@ -45,6 +29,7 @@ export async function loginUser(username, password) {
             role: user.role,
             name: user.name,
             email: user.email,
+            scopes: user.scopes ? JSON.parse(user.scopes) : [],
         };
         await session.save();
 
