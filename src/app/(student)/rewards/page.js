@@ -2,9 +2,11 @@
 
 import Link from 'next/link';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLanguage } from '@/i18n/LanguageProvider';
 import { Gift, Wallet, History, Ticket, ArrowUpRight, TrendingUp, HelpCircle } from 'lucide-react';
+import { spendRewardPoints, getRewardBalance } from '@/app/actions/rewards-engine';
+import toast from 'react-hot-toast';
 
 const REWARDS_TABS = [
     { id: 'overview', icon: Wallet, en: 'Overview', ar: 'نظرة عامة' },
@@ -29,10 +31,39 @@ export default function RewardsPage() {
     const { language } = useLanguage();
     const isRTL = language === 'ar-EG';
     const [activeTab, setActiveTab] = useState('overview');
+    const [currentPoints, setCurrentPoints] = useState(0);
+    const [totalEarned, setTotalEarned] = useState(0);
+    const [isRedeeming, setIsRedeeming] = useState(null);
 
-    const currentPoints = 345;
-    const totalEarned = 1250;
-    const eqvEgp = currentPoints / 10; // Rule: 1 EGP = 0.1 point -> 10 points = 1 EGP
+    useEffect(() => {
+        async function loadBalance() {
+            const res = await getRewardBalance();
+            if (res.success) {
+                setCurrentPoints(res.balance || 0);
+                setTotalEarned(res.totalEarned || 0);
+            }
+        }
+        loadBalance();
+    }, []);
+
+    const handleRedeem = async (option) => {
+        if (currentPoints < option.points) return;
+        setIsRedeeming(option.id);
+        try {
+            const res = await spendRewardPoints(option.points, `Redeemed: ${option.enTitle}`);
+            if (res.success) {
+                setCurrentPoints(prev => prev - option.points);
+                toast.success(`Redeemed ${option.value} successfully!`);
+            } else {
+                toast.error(res.error || 'Redemption failed');
+            }
+        } catch {
+            toast.error('Something went wrong');
+        }
+        setIsRedeeming(null);
+    };
+
+    const eqvEgp = Math.round(currentPoints / 10); // Rule: 10 points = 1 EGP
 
     return (
         <main className="min-h-screen pb-24 bg-[var(--unizy-bg-light)] dark:bg-[var(--unizy-bg-dark)] px-4 sm:px-6 lg:px-8 max-w-3xl mx-auto pt-6 transition-colors duration-300">
@@ -168,13 +199,14 @@ export default function RewardsPage() {
                                     <p className="text-[var(--unizy-primary)] font-bold mt-1 text-lg leading-none">{option.value}</p>
                                 </div>
                                 <button
-                                    disabled={currentPoints < option.points}
+                                    onClick={() => handleRedeem(option)}
+                                    disabled={currentPoints < option.points || isRedeeming === option.id}
                                     className={`px-4 py-2 rounded-xl text-sm font-bold shadow-sm transition-all shrink-0 ${currentPoints >= option.points
                                         ? 'bg-[var(--unizy-primary)] text-white hover:opacity-90'
                                         : 'bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed'
                                         }`}
                                 >
-                                    {option.points} pts
+                                    {isRedeeming === option.id ? '...' : `${option.points} pts`}
                                 </button>
                             </div>
                         ))}

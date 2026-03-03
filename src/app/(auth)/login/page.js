@@ -31,6 +31,7 @@ export default function Login() {
             const role = result.role || 'STUDENT';
             const redirectMap = {
                 'ADMIN_SUPER': '/admin',
+                'SUPERADMIN': '/admin',
                 'ADMIN_DELIVERY': '/admin/delivery',
                 'ADMIN_TRANSPORT': '/admin/transport',
                 'ADMIN_HOUSING': '/admin/housing',
@@ -78,13 +79,13 @@ export default function Login() {
                     )}
 
                     <div className="mb-6">
-                        <label className="block text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3 ml-1">Username</label>
+                        <label className="block text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3 ml-1">Email</label>
                         <input
                             type="text"
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
                             className="w-full px-6 py-4 rounded-2xl bg-gray-50 dark:bg-unizy-navy/50 border-2 border-transparent focus:bg-white dark:focus:bg-unizy-navy focus:border-brand-500 focus:ring-0 outline-none transition-all text-gray-900 dark:text-white font-bold"
-                            placeholder="e.g. driver, landlord, merchant"
+                            placeholder="your@email.com"
                             required
                         />
                     </div>
@@ -106,7 +107,7 @@ export default function Login() {
                             <input type="checkbox" className="w-5 h-5 rounded-lg border-gray-200 dark:border-gray-700 text-brand-600 focus:ring-brand-500 bg-white dark:bg-unizy-navy" />
                             <span className="text-sm font-bold text-gray-600 dark:text-gray-400 group-hover:text-brand-600 transition-colors">Remember me</span>
                         </label>
-                        <Link href="/forgot-password" className="text-sm font-black text-brand-600 hover:text-brand-700 uppercase tracking-tighter">Forgot?</Link>
+                        <Link href="/forgot-password" className="text-sm font-black text-brand-600 hover:text-brand-700 tracking-tighter">Forgot Password?</Link>
                     </div>
 
                     <button

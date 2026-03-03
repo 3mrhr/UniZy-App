@@ -44,13 +44,19 @@ export default function NewTicketPage() {
     const [description, setDescription] = useState('');
     const [priority, setPriority] = useState('MEDIUM');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [errors, setErrors] = useState({});
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!subject || !description) {
-            toast.error(isRTL ? 'يرجى ملء جميع الحقول' : 'Please fill in all fields');
+            const newErrors = {};
+            if (!subject) newErrors.subject = true;
+            if (!description) newErrors.description = true;
+            setErrors(newErrors);
+            toast.error(isRTL ? 'يرجى ملء جميع الحقول' : 'Please fill in all required fields');
             return;
         }
+        setErrors({});
 
         setIsSubmitting(true);
         const res = await createTicket({ subject, category, description, priority });
@@ -100,8 +106,8 @@ export default function NewTicketPage() {
                                         type="button"
                                         onClick={() => setCategory(cat.id)}
                                         className={`flex flex-col items-center p-4 rounded-3xl border-2 transition-all ${isSelected
-                                                ? 'border-unizy-primary bg-unizy-primary/5 text-unizy-primary shadow-lg shadow-unizy-primary/10'
-                                                : 'border-gray-100 dark:border-white/5 bg-white dark:bg-unizy-dark text-gray-500 hover:border-unizy-primary/50'
+                                            ? 'border-unizy-primary bg-unizy-primary/5 text-unizy-primary shadow-lg shadow-unizy-primary/10'
+                                            : 'border-gray-100 dark:border-white/5 bg-white dark:bg-unizy-dark text-gray-500 hover:border-unizy-primary/50'
                                             }`}
                                     >
                                         <Icon className={`w-6 h-6 mb-2 ${isSelected ? 'text-unizy-primary' : 'text-gray-400'}`} />
@@ -113,30 +119,32 @@ export default function NewTicketPage() {
                     </div>
 
                     {/* Subject */}
-                    <div className="bg-white dark:bg-unizy-dark p-6 rounded-3xl border border-gray-100 dark:border-white/5 shadow-sm">
+                    <div className={`bg-white dark:bg-unizy-dark p-6 rounded-3xl border ${errors.subject ? 'border-red-300 dark:border-red-600 ring-2 ring-red-200 dark:ring-red-900/30' : 'border-gray-100 dark:border-white/5'} shadow-sm transition-all`}>
                         <div className="flex items-center gap-2 mb-4">
                             <Tag className="w-5 h-5 text-unizy-primary" />
                             <h3 className="font-bold text-gray-900 dark:text-white">{isRTL ? 'الموضوع' : 'Subject'}</h3>
+                            {errors.subject && <span className="text-red-500 text-xs font-bold ml-auto">{isRTL ? 'مطلوب' : 'Required'}</span>}
                         </div>
                         <input
                             type="text"
                             placeholder={isRTL ? 'مثال: مشكلة في الدفع' : 'e.g., Payment Issue'}
                             value={subject}
-                            onChange={(e) => setSubject(e.target.value)}
+                            onChange={(e) => { setSubject(e.target.value); if (errors.subject) setErrors(prev => ({ ...prev, subject: false })); }}
                             className="w-full bg-gray-50 dark:bg-white/5 border-none rounded-2xl py-4 px-5 text-gray-900 dark:text-white focus:ring-2 focus:ring-unizy-primary transition-all font-medium"
                         />
                     </div>
 
                     {/* Description */}
-                    <div className="bg-white dark:bg-unizy-dark p-6 rounded-3xl border border-gray-100 dark:border-white/5 shadow-sm">
+                    <div className={`bg-white dark:bg-unizy-dark p-6 rounded-3xl border ${errors.description ? 'border-red-300 dark:border-red-600 ring-2 ring-red-200 dark:ring-red-900/30' : 'border-gray-100 dark:border-white/5'} shadow-sm transition-all`}>
                         <div className="flex items-center gap-2 mb-4">
                             <Info className="w-5 h-5 text-unizy-primary" />
                             <h3 className="font-bold text-gray-900 dark:text-white">{isRTL ? 'التفاصيل' : 'Details'}</h3>
+                            {errors.description && <span className="text-red-500 text-xs font-bold ml-auto">{isRTL ? 'مطلوب' : 'Required'}</span>}
                         </div>
                         <textarea
                             placeholder={isRTL ? 'يرجى تقديم أكبر قدر ممكن من التفاصيل...' : 'Please provide as much detail as possible...'}
                             value={description}
-                            onChange={(e) => setDescription(e.target.value)}
+                            onChange={(e) => { setDescription(e.target.value); if (errors.description) setErrors(prev => ({ ...prev, description: false })); }}
                             rows={5}
                             className="w-full bg-gray-50 dark:bg-white/5 border-none rounded-2xl py-4 px-5 text-gray-900 dark:text-white focus:ring-2 focus:ring-unizy-primary transition-all font-medium resize-none"
                         />
@@ -155,8 +163,8 @@ export default function NewTicketPage() {
                                     type="button"
                                     onClick={() => setPriority(p.id)}
                                     className={`px-5 py-2.5 rounded-full text-xs font-bold transition-all ${priority === p.id
-                                            ? 'bg-unizy-primary text-white shadow-lg shadow-unizy-primary/20'
-                                            : 'bg-gray-100 dark:bg-white/5 text-gray-500 hover:bg-gray-200'
+                                        ? 'bg-unizy-primary text-white shadow-lg shadow-unizy-primary/20'
+                                        : 'bg-gray-100 dark:bg-white/5 text-gray-500 hover:bg-gray-200'
                                         }`}
                                 >
                                     {isRTL ? p.ar : p.en}

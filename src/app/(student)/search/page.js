@@ -64,6 +64,7 @@ export default function SearchPage() {
                             type="text"
                             value={query}
                             onChange={(e) => setQuery(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); performSearch(); } }}
                             placeholder="Search housing, deals, meals..."
                             autoFocus
                             className="w-full pl-14 pr-24 py-4 rounded-2xl bg-gray-50 dark:bg-unizy-navy/50 border-2 border-transparent focus:border-brand-500 focus:bg-white dark:focus:bg-unizy-navy outline-none transition-all text-gray-900 dark:text-white font-bold text-lg"

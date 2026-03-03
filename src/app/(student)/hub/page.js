@@ -83,7 +83,16 @@ export default function HubPage() {
     }, []);
 
     const handlePost = () => {
-        if (!postText.trim()) return;
+        if (!postText.trim()) {
+            // Show brief shake animation on the post button by doing nothing - 
+            // the disabled state already prevents action. But let's add a toast.
+            if (typeof window !== 'undefined') {
+                import('react-hot-toast').then(({ default: toast }) => {
+                    toast.error('Please write something before posting');
+                });
+            }
+            return;
+        }
         startTransition(async () => {
             const result = await createPost({ content: postText, category: postCategory });
             if (result.success) {

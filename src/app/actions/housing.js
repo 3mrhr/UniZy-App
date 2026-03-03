@@ -10,7 +10,16 @@ export async function getHousingListings(filters = {}) {
         let whereClause = { status: 'ACTIVE' };
 
         if (filters.type && filters.type !== 'All') {
-            whereClause.type = filters.type;
+            // Handle gender-based filters separately
+            if (filters.type === 'Female Only' || filters.type === 'Male Only') {
+                whereClause.gender = filters.type === 'Female Only' ? 'FEMALE' : 'MALE';
+            } else {
+                // Case-insensitive type matching
+                whereClause.type = {
+                    equals: filters.type,
+                    mode: 'insensitive'
+                };
+            }
         }
 
         const listings = await prisma.housingListing.findMany({
