@@ -53,27 +53,65 @@ export async function detectReferralAbuse() {
         const admin = await getCurrentUser();
         if (!admin || !admin.role?.startsWith('ADMIN')) return { error: 'Unauthorized' };
 
-        // Find users who referred themselves (same referral code as their own)
+        // Find users who have been referred
         const selfReferrals = await prisma.user.findMany({
             where: {
-                referredById: { not: null },
+                referralsUsed: { some: {} },
             },
-            select: { id: true, name: true, email: true, referredById: true },
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                referralsUsed: {
+                    select: { referrerId: true },
+                    take: 1, // Get the primary referral
+                },
+            },
         });
 
-        // Check for ring referrals (A referred B who referred A)
+        // Prepare a batch lookup for referrers to prevent N+1 querying in the loop
+        const parentReferrerIdsToFetch = [];
+        for (const user of selfReferrals) {
+            const referredById = user.referralsUsed[0]?.referrerId;
+            if (referredById && referredById !== user.id) {
+                parentReferrerIdsToFetch.push(referredById);
+            }
+        }
+
+        // Fetch referrers in a single query
+        const parentReferrals = await prisma.user.findMany({
+            where: {
+                id: { in: parentReferrerIdsToFetch },
+                referralsUsed: { some: {} },
+            },
+            select: {
+                id: true,
+                referralsUsed: {
+                    select: { referrerId: true },
+                    take: 1,
+                },
+            },
+        });
+
+        const parentReferrerMap = new Map();
+        for (const parent of parentReferrals) {
+            parentReferrerMap.set(parent.id, parent.referralsUsed[0]?.referrerId);
+        }
+
+        // Check for self referrals and ring referrals (A referred B who referred A)
         const ringReferrals = [];
         for (const user of selfReferrals) {
-            if (user.referredById === user.id) {
+            const referredById = user.referralsUsed[0]?.referrerId;
+            if (!referredById) continue;
+
+            if (referredById === user.id) {
                 ringReferrals.push({ type: 'SELF_REFERRAL', userId: user.id, name: user.name });
                 continue;
             }
-            const referrer = await prisma.user.findUnique({
-                where: { id: user.referredById },
-                select: { referredById: true },
-            });
-            if (referrer?.referredById === user.id) {
-                ringReferrals.push({ type: 'RING_REFERRAL', userId: user.id, referrerId: user.referredById });
+
+            const parentReferredById = parentReferrerMap.get(referredById);
+            if (parentReferredById === user.id) {
+                ringReferrals.push({ type: 'RING_REFERRAL', userId: user.id, referrerId: referredById });
             }
         }
 
