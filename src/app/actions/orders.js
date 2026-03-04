@@ -1,7 +1,7 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
-import { getCurrentUser } from '@/app/actions/auth';
+import { requireRole, requireOwnership } from '@/lib/authz';
 import { revalidatePath } from 'next/cache';
 import { completeReferralIfEligible } from './referrals';
 import { createNotification } from './notifications';
@@ -12,10 +12,7 @@ import { success, failure } from '@/lib/actionResult';
 
 export async function createOrder(service, details, clientTotal, promoCodeStr = null, lineItems = []) {
     try {
-        const user = await getCurrentUser();
-        if (!user || user.role !== 'STUDENT') {
-            return failure('UNAUTHORIZED', 'Only students can create orders.');
-        }
+        const user = await requireRole(['STUDENT']);
 
         // If lineItems are provided (e.g. DELIVERY / Meals), we calculate securely.
         // If not (e.g. TRANSPORT), we fallback to clientTotal for now
@@ -272,10 +269,7 @@ export async function createOrder(service, details, clientTotal, promoCodeStr = 
 
 export async function getStudentOrders() {
     try {
-        const user = await getCurrentUser();
-        if (!user || user.role !== 'STUDENT') {
-            return { error: 'Unauthorized.' };
-        }
+        const user = await requireRole(['STUDENT']);
 
         const orders = await prisma.order.findMany({
             where: {
@@ -295,10 +289,7 @@ export async function getStudentOrders() {
 
 export async function getDriverOrders() {
     try {
-        const user = await getCurrentUser();
-        if (!user || user.role !== 'DRIVER') {
-            return { error: 'Unauthorized.' };
-        }
+        const user = await requireRole(['DRIVER']);
 
         // Drivers see READY delivery orders (available to pick up) + their own assigned orders
         const orders = await prisma.order.findMany({
@@ -338,10 +329,7 @@ export async function getDriverOrders() {
 
 export async function acceptOrder(orderId) {
     try {
-        const user = await getCurrentUser();
-        if (!user || user.role !== 'DRIVER') {
-            return failure('UNAUTHORIZED', 'Only drivers can accept orders.');
-        }
+        const user = await requireRole(['DRIVER']);
 
         // Conditional update: only accept if status is READY and no driver assigned (prevents double-accept)
         const updated = await prisma.order.updateMany({
@@ -382,16 +370,13 @@ const DRIVER_TRANSITIONS = {
 
 export async function updateOrderStatus(orderId, newStatus) {
     try {
-        const user = await getCurrentUser();
-        if (!user || user.role !== 'DRIVER') {
-            return { error: 'Unauthorized.' };
-        }
+        const user = await requireRole(['DRIVER']);
 
         // Verify ownership: driver can only update their own orders
         const existingOrder = await prisma.order.findUnique({ where: { id: orderId } });
-        if (!existingOrder || existingOrder.driverId !== user.id) {
-            return failure('NOT_AUTHORIZED', 'Order not found or not assigned to you.');
-        }
+        if (!existingOrder) return failure('NOT_FOUND', 'Order not found.');
+
+        requireOwnership(existingOrder.driverId, user.id);
 
         // Enforce state machine
         const allowed = DRIVER_TRANSITIONS[existingOrder.status];
@@ -496,10 +481,7 @@ const MERCHANT_TRANSITIONS = {
 
 export async function getMerchantOrders() {
     try {
-        const user = await getCurrentUser();
-        if (!user || user.role !== 'MERCHANT') {
-            return { error: 'Unauthorized.' };
-        }
+        const user = await requireRole(['MERCHANT']);
 
         // Only return orders that contain this merchant's meals (ownership enforcement)
         const orders = await prisma.order.findMany({
@@ -536,10 +518,7 @@ export async function getMerchantOrders() {
 
 export async function updateMerchantOrderStatus(orderId, newStatus) {
     try {
-        const user = await getCurrentUser();
-        if (!user || user.role !== 'MERCHANT') {
-            return failure('UNAUTHORIZED', 'Only merchants can update order status.');
-        }
+        const user = await requireRole(['MERCHANT']);
 
         // Ownership check: ensure order contains this merchant's meals
         const order = await prisma.order.findFirst({
@@ -617,11 +596,15 @@ export async function getRideEstimate(pickup, destination, vehicle) {
 
 export async function cancelOrder(orderId) {
     try {
-        const user = await getCurrentUser();
-        if (!user) return { error: 'Unauthorized.' };
+        const user = await requireRole(['STUDENT', 'MERCHANT', 'DRIVER']);
 
         const order = await prisma.order.findUnique({ where: { id: orderId } });
-        if (!order || order.userId !== user.id) return { error: 'Order not found.' };
+        if (!order) return { error: 'Order not found.' };
+
+        // Ownership check
+        if (order.userId !== user.id) {
+            return { error: 'Unauthorized: Order belongs to another user.' };
+        }
 
         if (order.status !== 'PENDING' && order.status !== 'ACCEPTED') {
             return { error: 'Cannot cancel an order in progress.' };
@@ -645,8 +628,7 @@ export async function cancelOrder(orderId) {
 
 export async function triggerSOS(orderId) {
     try {
-        const user = await getCurrentUser();
-        if (!user) return { error: 'Unauthorized.' };
+        const user = await requireRole(['STUDENT', 'DRIVER']);
 
         // Create a critical support ticket
         const ticket = await prisma.supportTicket.create({
@@ -668,8 +650,7 @@ export async function triggerSOS(orderId) {
 
 export async function pollOrderStatus(orderId) {
     try {
-        const user = await getCurrentUser();
-        if (!user) return { error: 'Unauthorized.' };
+        const user = await requireRole(['STUDENT']);
 
         const order = await prisma.order.findUnique({
             where: { id: orderId },
@@ -680,9 +661,11 @@ export async function pollOrderStatus(orderId) {
             }
         });
 
-        if (!order || order.userId !== user.id) {
+        if (!order) {
             return { error: 'Order not found.' };
         }
+
+        requireOwnership(order.userId, user.id);
 
         return { success: true, order };
     } catch (error) {

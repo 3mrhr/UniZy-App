@@ -134,10 +134,7 @@ export async function updateHousingRequestStatus(requestId, newStatus) {
 
 export async function createHousingListing(formData) {
     try {
-        const user = await getCurrentUser();
-        if (!user || (user.role !== 'PROVIDER' && user.role !== 'ADMIN')) {
-            return { error: 'Unauthorized to create listing' };
-        }
+        const user = await requireRole(['PROVIDER', 'ADMIN_SUPER', 'ADMIN_HOUSING']);
 
         const newListing = await prisma.housingListing.create({
             data: {
@@ -239,8 +236,7 @@ export async function rejectListing(id, adminId, reason = "Violates guidelines")
 
 export async function toggleSavedHousing(listingId) {
     try {
-        const user = await getCurrentUser();
-        if (!user) return { error: 'Not authenticated' };
+        const user = await requireUser();
 
         const existing = await prisma.savedHousing.findUnique({
             where: {
@@ -317,8 +313,7 @@ export async function getSavedHousing() {
 
 export async function createHousingRequest(listingId, type, message = '') {
     try {
-        const user = await getCurrentUser();
-        if (!user) return { error: 'Not authenticated' };
+        const user = await requireRole(['STUDENT']);
 
         // Prevent duplicate pending requests for the same listing by the same user
         const existing = await prisma.housingRequest.findFirst({

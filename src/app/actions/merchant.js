@@ -1,16 +1,12 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
-import { getCurrentUser } from './auth';
+import { requireRole } from '@/lib/authz';
 import { revalidatePath } from 'next/cache';
 
 export async function createMeal(data) {
     try {
-        const user = await getCurrentUser();
-        if (!user || user.role !== 'MERCHANT') {
-            return { error: 'Unauthorized: Only merchants can create items.' };
-        }
-
+        const user = await requireRole(['MERCHANT']);
         const { name, description, price, stockCount, trackInventory, tags } = data;
 
         if (!name || !price) {
@@ -42,11 +38,7 @@ export async function createMeal(data) {
 
 export async function updateMerchantSettings(data) {
     try {
-        const user = await getCurrentUser();
-        if (!user || user.role !== 'MERCHANT') {
-            return { error: 'Unauthorized: Only merchants can update settings.' };
-        }
-
+        const user = await requireRole(['MERCHANT']);
         const { storeName, storeAddress, storeDescription, storeOpen } = data;
 
         const updatedUser = await prisma.user.update({

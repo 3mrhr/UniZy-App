@@ -1,21 +1,14 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
-import { getCurrentUser } from './auth';
+import { requireRole } from '@/lib/authz';
 import { logAdminAction } from './audit';
 
-// Guard function to ensure only SUPER_ADMINs can alter roles
-async function requireSuperAdmin() {
-    const user = await getCurrentUser();
-    if (!user || user.role !== 'ADMIN_SUPER') {
-        throw new Error('Unauthorized. Super Admin access required.');
-    }
-    return user;
-}
+
 
 export async function getUsers() {
     try {
-        await requireSuperAdmin();
+        await requireRole(['ADMIN_SUPER']);
 
         const users = await prisma.user.findMany({
             select: {
@@ -39,7 +32,7 @@ export async function getUsers() {
 
 export async function updateUserRole(userId, newRole, scopes = null) {
     try {
-        await requireSuperAdmin();
+        await requireRole(['ADMIN_SUPER']);
 
         // Prevent modifying the very first SUPER_ADMIN account as a failsafe
         const targetUser = await prisma.user.findUnique({ where: { id: userId } });
