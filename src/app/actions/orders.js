@@ -39,11 +39,15 @@ export async function createOrder(service, details, clientTotal, promoCodeStr = 
             let providerId = details.vendorId || null;
 
             if (isCartBased) {
+                const mealIds = lineItems.map(item => item.mealId);
+                const meals = await tx.meal.findMany({
+                    where: { id: { in: mealIds } },
+                    include: { variantGroups: { include: { options: true } }, addonGroups: { include: { options: true } } }
+                });
+                const mealsMap = new Map(meals.map(m => [m.id, m]));
+
                 for (const item of lineItems) {
-                    const meal = await tx.meal.findUnique({
-                        where: { id: item.mealId },
-                        include: { variantGroups: { include: { options: true } }, addonGroups: { include: { options: true } } }
-                    });
+                    const meal = mealsMap.get(item.mealId);
 
                     if (!meal || meal.status !== 'ACTIVE') throw new Error(`Meal ${item.mealId} unavailable.`);
                     if (meal.isSoldOut) throw new Error(`Meal ${meal.name} is sold out.`);

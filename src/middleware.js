@@ -54,36 +54,34 @@ export async function middleware(request) {
         if (user.role !== 'ADMIN_SUPER') {
             const hasScope = (mod) => Array.isArray(user.scopes) && user.scopes.includes(mod);
 
-            if (pathname.startsWith('/admin/housing') && user.role !== 'ADMIN_HOUSING' && !hasScope('HOUSING')) {
-                return NextResponse.redirect(new URL('/admin', request.url));
-            }
-            if (pathname.startsWith('/admin/transport') && user.role !== 'ADMIN_TRANSPORT' && !hasScope('TRANSPORT')) {
-                return NextResponse.redirect(new URL('/admin', request.url));
-            }
-            if (pathname.startsWith('/admin/delivery') && user.role !== 'ADMIN_DELIVERY' && !hasScope('DELIVERY')) {
-                return NextResponse.redirect(new URL('/admin', request.url));
-            }
-            if (pathname.startsWith('/admin/commerce') && user.role !== 'ADMIN_COMMERCE' && !hasScope('DEALS') && !hasScope('MEALS')) {
-                return NextResponse.redirect(new URL('/admin', request.url));
-            }
-            if (pathname.startsWith('/admin/services') && !hasScope('SERVICES') && !hasScope('CLEANING')) {
-                return NextResponse.redirect(new URL('/admin', request.url));
+            const adminRoutes = [
+                { path: '/admin/housing', role: 'ADMIN_HOUSING', scopes: ['HOUSING'] },
+                { path: '/admin/transport', role: 'ADMIN_TRANSPORT', scopes: ['TRANSPORT'] },
+                { path: '/admin/delivery', role: 'ADMIN_DELIVERY', scopes: ['DELIVERY'] },
+                { path: '/admin/commerce', role: 'ADMIN_COMMERCE', scopes: ['DEALS', 'MEALS'] },
+                { path: '/admin/services', role: null, scopes: ['SERVICES', 'CLEANING'] },
+            ];
+
+            const matchedRoute = adminRoutes.find((route) => pathname.startsWith(route.path));
+            if (matchedRoute) {
+                const hasRole = matchedRoute.role ? user.role === matchedRoute.role : false;
+                const hasRequiredScope = matchedRoute.scopes.some(hasScope);
+
+                if (!hasRole && !hasRequiredScope) {
+                    return NextResponse.redirect(new URL('/admin', request.url));
+                }
             }
         }
     }
 
     // Protect /students routes
-    if (pathname.startsWith('/students') ||
-        pathname.startsWith('/housing') ||
-        pathname.startsWith('/transport') ||
-        pathname.startsWith('/delivery') ||
-        pathname.startsWith('/deals') ||
-        pathname.startsWith('/meals') ||
-        pathname.startsWith('/hub') ||
-        pathname.startsWith('/services') ||
-        pathname.startsWith('/rewards') ||
-        pathname.startsWith('/activity')
-    ) {
+    const studentRoutes = [
+        '/students', '/housing', '/transport', '/delivery',
+        '/deals', '/meals', '/hub', '/services',
+        '/rewards', '/activity'
+    ];
+
+    if (studentRoutes.some((route) => pathname.startsWith(route))) {
         if (user.role !== 'STUDENT') {
             return NextResponse.redirect(new URL('/login', request.url));
         }

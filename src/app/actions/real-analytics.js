@@ -15,25 +15,30 @@ export async function getRevenueByModule() {
 
         const modules = ['HOUSING', 'TRANSPORT', 'DELIVERY', 'DEALS', 'MEALS', 'SERVICES', 'CLEANING'];
 
-        const results = await Promise.all(
-            modules.map(async (mod) => {
-                const revenue = await prisma.transaction.aggregate({
-                    where: { type: mod, status: { not: 'REFUNDED' } },
-                    _sum: { amount: true },
-                    _count: true,
-                });
-                const commission = await prisma.transaction.aggregate({
-                    where: { type: mod, status: { not: 'REFUNDED' } },
-                    _sum: { unizyCommissionAmount: true },
-                });
-                return {
-                    module: mod,
-                    revenue: revenue._sum.amount || 0,
-                    commission: commission._sum.unizyCommissionAmount || 0,
-                    transactions: revenue._count || 0,
-                };
-            })
-        );
+        const groupResults = await prisma.transaction.groupBy({
+            by: ['type'],
+            where: {
+                type: { in: modules },
+                status: { not: 'REFUNDED' },
+            },
+            _sum: {
+                amount: true,
+                unizyCommissionAmount: true,
+            },
+            _count: {
+                _all: true,
+            },
+        });
+
+        const results = modules.map((mod) => {
+            const data = groupResults.find((g) => g.type === mod);
+            return {
+                module: mod,
+                revenue: data?._sum?.amount || 0,
+                commission: data?._sum?.unizyCommissionAmount || 0,
+                transactions: data?._count?._all || 0,
+            };
+        });
 
         return { success: true, data: results };
     } catch (error) {
@@ -56,33 +61,67 @@ export async function getProviderPerformance(limit = 20) {
             take: limit,
         });
 
-        const results = await Promise.all(
-            providers.map(async (provider) => {
-                const [totalTxns, totalEarnings, avgRating, completedOrders, totalOrders] = await Promise.all([
-                    prisma.transaction.count({ where: { providerId: provider.id } }),
-                    prisma.transaction.aggregate({
-                        where: { providerId: provider.id, status: 'COMPLETED' },
-                        _sum: { providerNetAmount: true },
-                    }),
-                    prisma.review.aggregate({
-                        where: { targetId: provider.id },
-                        _avg: { rating: true },
-                    }),
-                    prisma.order.count({ where: { driverId: provider.id, status: 'COMPLETED' } }),
-                    prisma.order.count({ where: { driverId: provider.id } }),
-                ]);
+        if (providers.length === 0) return { success: true, data: [] };
 
-                return {
-                    id: provider.id,
-                    name: provider.name,
-                    role: provider.role,
-                    totalTransactions: totalTxns,
-                    totalEarnings: totalEarnings._sum.providerNetAmount || 0,
-                    avgRating: avgRating._avg.rating || 0,
-                    completionRate: totalOrders > 0 ? Math.round((completedOrders / totalOrders) * 100) : 0,
-                };
-            })
-        );
+        const providerIds = providers.map((p) => p.id);
+
+        const [
+            txnsCountsRaw,
+            txnsEarningsRaw,
+            reviewsAvgRaw,
+            ordersCompletedRaw,
+            ordersTotalRaw,
+        ] = await Promise.all([
+            prisma.transaction.groupBy({
+                by: ['providerId'],
+                where: { providerId: { in: providerIds } },
+                _count: { providerId: true },
+            }),
+            prisma.transaction.groupBy({
+                by: ['providerId'],
+                where: { providerId: { in: providerIds }, status: 'COMPLETED' },
+                _sum: { providerNetAmount: true },
+            }),
+            prisma.review.groupBy({
+                by: ['targetUserId'],
+                where: { targetUserId: { in: providerIds } },
+                _avg: { rating: true },
+            }),
+            prisma.order.groupBy({
+                by: ['driverId'],
+                where: { driverId: { in: providerIds }, status: 'COMPLETED' },
+                _count: { driverId: true },
+            }),
+            prisma.order.groupBy({
+                by: ['driverId'],
+                where: { driverId: { in: providerIds } },
+                _count: { driverId: true },
+            }),
+        ]);
+
+        const txnsCounts = new Map(txnsCountsRaw.map((x) => [x.providerId, x._count.providerId]));
+        const txnsEarnings = new Map(txnsEarningsRaw.map((x) => [x.providerId, x._sum.providerNetAmount]));
+        const reviewsAvg = new Map(reviewsAvgRaw.map((x) => [x.targetUserId, x._avg.rating]));
+        const ordersCompleted = new Map(ordersCompletedRaw.map((x) => [x.driverId, x._count.driverId]));
+        const ordersTotal = new Map(ordersTotalRaw.map((x) => [x.driverId, x._count.driverId]));
+
+        const results = providers.map((provider) => {
+            const totalTxns = txnsCounts.get(provider.id) || 0;
+            const totalEarnings = txnsEarnings.get(provider.id) || 0;
+            const avgRating = reviewsAvg.get(provider.id) || 0;
+            const completedOrders = ordersCompleted.get(provider.id) || 0;
+            const totalOrders = ordersTotal.get(provider.id) || 0;
+
+            return {
+                id: provider.id,
+                name: provider.name,
+                role: provider.role,
+                totalTransactions: totalTxns,
+                totalEarnings,
+                avgRating,
+                completionRate: totalOrders > 0 ? Math.round((completedOrders / totalOrders) * 100) : 0,
+            };
+        });
 
         // Sort by earnings descending
         results.sort((a, b) => b.totalEarnings - a.totalEarnings);
@@ -103,20 +142,39 @@ export async function getRefundRates() {
 
         const modules = ['HOUSING', 'TRANSPORT', 'DELIVERY', 'DEALS', 'MEALS', 'SERVICES', 'CLEANING'];
 
-        const byModule = await Promise.all(
-            modules.map(async (mod) => {
-                const [total, refunded] = await Promise.all([
-                    prisma.transaction.count({ where: { type: mod } }),
-                    prisma.transaction.count({ where: { type: mod, status: 'REFUNDED' } }),
-                ]);
-                return {
-                    module: mod,
-                    totalTransactions: total,
-                    refundedTransactions: refunded,
-                    refundRate: total > 0 ? Math.round((refunded / total) * 100) : 0,
-                };
-            })
-        );
+        const stats = await prisma.transaction.groupBy({
+            by: ['type', 'status'],
+            _count: {
+                _all: true,
+            },
+            where: {
+                type: { in: modules },
+            },
+        });
+
+        const statsMap = modules.reduce((acc, mod) => {
+            acc[mod] = { total: 0, refunded: 0 };
+            return acc;
+        }, {});
+
+        for (const stat of stats) {
+            if (!statsMap[stat.type]) continue;
+            statsMap[stat.type].total += stat._count._all;
+            if (stat.status === 'REFUNDED') {
+                statsMap[stat.type].refunded += stat._count._all;
+            }
+        }
+
+        const byModule = modules.map((mod) => {
+            const total = statsMap[mod].total;
+            const refunded = statsMap[mod].refunded;
+            return {
+                module: mod,
+                totalTransactions: total,
+                refundedTransactions: refunded,
+                refundRate: total > 0 ? Math.round((refunded / total) * 100) : 0,
+            };
+        });
 
         return { success: true, byModule };
     } catch (error) {

@@ -59,24 +59,44 @@ export default function AccountPage() {
     }
 
     // Default avatar if none exists
-    const avatarUrl = user?.profileImage || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'User')}&background=random&color=fff&size=150`;
+    const avatarUrl = user?.profileImage || user?.avatarUrl || null;
+
+    // Fallback UI Avatar
+    const getInitials = (name) => {
+        if (!name) return 'U';
+        return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+    };
 
     return (
         <main className="min-h-screen pb-24 bg-[var(--unizy-bg-light)] dark:bg-[var(--unizy-bg-dark)] px-4 sm:px-6 lg:px-8 max-w-3xl mx-auto pt-6 transition-colors duration-300">
 
             {/* Header Profile Summary */}
-            <div className="bg-white dark:bg-[#1E293B] rounded-3xl p-6 border border-gray-100 dark:border-gray-800 shadow-sm flex items-center gap-5 mb-8">
-                <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-[var(--unizy-primary)] to-blue-400 p-1 shrink-0">
-                    <div className="w-full h-full rounded-full bg-white dark:bg-[#1E293B] overflow-hidden border-2 border-white dark:border-[#1E293B]">
-                        <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+            <div className="bg-white dark:bg-[#1E293B] rounded-3xl p-6 border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col sm:flex-row items-center sm:items-start gap-5 mb-8 text-center sm:text-left">
+                <div className="flex flex-col items-center gap-2 shrink-0">
+                    <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-[var(--unizy-primary)] to-blue-400 p-1">
+                        <div className="w-full h-full rounded-full bg-white dark:bg-[#1E293B] overflow-hidden border-2 border-white dark:border-[#1E293B] flex items-center justify-center">
+                            {avatarUrl ? (
+                                <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                            ) : (
+                                <span className="text-2xl font-bold text-gray-400 dark:text-gray-500">
+                                    {getInitials(user?.name)}
+                                </span>
+                            )}
+                        </div>
                     </div>
+                    <button
+                        disabled
+                        className="text-xs font-medium text-gray-400 bg-gray-50 dark:bg-gray-800 px-3 py-1.5 rounded-full border border-gray-100 dark:border-gray-700 cursor-not-allowed opacity-70"
+                    >
+                        {isRTL ? 'تحميل الصورة (قريباً)' : 'Upload photo (soon)'}
+                    </button>
                 </div>
-                <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
+                <div className="flex-1 min-w-0 pt-1">
+                    <div className="flex items-center justify-center sm:justify-start gap-2 mb-1">
                         <h1 className="text-xl font-bold text-[var(--unizy-text-dark)] dark:text-white truncate">{user.name}</h1>
                         {user.isVerified && <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />}
                     </div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-2 truncate">{user.email}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-3 truncate">{user.email}</p>
                     <div className="inline-flex items-center gap-1.5 bg-brand-50 dark:bg-brand-900/20 px-2.5 py-1 rounded-md border border-brand-100 dark:border-brand-900">
                         <span className="text-xs font-bold text-brand-600 dark:text-brand-500">{user.role}</span>
                     </div>

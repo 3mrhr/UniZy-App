@@ -184,6 +184,7 @@ export async function checkSLABreaches() {
                 },
                 select: { targetId: true }
             });
+
             const existingTargetIds = new Set(existingBreaches.map(b => b.targetId));
 
             // Filter targets that don't have an existing breach and prepare for creation

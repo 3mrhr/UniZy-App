@@ -70,31 +70,38 @@ export async function generateSettlements(periodStart, periodEnd) {
         }
 
         // Create settlement records
-        const settlements = [];
+        const providerIds = Object.keys(providerGroups);
+        const existingSettlements = await prisma.settlement.findMany({
+            where: {
+                providerId: { in: providerIds },
+                periodStart: start,
+                periodEnd: end,
+            },
+        });
+
+        const existingSettlementMap = new Map();
+        for (const settlement of existingSettlements) {
+            existingSettlementMap.set(settlement.providerId, settlement);
+        }
+
+        const transactions = [];
+
         for (const [providerId, data] of Object.entries(providerGroups)) {
-            // Check if settlement already exists for this provider + period
-            const existing = await prisma.settlement.findFirst({
-                where: {
-                    providerId,
-                    periodStart: start,
-                    periodEnd: end,
-                },
-            });
+            const existing = existingSettlementMap.get(providerId);
 
             if (existing) {
                 // Update existing settlement
-                const updated = await prisma.settlement.update({
+                transactions.push(prisma.settlement.update({
                     where: { id: existing.id },
                     data: {
                         grossAmount: Math.round(data.grossAmount * 100) / 100,
                         commissionAmount: Math.round(data.commissionAmount * 100) / 100,
                         netAmount: Math.round(data.netAmount * 100) / 100,
                     },
-                });
-                settlements.push(updated);
+                }));
             } else {
                 // Create new settlement
-                const settlement = await prisma.settlement.create({
+                transactions.push(prisma.settlement.create({
                     data: {
                         providerId,
                         periodStart: start,
@@ -104,10 +111,11 @@ export async function generateSettlements(periodStart, periodEnd) {
                         netAmount: Math.round(data.netAmount * 100) / 100,
                         status: 'PENDING',
                     },
-                });
-                settlements.push(settlement);
+                }));
             }
         }
+
+        const settlements = await prisma.$transaction(transactions);
 
         await logAdminAction('GENERATE_SETTLEMENTS', 'FINANCE', null, {
             periodStart: periodStart,

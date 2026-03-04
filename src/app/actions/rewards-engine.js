@@ -169,27 +169,36 @@ export async function expireOldPoints() {
             },
         });
 
+        if (expirableEntries.length === 0) {
+            return { success: true, entriesExpired: 0, totalPoints: 0 };
+        }
+
         let totalExpired = 0;
+        const newTransactions = [];
+        const entryIds = [];
 
         for (const entry of expirableEntries) {
             // Check if points from this entry are still available (not already spent/reversed)
-            await prisma.rewardTransaction.create({
-                data: {
-                    type: 'EXPIRE',
-                    points: -entry.points,
-                    description: `Points expired (earned on ${entry.createdAt.toISOString().split('T')[0]})`,
-                    userId: entry.userId,
-                    transactionId: entry.transactionId,
-                },
+            newTransactions.push({
+                type: 'EXPIRE',
+                points: -entry.points,
+                description: `Points expired (earned on ${entry.createdAt.toISOString().split('T')[0]})`,
+                userId: entry.userId,
+                transactionId: entry.transactionId,
             });
-
-            await prisma.rewardTransaction.update({
-                where: { id: entry.id },
-                data: { expired: true },
-            });
-
+            entryIds.push(entry.id);
             totalExpired += entry.points;
         }
+
+        await prisma.$transaction([
+            prisma.rewardTransaction.createMany({
+                data: newTransactions
+            }),
+            prisma.rewardTransaction.updateMany({
+                where: { id: { in: entryIds } },
+                data: { expired: true }
+            })
+        ]);
 
         return { success: true, entriesExpired: expirableEntries.length, totalPoints: totalExpired };
     } catch (error) {

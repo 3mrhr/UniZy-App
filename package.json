@@ -10,7 +10,7 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
     "seed": "node prisma/seed.mjs",
-    "test": "jest"
+    "test": "jest --testMatch=\"**/__tests__/**/*.test.js\""
   },
   "prisma": {
     "seed": "node prisma/seed.mjs"
@@ -22,7 +22,7 @@
     "cloudinary": "^2.9.0",
     "iron-session": "^8.0.4",
     "lucide-react": "^0.575.0",
-    "next": "16.1.6",
+    "next": "^16.1.6",
     "next-themes": "^0.4.6",
     "react": "19.2.3",
     "react-dom": "19.2.3",
@@ -31,21 +31,27 @@
     "zustand": "^5.0.11"
   },
   "devDependencies": {
+    "@babel/core": "^7.29.0",
+    "@babel/preset-env": "^7.29.0",
+    "@babel/preset-react": "^7.28.5",
     "@swc/core": "^1.15.18",
     "@swc/jest": "^0.2.39",
     "@tailwindcss/postcss": "^4",
+    "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
-    "@types/jest": "^30.0.0",
+    "@testing-library/user-event": "^14.6.1",
+    "babel-jest": "^30.2.0",
     "dotenv": "^17.3.1",
-    "eslint": "^9",
+    "eslint": "^9.39.3",
     "eslint-config-next": "16.1.6",
     "jest": "^30.2.0",
     "jest-environment-jsdom": "^30.2.0",
     "prisma": "^6.4.1",
     "tailwindcss": "^4",
     "ts-jest": "^29.4.6",
-    "ts-node": "^10.9.2"
+    "ts-node": "^10.9.2",
+    "uncrypto": "^0.1.3"
   },
   "type": "module"
 }

@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Phone, Navigation, AlertTriangle, XCircle, Star } from 'lucide-react';
+import { Phone, Navigation, XCircle, Star } from 'lucide-react';
+import SOSButton from '@/components/SOSButton';
 
 export default function LiveTrackingPage({ params }) {
     const router = useRouter();
@@ -49,16 +50,6 @@ export default function LiveTrackingPage({ params }) {
         } else {
             alert(res.error || 'Failed to cancel.');
             setShowCancelModal(false);
-        }
-    };
-
-    const handleSOS = async () => {
-        const { triggerSOS } = await import('@/app/actions/orders');
-        const res = await triggerSOS(orderId);
-        if (res.success) {
-            alert('SOS Alert triggered! UniZy support has been notified immediately.');
-        } else {
-            alert('Failed to trigger SOS. Call emergency services immediately: 122');
         }
     };
 
@@ -215,23 +206,27 @@ export default function LiveTrackingPage({ params }) {
 
                 {/* Bottom Actions */}
                 {(!isCompleted && !isCancelled) && (
-                    <div className="mt-8 grid grid-cols-2 gap-3">
+                    <div className="mt-8">
                         <button
                             onClick={() => setShowCancelModal(true)}
                             disabled={!isPending && order.status !== 'ACCEPTED'}
-                            className="bg-red-50 dark:bg-red-900/10 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/20 font-bold py-4 rounded-2xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm"
+                            className="w-full bg-red-50 dark:bg-red-900/10 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/20 font-bold py-4 rounded-2xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm"
                         >
-                            <XCircle size={16} /> Cancel
-                        </button>
-                        <button
-                            onClick={handleSOS}
-                            className="bg-orange-50 dark:bg-orange-900/10 text-orange-600 hover:bg-orange-100 dark:hover:bg-orange-900/20 font-bold py-4 rounded-2xl transition-colors flex items-center justify-center gap-2 text-sm"
-                        >
-                            <AlertTriangle size={16} /> SOS
+                            <XCircle size={16} /> Cancel Order
                         </button>
                     </div>
                 )}
             </div>
+
+            {/* Float the SOSButton over the page, linking it to the Transport order */}
+            {order.service === 'TRANSPORT' && (
+                <SOSButton transportOrderId={order.id} contextData={{
+                    location: 'Active Transport Ride',
+                    pickup: details.pickup || details.vendor,
+                    destination: details.destination,
+                    driverId: order.driverId
+                }} />
+            )}
 
             {/* Cancel Modal */}
             {showCancelModal && (
