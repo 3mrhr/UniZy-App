@@ -28,7 +28,7 @@ export async function rateLimit(key, limit, windowMs) {
 
 // Cleanup interval to prevent memory leaks
 if (typeof setInterval !== 'undefined') {
-    setInterval(() => {
+    const cleanupInterval = setInterval(() => {
         const now = Date.now();
         for (const [key, record] of trackers.entries()) {
             if (now > record.expires) {
@@ -36,4 +36,12 @@ if (typeof setInterval !== 'undefined') {
             }
         }
     }, 60000); // Every minute
+    if (cleanupInterval.unref) {
+        cleanupInterval.unref();
+    }
+}
+
+// Export for testing
+export function _resetTrackers() {
+    trackers.clear();
 }
