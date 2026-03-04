@@ -69,7 +69,7 @@ export async function getTransactionDetails(transactionId) {
         if (!transaction) return { success: false, error: 'Transaction not found' };
 
         // Security check: only the owner or an admin can view it
-        if (transaction.userId !== user.id && !user.role.includes('ADMIN')) {
+        if (transaction.userId !== user.id && !user.role.startsWith('ADMIN_')) {
             return { success: false, error: 'Unauthorized access to transaction record' };
         }
 

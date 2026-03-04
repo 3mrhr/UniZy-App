@@ -117,7 +117,7 @@ export async function getCleaningBookings() {
 export async function getAdminCleaningStats() {
     try {
         const user = await getCurrentUser();
-        if (!user || !user.role?.includes('ADMIN')) return { error: 'Not authorized' };
+        if (!user || !user.role?.startsWith('ADMIN_')) return { error: 'Not authorized' };
 
         const stats = {
             totalBookings: await prisma.cleaningBooking.count(),
@@ -141,7 +141,7 @@ export async function getAdminCleaningStats() {
 export async function updateCleaningBookingStatus(bookingId, status) {
     try {
         const user = await getCurrentUser();
-        if (!user || (!user.role?.includes('ADMIN') && user.role !== 'SUPER_ADMIN')) {
+        if (!user || !user.role?.startsWith('ADMIN_')) {
             return { error: 'Not authorized' };
         }
 

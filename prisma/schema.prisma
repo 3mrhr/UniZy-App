@@ -9,7 +9,7 @@ datasource db {
 
 model User {
   id                  String                 @id @default(uuid())
-  role                String                 @default("STUDENT")
+  role                UserRole               @default(STUDENT)
   name                String
   email               String                 @unique
   password            String
@@ -789,4 +789,17 @@ model SystemSettings {
   key       String   @unique
   value     String
   updatedAt DateTime @updatedAt
+}
+
+enum UserRole {
+  STUDENT
+  MERCHANT
+  DRIVER
+  PROVIDER
+  ADMIN_SUPER
+  ADMIN_HOUSING
+  ADMIN_TRANSPORT
+  ADMIN_DELIVERY
+  ADMIN_COMMERCE
+  ADMIN_SERVICES
 }

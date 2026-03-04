@@ -183,7 +183,7 @@ export async function createDeal(dealData) {
         }
 
         // Use the logged-in merchant's ID by default, or an explicitly provided one if Admin
-        const merchantId = user.role === 'ADMIN' && dealData.merchantId ? dealData.merchantId : user.id;
+        const merchantId = user.role.startsWith('ADMIN_') && dealData.merchantId ? dealData.merchantId : user.id;
 
         const newDeal = await prisma.deal.create({
             data: {

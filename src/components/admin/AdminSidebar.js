@@ -5,7 +5,7 @@ import { getCurrentUser } from "@/app/actions/auth";
 export default async function AdminSidebar() {
     const user = await getCurrentUser();
     const role = user?.role || 'SUPERADMIN';
-    const isGlobalAdmin = role === 'SUPERADMIN' || role === 'ADMIN_SUPER' || role === 'ADMIN';
+    const isGlobalAdmin = role === 'ADMIN_SUPER';
 
     // Base items everyone sees
     let navItems = [

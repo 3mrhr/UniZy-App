@@ -17,6 +17,13 @@ export async function createTicket({ subject, category, description, priority = 
         const user = await getCurrentUser();
         if (!user) return { success: false, error: 'Unauthorized.' };
 
+        // Rate limit: 2 tickets per hour per user
+        const { rateLimit } = await import('@/lib/rate-limit');
+        const rl = await rateLimit(`ticket:${user.id}`, 2, 3600000);
+        if (!rl.success) {
+            return { success: false, error: 'Ticket creation limit reached. Please wait an hour.' };
+        }
+
         const ticket = await prisma.supportTicket.create({
             data: {
                 subject,

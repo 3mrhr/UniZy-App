@@ -208,7 +208,7 @@ export async function rateProvider(bookingId, rating, review) {
 export async function getAdminProviders() {
     try {
         const user = await getCurrentUser();
-        if (!user || !user.role?.includes('ADMIN')) return { error: 'Not authorized' };
+        if (!user || !user.role?.startsWith('ADMIN_')) return { error: 'Not authorized' };
 
         const providers = await prisma.serviceProvider.findMany({
             orderBy: { createdAt: 'desc' },
@@ -231,7 +231,7 @@ export async function getAdminProviders() {
 export async function approveProvider(providerId) {
     try {
         const user = await getCurrentUser();
-        if (!user || (!user.role?.includes('ADMIN') && user.role !== 'ADMIN_SUPER')) {
+        if (!user || !user.role?.startsWith('ADMIN_')) {
             return { error: 'Not authorized' };
         }
 
@@ -255,7 +255,7 @@ export async function approveProvider(providerId) {
 export async function rejectProvider(providerId) {
     try {
         const user = await getCurrentUser();
-        if (!user || (!user.role?.includes('ADMIN') && user.role !== 'ADMIN_SUPER')) {
+        if (!user || !user.role?.startsWith('ADMIN_')) {
             return { error: 'Not authorized' };
         }
 

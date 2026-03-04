@@ -4,10 +4,21 @@ import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/session';
 import bcrypt from 'bcryptjs';
 import { logEvent } from './analytics';
+import { rateLimit } from '@/lib/rate-limit';
+import { headers } from 'next/headers';
+
+async function getClientIp() {
+    const headerList = await headers();
+    return headerList.get('x-forwarded-for') || '127.0.0.1';
+}
 
 export async function loginUser(username, password) {
     try {
-        // -----------------------------------------------------------------
+        const ip = await getClientIp();
+        const rl = await rateLimit(`login:${ip}`, 5, 60000); // 5 attempts per minute
+        if (!rl.success) {
+            return { error: 'Too many login attempts. Please try again in a minute.' };
+        }
 
         // Standard DB check
         const user = await prisma.user.findUnique({
@@ -24,13 +35,22 @@ export async function loginUser(username, password) {
             return { error: 'Invalid credentials' };
         }
 
+        let parsedScopes = [];
+        try {
+            if (user.scopes) {
+                parsedScopes = typeof user.scopes === 'string' ? JSON.parse(user.scopes) : user.scopes;
+            }
+        } catch (e) {
+            console.error('Failed to parse user scopes:', e);
+        }
+
         const session = await getSession();
         session.user = {
             id: user.id,
             role: user.role,
             name: user.name,
             email: user.email,
-            scopes: user.scopes ? JSON.parse(user.scopes) : [],
+            scopes: Array.isArray(parsedScopes) ? parsedScopes : [],
         };
         await session.save();
 
@@ -43,6 +63,11 @@ export async function loginUser(username, password) {
 
 export async function registerUser(data) {
     try {
+        const ip = await getClientIp();
+        const rl = await rateLimit(`register:${ip}`, 3, 3600000); // 3 registrations per hour
+        if (!rl.success) {
+            return { error: 'Registration limit reached. Please try later.' };
+        }
         const {
             name,
             email,
@@ -144,6 +169,11 @@ export async function getCurrentUser() {
 
 export async function requestPasswordReset(email) {
     try {
+        const ip = await getClientIp();
+        const rl = await rateLimit(`pwd-reset:${ip}`, 3, 3600000); // 3 per hour
+        if (!rl.success) {
+            return { error: 'Too many reset requests. Please try later.' };
+        }
         const user = await prisma.user.findUnique({ where: { email } });
         if (!user) {
             // Don't reveal if email exists — always return success for security

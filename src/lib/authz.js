@@ -23,20 +23,25 @@ export async function requireRole(allowedRoles) {
 }
 
 /**
- * Ensures the user has a specific scope (useful for ADMIN role).
+ * Ensures the user has a specific scope (useful for ADMIN roles).
  */
 export async function requireScope(requiredScope) {
     const user = await requireUser();
-    if (user.role !== 'ADMIN') {
+
+    // Super admin bypasses all scope checks
+    if (user.role === 'ADMIN_SUPER') {
+        return user;
+    }
+
+    // Must be some kind of ADMIN to have scopes in this context
+    if (!user.role.startsWith('ADMIN_')) {
         throw new Error('Forbidden: Admin access required.');
     }
 
-    if (user.scopes === 'ADMIN_SUPER') {
-        return user; // Super admin has all scopes
-    }
+    // Standardize scopes as an array
+    const scopes = Array.isArray(user.scopes) ? user.scopes : [];
 
-    const scopes = user.scopes ? user.scopes.split(',') : [];
-    if (!scopes.includes(requiredScope) && !scopes.includes('ADMIN_SUPER')) {
+    if (!scopes.includes(requiredScope)) {
         throw new Error(`Forbidden: Requires scope ${requiredScope}`);
     }
     return user;

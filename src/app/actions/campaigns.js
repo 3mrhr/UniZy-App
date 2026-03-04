@@ -7,7 +7,7 @@ import { logAdminAction } from './audit';
 export async function createCampaign({ title, message, targetRole, targetUni, scheduledAt }) {
     try {
         const user = await getCurrentUser();
-        if (!user || !user.role?.includes('ADMIN')) return { error: 'Not authorized' };
+        if (!user || !user.role?.startsWith('ADMIN_')) return { error: 'Not authorized' };
 
         const campaign = await prisma.campaign.create({
             data: {
@@ -42,7 +42,7 @@ export async function getCampaigns() {
 export async function sendCampaign(campaignId) {
     try {
         const user = await getCurrentUser();
-        if (!user || !user.role?.includes('ADMIN')) return { error: 'Not authorized' };
+        if (!user || !user.role?.startsWith('ADMIN_')) return { error: 'Not authorized' };
 
         const campaign = await prisma.campaign.findUnique({ where: { id: campaignId } });
         if (!campaign) return { error: 'Campaign not found' };

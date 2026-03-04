@@ -77,7 +77,7 @@ export async function flagPost(postId, reason) {
 export async function deletePost(postId) {
     try {
         const user = await getCurrentUser();
-        if (!user || !user.role?.includes('ADMIN')) {
+        if (!user || !user.role?.startsWith('ADMIN_')) {
             return { error: 'Not authorized — admin only' };
         }
 
@@ -98,7 +98,7 @@ export async function deletePost(postId) {
 export async function getModQueue() {
     try {
         const user = await getCurrentUser();
-        if (!user || !user.role?.includes('ADMIN')) {
+        if (!user || !user.role?.startsWith('ADMIN_')) {
             return { error: 'Not authorized' };
         }
 
@@ -129,7 +129,7 @@ export async function getModQueue() {
 export async function approvePost(postId) {
     try {
         const user = await getCurrentUser();
-        if (!user || !user.role?.includes('ADMIN')) {
+        if (!user || !user.role?.startsWith('ADMIN_')) {
             return { error: 'Not authorized' };
         }
 

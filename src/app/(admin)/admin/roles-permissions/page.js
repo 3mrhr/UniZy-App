@@ -121,7 +121,7 @@ export default function RolesPermissionsPage() {
                                                     ))}
                                                 </select>
                                             ) : (
-                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-black tracking-wider uppercase ${user.role.includes('ADMIN') ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400' :
+                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-black tracking-wider uppercase ${user.role?.startsWith('ADMIN_') ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400' :
                                                     user.role === 'STUDENT' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
                                                         'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-400'
                                                     }`}>

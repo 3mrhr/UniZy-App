@@ -17,7 +17,6 @@ export async function middleware(request) {
     // Bypass public/static files and login routes
     if (
         pathname.startsWith('/_next') ||
-        pathname.startsWith('/api') ||
         pathname.includes('.') ||
         pathname === '/' ||
         pathname === '/login' ||
@@ -47,13 +46,13 @@ export async function middleware(request) {
 
     // Protect /admin routes
     if (pathname.startsWith('/admin')) {
-        if (!user.role.startsWith('ADMIN')) {
+        if (!user.role.startsWith('ADMIN_')) {
             return NextResponse.redirect(new URL('/login', request.url));
         }
 
-        // Scope enforcement
+        // Scope enforcement for restricted admins
         if (user.role !== 'ADMIN_SUPER') {
-            const hasScope = (mod) => user.scopes && user.scopes.includes(mod);
+            const hasScope = (mod) => Array.isArray(user.scopes) && user.scopes.includes(mod);
 
             if (pathname.startsWith('/admin/housing') && user.role !== 'ADMIN_HOUSING' && !hasScope('HOUSING')) {
                 return NextResponse.redirect(new URL('/admin', request.url));
