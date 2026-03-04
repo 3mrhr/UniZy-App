@@ -155,26 +155,18 @@ export async function expireStalePendingPayments() {
     try {
         const now = new Date();
 
-        const stalePayments = await prisma.payment.findMany({
+        const result = await prisma.payment.updateMany({
             where: {
                 status: 'PENDING',
                 expiresAt: { lte: now },
             },
+            data: {
+                status: 'EXPIRED',
+                failedReason: `Auto-expired after ${PAYMENT_EXPIRY_MINUTES} minutes`,
+            },
         });
 
-        let expired = 0;
-        for (const payment of stalePayments) {
-            await prisma.payment.update({
-                where: { id: payment.id },
-                data: {
-                    status: 'EXPIRED',
-                    failedReason: `Auto-expired after ${PAYMENT_EXPIRY_MINUTES} minutes`,
-                },
-            });
-            expired++;
-        }
-
-        return { success: true, expired };
+        return { success: true, expired: result.count };
     } catch (error) {
         console.error('Expire payments error:', error);
         return { error: 'Failed to expire payments.' };
