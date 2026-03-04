@@ -2,7 +2,7 @@ import { getIronSession } from 'iron-session';
 import { cookies } from 'next/headers';
 
 const sessionOptions = {
-    password: process.env.SESSION_SECRET || 'unizy-dev-secret-key-that-is-at-least-32-characters-long',
+    password: process.env.SESSION_SECRET || (process.env.NODE_ENV === 'production' ? undefined : 'unizy-dev-secret-key-that-is-at-least-32-characters-long'),
     cookieName: 'unizy_session',
     cookieOptions: {
         secure: process.env.NODE_ENV === 'production',

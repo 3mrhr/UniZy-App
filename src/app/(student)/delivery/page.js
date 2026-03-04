@@ -42,29 +42,6 @@ function DeliveryContent() {
         fetchMerchants();
     }, [selectedCategory]);
 
-    const [isOrdering, setIsOrdering] = useState(false);
-
-    const handleOrder = async (vendor) => {
-        setIsOrdering(true);
-        const { createOrder } = await import('@/app/actions/orders');
-
-        // This is a quick jump to cart for demonstration - ideally routes to merchant detail first
-        const mockItems = vendor.meals.slice(0, 2).map(m => m.name);
-        const calcTotal = vendor.meals.slice(0, 2).reduce((sum, m) => sum + m.price, 0);
-
-        const result = await createOrder('DELIVERY', {
-            vendor: vendor.name,
-            items: mockItems.length > 0 ? mockItems : ['Sample Order'],
-            vendorId: vendor.id
-        }, calcTotal > 0 ? calcTotal : 150.00);
-
-        setIsOrdering(false);
-        if (result.success) {
-            window.location.href = `/activity/tracking/${result.order.id}`;
-        } else {
-            alert(result.error || 'Failed to place order');
-        }
-    };
 
     return (
         <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-unizy-navy pb-32 transition-colors duration-300">
