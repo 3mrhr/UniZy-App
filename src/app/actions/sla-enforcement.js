@@ -54,33 +54,45 @@ export async function checkSLABreaches() {
                 });
             }
 
-            for (const target of breachableTargets) {
-                // Check if breach already exists for this rule+target
-                const existing = await prisma.sLABreach.findFirst({
-                    where: { ruleId: rule.id, targetId: target.id },
+            if (breachableTargets.length === 0) continue;
+
+            const targetIds = breachableTargets.map(t => t.id);
+
+            // Check if breaches already exist for these targets
+            const existingBreaches = await prisma.sLABreach.findMany({
+                where: {
+                    ruleId: rule.id,
+                    targetId: { in: targetIds },
+                },
+                select: { targetId: true },
+            });
+
+            const existingTargetIds = new Set(existingBreaches.map(b => b.targetId));
+
+            // Filter out targets that already have a breach
+            const newBreachTargets = targetIds.filter(id => !existingTargetIds.has(id));
+
+            if (newBreachTargets.length > 0) {
+                // Batch create SLA breaches
+                await prisma.sLABreach.createMany({
+                    data: newBreachTargets.map(targetId => ({
+                        ruleId: rule.id,
+                        targetId: targetId,
+                        status: 'OPEN',
+                    })),
                 });
 
-                if (!existing) {
-                    await prisma.sLABreach.create({
-                        data: {
-                            ruleId: rule.id,
-                            targetId: target.id,
-                            status: 'OPEN',
-                        },
-                    });
+                // Batch create admin notifications
+                await prisma.notification.createMany({
+                    data: newBreachTargets.map(targetId => ({
+                        type: 'SLA_BREACH',
+                        title: `SLA Breach: ${rule.name}`,
+                        message: `${rule.metric} threshold (${thresholdMinutes} min) exceeded for ${targetId}`,
+                        userId: 'SYSTEM', // System notification — should go to admin
+                    })),
+                });
 
-                    // Create admin notification
-                    await prisma.notification.create({
-                        data: {
-                            type: 'SLA_BREACH',
-                            title: `SLA Breach: ${rule.name}`,
-                            message: `${rule.metric} threshold (${thresholdMinutes} min) exceeded for ${target.id}`,
-                            userId: 'SYSTEM', // System notification — should go to admin
-                        },
-                    });
-
-                    breachesCreated++;
-                }
+                breachesCreated += newBreachTargets.length;
             }
         }
 
