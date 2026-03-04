@@ -316,8 +316,8 @@ export async function createHousingRequest(listingId, type, message = '') {
         const user = await requireRole(['STUDENT']);
 
         // Anti-Spam: Only verified users can send housing requests
-        const fullUser = await prisma.user.findUnique({ where: { id: user.id } });
-        if (!fullUser || !fullUser.isVerified) {
+        // Optimization: Use isVerified from session instead of separate DB lookup
+        if (!user.isVerified) {
             return { error: 'You must verify your account before contacting housing providers.' };
         }
 
