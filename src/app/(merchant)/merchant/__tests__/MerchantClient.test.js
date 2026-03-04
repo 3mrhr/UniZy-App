@@ -73,10 +73,12 @@ describe('MerchantClient error handling', () => {
       ordersActions.updateMerchantOrderStatus.mockRejectedValueOnce(new Error('Network failure'));
 
       render(<MerchantClient
-        dbOrders={mockOrders}
-        dbMeals={[]}
-        dbDeals={[]}
-        settlements={[]}
+        merchantData={{
+          dbOrders: mockOrders,
+          dbMeals: [],
+          dbDeals: [],
+          settlements: []
+        }}
       />);
 
       const acceptButton = screen.getByText('Accept');
@@ -94,10 +96,12 @@ describe('MerchantClient error handling', () => {
       });
 
       render(<MerchantClient
-        dbOrders={mockOrders}
-        dbMeals={[]}
-        dbDeals={[]}
-        settlements={[]}
+        merchantData={{
+          dbOrders: mockOrders,
+          dbMeals: [],
+          dbDeals: [],
+          settlements: []
+        }}
       />);
 
       const acceptButton = screen.getByText('Accept');
@@ -113,7 +117,7 @@ describe('MerchantClient error handling', () => {
     it('triggers the catch block and logs the error when updateMerchantSettings throws an exception', async () => {
       mockUpdateMerchantSettings = jest.fn().mockRejectedValue(new Error('Network error'));
 
-      render(<MerchantClient settlements={[]} merchantName="Test Store" />);
+      render(<MerchantClient merchantData={{ settlements: [], merchantName: "Test Store" }} />);
 
       // Open settings modal
       fireEvent.click(screen.getByText('Store Settings'));
@@ -134,7 +138,7 @@ describe('MerchantClient error handling', () => {
         error: { message: 'Custom API error message' }
       });
 
-      render(<MerchantClient settlements={[]} merchantName="Test Store" />);
+      render(<MerchantClient merchantData={{ settlements: [], merchantName: "Test Store" }} />);
 
       // Open settings modal
       fireEvent.click(screen.getByText('Store Settings'));
@@ -152,7 +156,7 @@ describe('MerchantClient error handling', () => {
         ok: false
       });
 
-      render(<MerchantClient settlements={[]} merchantName="Test Store" />);
+      render(<MerchantClient merchantData={{ settlements: [], merchantName: "Test Store" }} />);
 
       // Open settings modal
       fireEvent.click(screen.getByText('Store Settings'));
