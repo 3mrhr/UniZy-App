@@ -1,5 +1,6 @@
 'use server';
 
+import crypto from 'node:crypto';
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from './auth';
 import { revalidatePath } from 'next/cache';
@@ -196,7 +197,7 @@ export async function createDeal(dealData) {
                 discountPrice: dealData.discountPrice ? parseFloat(dealData.discountPrice) : null,
                 currency: dealData.currency || 'EGP',
                 expiresIn: dealData.expiresIn || 'Ongoing',
-                promoCode: dealData.promoCode || `DEAL${Math.floor(Math.random() * 10000)}`,
+                promoCode: dealData.promoCode || `DEAL${crypto.randomInt(0, 10000).toString().padStart(4, '0')}`,
                 merchantId: merchantId,
             }
         });
