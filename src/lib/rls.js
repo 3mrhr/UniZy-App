@@ -13,28 +13,13 @@ import { prisma } from './prisma';
  * @returns {import('@prisma/client').PrismaClient} A Prisma client with RLS context set
  */
 /**
- * Safely sets session variables for RLS.
- * Note: SET LOCAL does not support parameters in Postgres, so we must strictly validate inputs.
+ * Safely sets session variables for RLS using standard parameterized queries.
+ * PostgreSQL set_config supports safe parameterization via SELECT,
+ * removing the need for executeRawUnsafe and strict regex validation.
  */
 async function setRLSVars(client, userId, userRole) {
-    // Strict Validation: userId must be a valid UUID, userRole must be a known enum value
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    const validRoles = [
-        'STUDENT', 'MERCHANT', 'DRIVER', 'PROVIDER',
-        'ADMIN_SUPER', 'ADMIN_HOUSING', 'ADMIN_TRANSPORT',
-        'ADMIN_DELIVERY', 'ADMIN_COMMERCE', 'ADMIN_SERVICES'
-    ];
-
-    if (!uuidRegex.test(userId)) {
-        throw new Error('Invalid User ID format for RLS context');
-    }
-    if (!validRoles.includes(userRole)) {
-        throw new Error('Invalid User Role for RLS context');
-    }
-
-    // Now safe to use in template literal because we've validated against allow-lists/patterns
-    await client.$executeRawUnsafe(`SET LOCAL app.current_user_id = '${userId}'`);
-    await client.$executeRawUnsafe(`SET LOCAL app.current_user_role = '${userRole}'`);
+    await client.$executeRaw`SELECT set_config('app.current_user_id', ${userId}, true);`;
+    await client.$executeRaw`SELECT set_config('app.current_user_role', ${userRole}, true);`;
 }
 
 export async function withRLSContext(userId, userRole) {

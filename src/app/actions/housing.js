@@ -5,6 +5,7 @@ import { getCurrentUser } from '@/app/actions/auth';
 import { revalidatePath } from 'next/cache';
 import { completeReferralIfEligible } from './referrals';
 import { requireUser, requireRole, requireOwnership } from '@/lib/authz';
+import { logAdminAction } from './audit';
 
 export async function getHousingListings(filters = {}) {
     try {
@@ -196,15 +197,7 @@ export async function approveListing(id, adminId) {
             data: { status: 'ACTIVE' }
         });
 
-        await prisma.auditLog.create({
-            data: {
-                action: "APPROVE_LISTING",
-                module: "HOUSING",
-                targetId: listing.id,
-                details: JSON.stringify({ action: "APPROVED" }),
-                adminId: actionAdminId,
-            }
-        });
+        await logAdminAction('APPROVE_LISTING', 'HOUSING', listing.id, { action: 'APPROVED' });
 
         revalidatePath('/admin/listings-moderation');
         revalidatePath('/housing');
@@ -229,15 +222,7 @@ export async function rejectListing(id, adminId, reason = "Violates guidelines")
             data: { status: 'REJECTED' }
         });
 
-        await prisma.auditLog.create({
-            data: {
-                action: "REJECT_LISTING",
-                module: "HOUSING",
-                targetId: listing.id,
-                details: JSON.stringify({ reason }),
-                adminId: actionAdminId,
-            }
-        });
+        await logAdminAction('REJECT_LISTING', 'HOUSING', listing.id, { reason });
 
         revalidatePath('/admin/listings-moderation');
         return { success: true };
@@ -329,6 +314,12 @@ export async function getSavedHousing() {
 export async function createHousingRequest(listingId, type, message = '') {
     try {
         const user = await requireRole(['STUDENT']);
+
+        // Anti-Spam: Only verified users can send housing requests
+        const fullUser = await prisma.user.findUnique({ where: { id: user.id } });
+        if (!fullUser || !fullUser.isVerified) {
+            return { error: 'You must verify your account before contacting housing providers.' };
+        }
 
         // Prevent duplicate pending requests for the same listing by the same user
         const existing = await prisma.housingRequest.findFirst({

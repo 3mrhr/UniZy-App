@@ -49,12 +49,11 @@ CREATE POLICY order_student_isolation ON "Order"
     USING ("userId" = current_setting('app.current_user_id', true)::text)
     WITH CHECK ("userId" = current_setting('app.current_user_id', true)::text);
 
--- Drivers can see orders assigned to them or pending orders
+-- Drivers can see orders assigned to them
 CREATE POLICY order_driver_access ON "Order"
     FOR SELECT
     USING (
         "driverId" = current_setting('app.current_user_id', true)::text
-        OR "status" = 'PENDING'
     );
 
 -- Admins can see all orders

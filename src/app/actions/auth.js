@@ -29,6 +29,10 @@ export async function loginUser(username, password) {
             return { error: 'Invalid credentials' };
         }
 
+        if (user.status === 'BANNED' || user.status === 'SUSPENDED') {
+            return { error: 'Your account has been suspended or banned. Please contact support.' };
+        }
+
         // Compare hashed password
         const isValid = await bcrypt.compare(password, user.password);
         if (!isValid) {
@@ -38,7 +42,8 @@ export async function loginUser(username, password) {
         let parsedScopes = [];
         try {
             if (user.scopes) {
-                parsedScopes = typeof user.scopes === 'string' ? JSON.parse(user.scopes) : user.scopes;
+                // Prisma handles the JSON parsing natively now, so we just ensure it's an array
+                parsedScopes = Array.isArray(user.scopes) ? user.scopes : [];
             }
         } catch (e) {
             console.error('Failed to parse user scopes:', e);
@@ -164,7 +169,23 @@ export async function logoutUser() {
 
 export async function getCurrentUser() {
     const session = await getSession();
-    return session.user || null;
+    if (!session.user) return null;
+
+    try {
+        const user = await prisma.user.findUnique({
+            where: { id: session.user.id },
+            select: { status: true }
+        });
+
+        if (!user || user.status !== 'ACTIVE') {
+            session.destroy();
+            return null;
+        }
+    } catch (e) {
+        console.error("Session revalidation failed:", e);
+    }
+
+    return session.user;
 }
 
 export async function requestPasswordReset(email) {

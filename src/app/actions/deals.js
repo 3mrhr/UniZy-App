@@ -225,6 +225,19 @@ export async function redeemDeal(dealId) {
 
         if (!deal) return { success: false, error: 'Deal not found.' };
 
+        // Anti-Fraud: Strict one-per-user enforcement
+        const priorRedemption = await prisma.transaction.findFirst({
+            where: {
+                userId: user.id,
+                dealId: dealId,
+                status: { not: 'CANCELLED' } // Any pending or completed transaction counts as used
+            }
+        });
+
+        if (priorRedemption) {
+            return { success: false, error: 'You have already redeemed this deal. Deals are limited to one per student.' };
+        }
+
         // Compute financial snapshots before transaction
         const dealAmount = deal.discountPrice || deal.originalPrice || 0;
         const commSnap = await computeCommissionSnapshot('DEALS', 'MERCHANT', dealAmount);

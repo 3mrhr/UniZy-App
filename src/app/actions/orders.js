@@ -365,7 +365,8 @@ export async function acceptOrder(orderId) {
 
 // Allowed driver transitions
 const DRIVER_TRANSITIONS = {
-    'PICKED_UP': ['DELIVERED'],
+    'PICKED_UP': ['IN_TRANSIT', 'DELIVERED'],
+    'IN_TRANSIT': ['DELIVERED']
 };
 
 export async function updateOrderStatus(orderId, newStatus) {

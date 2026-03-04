@@ -42,7 +42,7 @@ export async function updateUserRole(userId, newRole, scopes = null) {
 
         const dataUpdate = { role: newRole };
         if (scopes !== null) {
-            dataUpdate.scopes = JSON.stringify(scopes);
+            dataUpdate.scopes = scopes;
         }
 
         const updatedUser = await prisma.user.update({

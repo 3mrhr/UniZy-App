@@ -29,8 +29,22 @@ export async function submitReport({ type, targetId, reason, details, targetUser
             }
         });
 
-        // Optionally log the report submission
-        // For audit logs, we usually track admin actions, but tracking reports could be useful.
+        // Auto-Suspension for Housing Listings
+        if (type === 'HOUSING') {
+            const reportCount = await prisma.report.count({
+                where: { targetId, type: 'HOUSING', status: 'PENDING' }
+            });
+
+            if (reportCount >= 3) {
+                await prisma.housingListing.update({
+                    where: { id: targetId },
+                    data: { status: 'SUSPENDED' }
+                });
+
+                // Fire an alert or log it
+                await logAdminAction('AUTO_SUSPEND_LISTING', 'SAFETY', targetId, { reportCount });
+            }
+        }
 
         return { success: true, report };
     } catch (error) {
@@ -118,16 +132,9 @@ export async function banUser(userId, reason) {
             return { success: false, error: 'Unauthorized.' };
         }
 
-        // We could add a 'isBanned' field or update status to 'BANNED'
-        // For now, let's assume we update a verificationStatus or role, 
-        // but ideally we'd have a 'status' field on User.
-        // Let's check User model fields.
-
         await prisma.user.update({
             where: { id: userId },
-            data: {
-                verificationStatus: 'REJECTED' // Temporary proxy for banning until we add a proper status
-            }
+            data: { status: 'BANNED' }
         });
 
         await logAdminAction('BAN_USER', 'SAFETY', { userId, reason });

@@ -85,7 +85,7 @@ async function main() {
             email: 'admin@unizy.app',
             password: DEFAULT_PASS,
             phone: '+201000000000',
-            role: 'ADMIN',
+            role: 'ADMIN_SUPER',
             isVerified: true,
             verificationStatus: 'VERIFIED',
             university: 'Assiut University',

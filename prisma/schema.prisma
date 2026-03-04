@@ -14,13 +14,14 @@ model User {
   email               String                 @unique
   password            String
   phone               String?                @unique
-  scopes              String?
+  scopes              Json?
   university          String?                @default("Assiut University")
   faculty             String?
   academicYear        String?
   gender              String?
   referralCode        String?                @unique
   isVerified          Boolean                @default(false)
+  status              UserStatus             @default(ACTIVE)
   verificationStatus  String                 @default("UNVERIFIED")
   profileImage        String?
   notificationPrefs   String?                @default("{\"email\": true, \"push\": true, \"sms\": false}")
@@ -71,7 +72,7 @@ model HousingListing {
   description  String
   price        Float
   type         String
-  status       String           @default("PENDING")
+  status       HousingStatus    @default(PENDING)
   location     String
   images       String
   amenities    String
@@ -83,6 +84,8 @@ model HousingListing {
   requests     HousingRequest[]
   savedBy      SavedHousing[]
   transactions Transaction[]
+
+  @@index([status])
 }
 
 model VerificationDocument {
@@ -100,7 +103,7 @@ model VerificationDocument {
 model Order {
   id           String              @id @default(uuid())
   service      String
-  status       String              @default("PENDING")
+  status       OrderStatus         @default(PENDING)
   total        Float
   details      String
   userId       String
@@ -116,6 +119,8 @@ model Order {
   refunds      Refund[]
   rewardTxns   RewardTransaction[]
   transactions Transaction[]
+
+  @@index([userId, status])
 }
 
 model Review {
@@ -170,7 +175,7 @@ model SupportTicket {
   description     String          @default("")
   category        String
   priority        String          @default("MEDIUM")
-  status          String          @default("OPEN")
+  status          TicketStatus    @default(OPEN)
   userId          String
   assignedAgentId String?
   createdAt       DateTime        @default(now())
@@ -178,6 +183,8 @@ model SupportTicket {
   assignedAgent   User?           @relation("AssignedAgent", fields: [assignedAgentId], references: [id])
   user            User            @relation(fields: [userId], references: [id])
   messages        TicketMessage[]
+
+  @@index([userId, status])
 }
 
 model TicketMessage {
@@ -508,6 +515,7 @@ model Transaction {
   history               TransactionHistory[]
 
   @@index([orderId])
+  @@index([userId, status])
 }
 
 model TransactionHistory {
@@ -710,6 +718,8 @@ model HousingRequest {
   updatedAt        DateTime       @updatedAt
   listing          HousingListing @relation(fields: [housingListingId], references: [id])
   user             User           @relation("HousingRequests", fields: [userId], references: [id])
+
+  @@index([userId, status])
 }
 
 model Report {
@@ -802,4 +812,38 @@ enum UserRole {
   ADMIN_DELIVERY
   ADMIN_COMMERCE
   ADMIN_SERVICES
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  BANNED
+}
+
+enum OrderStatus {
+  PENDING
+  ACCEPTED
+  PREPARING
+  READY
+  PICKED_UP
+  IN_TRANSIT
+  DELIVERED
+  COMPLETED
+  CANCELLED
+  DISPUTED
+}
+
+enum HousingStatus {
+  DRAFT
+  PENDING
+  ACTIVE
+  REJECTED
+  SUSPENDED
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
 }
