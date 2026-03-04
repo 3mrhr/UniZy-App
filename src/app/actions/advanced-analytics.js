@@ -121,6 +121,17 @@ export async function getRetentionCohorts(weeks = 4) {
         const admin = await getCurrentUser();
         if (!admin || !admin.role?.startsWith('ADMIN')) return { error: 'Unauthorized' };
 
+        // Optimization: Fetch all orders in the N-week window with a single query
+        const overallStart = new Date();
+        overallStart.setDate(overallStart.getDate() - weeks * 7);
+
+        const orders = await prisma.order.findMany({
+            where: {
+                createdAt: { gte: overallStart },
+            },
+            select: { userId: true, createdAt: true },
+        });
+
         const cohorts = [];
         for (let i = 0; i < weeks; i++) {
             const weekStart = new Date();
@@ -128,19 +139,18 @@ export async function getRetentionCohorts(weeks = 4) {
             const weekEnd = new Date();
             weekEnd.setDate(weekEnd.getDate() - i * 7);
 
-            const activeUsers = await prisma.order.findMany({
-                where: {
-                    createdAt: { gte: weekStart, lt: weekEnd },
-                },
-                select: { userId: true },
-                distinct: ['userId'],
-            });
+            const weekUsers = new Set();
+            for (const order of orders) {
+                if (order.createdAt >= weekStart && order.createdAt < weekEnd) {
+                    weekUsers.add(order.userId);
+                }
+            }
 
             cohorts.push({
                 week: `Week -${i + 1}`,
                 startDate: weekStart.toISOString().split('T')[0],
                 endDate: weekEnd.toISOString().split('T')[0],
-                activeUsers: activeUsers.length,
+                activeUsers: weekUsers.size,
             });
         }
 
