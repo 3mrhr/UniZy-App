@@ -121,28 +121,34 @@ export async function getRetentionCohorts(weeks = 4) {
         const admin = await getCurrentUser();
         if (!admin || !admin.role?.startsWith('ADMIN')) return { error: 'Unauthorized' };
 
-        const cohorts = [];
-        for (let i = 0; i < weeks; i++) {
+        const queries = Array.from({ length: weeks }, (_, i) => {
             const weekStart = new Date();
             weekStart.setDate(weekStart.getDate() - (i + 1) * 7);
             const weekEnd = new Date();
             weekEnd.setDate(weekEnd.getDate() - i * 7);
 
-            const activeUsers = await prisma.order.findMany({
-                where: {
-                    createdAt: { gte: weekStart, lt: weekEnd },
-                },
-                select: { userId: true },
-                distinct: ['userId'],
-            });
-
-            cohorts.push({
+            return {
                 week: `Week -${i + 1}`,
                 startDate: weekStart.toISOString().split('T')[0],
                 endDate: weekEnd.toISOString().split('T')[0],
-                activeUsers: activeUsers.length,
-            });
-        }
+                promise: prisma.order.findMany({
+                    where: {
+                        createdAt: { gte: weekStart, lt: weekEnd },
+                    },
+                    select: { userId: true },
+                    distinct: ['userId'],
+                }),
+            };
+        });
+
+        const results = await Promise.all(queries.map((q) => q.promise));
+
+        const cohorts = queries.map((q, i) => ({
+            week: q.week,
+            startDate: q.startDate,
+            endDate: q.endDate,
+            activeUsers: results[i].length,
+        }));
 
         return { success: true, cohorts };
     } catch (error) {
