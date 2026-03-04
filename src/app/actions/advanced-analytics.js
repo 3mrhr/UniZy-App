@@ -121,30 +121,42 @@ export async function getRetentionCohorts(weeks = 4) {
         const admin = await getCurrentUser();
         if (!admin || !admin.role?.startsWith('ADMIN')) return { error: 'Unauthorized' };
 
-        const promises = [];
+        const cohorts = [];
+        const now = new Date();
+        const overallEnd = new Date(now);
+        const overallStart = new Date(now);
+        overallStart.setDate(overallStart.getDate() - weeks * 7);
+
+        const allActiveUsers = await prisma.order.findMany({
+            where: {
+                createdAt: {
+                    gte: overallStart,
+                    lt: overallEnd
+                }
+            },
+            select: { userId: true, createdAt: true },
+        });
+
         for (let i = 0; i < weeks; i++) {
-            const weekStart = new Date();
+            const weekStart = new Date(now);
             weekStart.setDate(weekStart.getDate() - (i + 1) * 7);
-            const weekEnd = new Date();
+            const weekEnd = new Date(now);
             weekEnd.setDate(weekEnd.getDate() - i * 7);
 
-            promises.push(
-                prisma.order.findMany({
-                    where: {
-                        createdAt: { gte: weekStart, lt: weekEnd },
-                    },
-                    select: { userId: true },
-                    distinct: ['userId'],
-                }).then(activeUsers => ({
-                    week: `Week -${i + 1}`,
-                    startDate: weekStart.toISOString().split('T')[0],
-                    endDate: weekEnd.toISOString().split('T')[0],
-                    activeUsers: activeUsers.length,
-                }))
-            );
-        }
+            const weekUsers = new Set();
+            for (const order of allActiveUsers) {
+                if (order.createdAt >= weekStart && order.createdAt < weekEnd) {
+                    weekUsers.add(order.userId);
+                }
+            }
 
-        const cohorts = await Promise.all(promises);
+            cohorts.push({
+                week: `Week -${i + 1}`,
+                startDate: weekStart.toISOString().split('T')[0],
+                endDate: weekEnd.toISOString().split('T')[0],
+                activeUsers: weekUsers.size,
+            });
+        }
 
         return { success: true, cohorts };
     } catch (error) {
