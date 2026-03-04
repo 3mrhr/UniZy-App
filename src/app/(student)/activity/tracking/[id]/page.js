@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Phone, Navigation, AlertTriangle, XCircle, Star } from 'lucide-react';
+import { Phone, Navigation, XCircle, Star } from 'lucide-react';
 import SOSButton from '@/components/SOSButton';
 
 export default function LiveTrackingPage({ params }) {
