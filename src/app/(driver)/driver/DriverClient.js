@@ -1,16 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useLanguage } from '@/i18n/LanguageProvider';
 import ThemeLangControls from '@/components/ThemeLangControls';
 
-export default function DriverClient({ settlements, activeJobs }) {
+export default function DriverClient({ settlements, dbOrders = [], driverName = 'Driver' }) {
     const { dict } = useLanguage();
     const t = dict?.driver || {};
     const [isOnline, setIsOnline] = useState(false);
-
-    // Default to the first active job assigned to the driver if it exists
-    const currentTask = activeJobs?.length > 0 ? activeJobs[0] : null;
 
     // Calculate real earnings from settlements
     const totalEarnings = settlements.reduce((sum, s) => sum + s.netAmount, 0);
@@ -25,6 +22,75 @@ export default function DriverClient({ settlements, activeJobs }) {
         setIsOnline(!isOnline);
     };
 
+    // Orders state
+    const [orders, setOrders] = useState(dbOrders);
+    const [actionLoading, setActionLoading] = useState(null);
+
+    // Split orders into available (READY, unassigned) and my orders (assigned to me)
+    const availableOrders = orders.filter(o => o.status === 'READY' && !o.driverId);
+    const myOrders = orders.filter(o => o.driverId); // assigned to this driver
+
+    // Refresh orders every 10 seconds when online
+    const refreshOrders = useCallback(async () => {
+        try {
+            const { getDriverOrders } = await import('@/app/actions/orders');
+            const result = await getDriverOrders();
+            if (Array.isArray(result)) {
+                setOrders(result);
+            }
+        } catch (_) { /* silent */ }
+    }, []);
+
+    useEffect(() => {
+        if (!isOnline) return;
+        const interval = setInterval(refreshOrders, 10000);
+        return () => clearInterval(interval);
+    }, [isOnline, refreshOrders]);
+
+    // Accept order (READY → PICKED_UP)
+    const handleAccept = async (orderId) => {
+        setActionLoading(orderId);
+        try {
+            const { acceptOrder } = await import('@/app/actions/orders');
+            const result = await acceptOrder(orderId);
+            if (result.success) {
+                await refreshOrders();
+            } else {
+                alert(result.error || 'Failed to accept order');
+            }
+        } catch (e) {
+            console.error('Accept failed:', e);
+        }
+        setActionLoading(null);
+    };
+
+    // Mark DELIVERED (PICKED_UP → DELIVERED)
+    const handleDeliver = async (orderId) => {
+        setActionLoading(orderId);
+        try {
+            const { updateOrderStatus } = await import('@/app/actions/orders');
+            const result = await updateOrderStatus(orderId, 'DELIVERED');
+            if (result.success) {
+                await refreshOrders();
+            } else {
+                alert(result.error || 'Failed to mark as delivered');
+            }
+        } catch (e) {
+            console.error('Deliver failed:', e);
+        }
+        setActionLoading(null);
+    };
+
+    const getItemsSummary = (order) => {
+        if (order.orderItems && order.orderItems.length > 0) {
+            return order.orderItems.map(i => `${i.nameSnapshot} x${i.qty}`).join(', ');
+        }
+        try {
+            const details = JSON.parse(order.details || '{}');
+            return details.items?.join(', ') || `Order #${order.id.slice(-4)}`;
+        } catch { return `Order #${order.id.slice(-4)}`; }
+    };
+
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-unizy-navy transition-colors pb-24">
 
@@ -37,7 +103,7 @@ export default function DriverClient({ settlements, activeJobs }) {
                     <div>
                         <h1 className="text-lg font-black text-gray-900 dark:text-white leading-none">Driver Hub</h1>
                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">
-                            {isOnline ? '● Online & Searching' : '○ Offline'}
+                            {driverName} • {isOnline ? '● Online & Searching' : '○ Offline'}
                         </p>
                     </div>
                 </div>
@@ -48,7 +114,7 @@ export default function DriverClient({ settlements, activeJobs }) {
 
                 {/* Status Toggle Card */}
                 <div className={`p-8 rounded-[2.5rem] shadow-xl transition-all duration-500 flex flex-col items-center gap-6 border-4 ${isOnline ? 'bg-brand-600 border-brand-400/30' : 'bg-white dark:bg-unizy-dark border-transparent shadow-gray-200/50 dark:shadow-none'}`}>
-                    <div className={`w-24 h-24 rounded-full flex items-center justify-center text-4xl shadow-2xl transition-transform duration-700 ${isOnline ? 'bg-white scale-110 rotate-[360deg]' : 'bg-gray-100 dark:bg-unizy-navy/50'}`}>
+                    <div className={`w-24 h-24 rounded-full flex items-center justify-center text-4xl shadow-2xl transition-transform duration-700 ${isOnline ? 'bg-white scale-110' : 'bg-gray-100 dark:bg-unizy-navy/50'}`}>
                         {isOnline ? '🚖' : '💤'}
                     </div>
                     <div className="text-center">
@@ -56,7 +122,7 @@ export default function DriverClient({ settlements, activeJobs }) {
                             {isOnline ? 'You are Online' : 'You are Offline'}
                         </h2>
                         <p className={`text-sm font-medium ${isOnline ? 'text-brand-100' : 'text-gray-400'}`}>
-                            {isOnline ? 'Ready to accept new requests' : 'Tap to start earning today'}
+                            {isOnline ? `${availableOrders.length} orders available for pickup` : 'Tap to start earning today'}
                         </p>
                     </div>
                     <button
@@ -78,61 +144,105 @@ export default function DriverClient({ settlements, activeJobs }) {
                     ))}
                 </div>
 
-                {/* Job Request Popup (Real) */}
-                {isOnline && currentTask && (
-                    <div className="bg-white dark:bg-unizy-dark rounded-[2.5rem] p-8 shadow-2xl border-2 border-brand-500 animate-bounce-slow relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-brand-500/5 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-1000"></div>
-                        <div className="flex justify-between items-start mb-6 relative">
-                            <div>
-                                <span className="bg-brand-100 dark:bg-brand-900/40 text-brand-600 dark:text-brand-400 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest mb-2 inline-block">
-                                    {currentTask.order?.module || 'Delivery'} Request
-                                </span>
-                                <h3 className="text-2xl font-black text-gray-900 dark:text-white leading-none">
-                                    {currentTask.order?.user?.name || 'Customer'}
-                                </h3>
-                            </div>
-                            <div className="text-right">
-                                <p className="text-2xl font-black text-brand-600 dark:text-brand-400">Order</p>
-                                <p className="font-mono text-[10px] font-bold text-gray-400">#{currentTask.id.substring(0, 6)}</p>
-                            </div>
-                        </div>
+                {/* Available Orders (READY, waiting for driver) */}
+                {isOnline && availableOrders.length > 0 && (
+                    <div className="flex flex-col gap-4">
+                        <h3 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-widest">
+                            Available for Pickup ({availableOrders.length})
+                        </h3>
+                        {availableOrders.map(order => (
+                            <div key={order.id} className="bg-white dark:bg-unizy-dark rounded-[2.5rem] p-6 shadow-xl border-2 border-brand-500/30 relative overflow-hidden group hover:shadow-2xl transition-all">
+                                <div className="absolute top-0 right-0 w-24 h-24 bg-brand-500/5 rounded-full -mr-12 -mt-12 group-hover:scale-150 transition-transform duration-1000"></div>
+                                <div className="flex justify-between items-start mb-4 relative">
+                                    <div>
+                                        <span className="bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest mb-2 inline-block">
+                                            Ready for Pickup
+                                        </span>
+                                        <h3 className="text-lg font-black text-gray-900 dark:text-white leading-tight">
+                                            {order.user?.name || 'Customer'}
+                                        </h3>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-lg font-black text-brand-600 dark:text-brand-400">EGP {order.total}</p>
+                                        <p className="font-mono text-[10px] font-bold text-gray-400">#{order.id.slice(-6)}</p>
+                                    </div>
+                                </div>
 
-                        <div className="space-y-4 mb-8 relative">
-                            <div className="flex items-center gap-4">
-                                <div className="w-2 h-2 rounded-full bg-brand-500"></div>
-                                <p className="text-sm font-bold text-gray-700 dark:text-gray-300 truncate tracking-tight text-wrap">
-                                    Wait for actual location data in v2
-                                </p>
-                            </div>
-                            <div className="flex items-center gap-4">
-                                <div className="w-2 h-2 rounded-full bg-orange-500"></div>
-                                <p className="text-sm font-bold text-gray-700 dark:text-gray-300 truncate tracking-tight text-wrap">
-                                    Pending Dropoff location
-                                </p>
-                            </div>
-                        </div>
+                                <div className="mb-6 p-3 bg-gray-50 dark:bg-unizy-navy/50 rounded-2xl relative">
+                                    <p className="text-sm font-bold text-gray-700 dark:text-gray-300">{getItemsSummary(order)}</p>
+                                </div>
 
-                        <div className="grid grid-cols-2 gap-4 relative">
-                            {currentTask.status === 'ASSIGNED' ? (
-                                <>
-                                    <button className="py-4 rounded-xl font-bold text-sm bg-gray-100 dark:bg-unizy-navy/50 text-gray-500 hover:bg-gray-200 dark:hover:bg-unizy-navy transition-colors">
-                                        Decline
-                                    </button>
-                                    <button className="py-4 rounded-xl font-bold text-sm bg-brand-600 text-white hover:bg-brand-700 shadow-xl shadow-brand-500/20 active:scale-95 transition-all">
-                                        Accept Job
-                                    </button>
-                                </>
-                            ) : (
-                                <button className="col-span-2 py-4 rounded-xl font-bold text-sm bg-green-500 text-white hover:bg-green-600 shadow-xl shadow-green-500/20 active:scale-95 transition-all">
-                                    Complete Job
+                                <button
+                                    disabled={actionLoading === order.id}
+                                    onClick={() => handleAccept(order.id)}
+                                    className="w-full py-4 rounded-xl font-bold text-sm bg-brand-600 text-white hover:bg-brand-700 shadow-xl shadow-brand-500/20 active:scale-95 transition-all disabled:opacity-50"
+                                >
+                                    {actionLoading === order.id ? 'Accepting...' : '🚀 Accept & Pick Up'}
                                 </button>
-                            )}
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {/* My Active Orders (assigned to this driver) */}
+                {myOrders.length > 0 && (
+                    <div className="flex flex-col gap-4">
+                        <h3 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-widest">
+                            My Active Orders ({myOrders.filter(o => o.status !== 'DELIVERED').length})
+                        </h3>
+                        {myOrders.filter(o => o.status !== 'DELIVERED').map(order => (
+                            <div key={order.id} className="bg-white dark:bg-unizy-dark p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-white/5">
+                                <div className="flex justify-between items-start mb-4">
+                                    <div>
+                                        <span className={`text-[10px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider ${order.status === 'PICKED_UP' ? 'bg-blue-100 text-blue-600' : 'bg-yellow-100 text-yellow-600'}`}>
+                                            {order.status === 'PICKED_UP' ? 'In Transit' : order.status}
+                                        </span>
+                                        <h4 className="font-black text-gray-900 dark:text-white leading-tight mt-2">{order.user?.name || 'Customer'}</h4>
+                                    </div>
+                                    <p className="font-black text-gray-900 dark:text-white">EGP {order.total}</p>
+                                </div>
+                                <p className="text-sm text-gray-500 mb-4">{getItemsSummary(order)}</p>
+
+                                {order.user?.phone && (
+                                    <p className="text-xs text-gray-400 mb-4">📞 {order.user.phone}</p>
+                                )}
+
+                                {order.status === 'PICKED_UP' && (
+                                    <button
+                                        disabled={actionLoading === order.id}
+                                        onClick={() => handleDeliver(order.id)}
+                                        className="w-full py-4 rounded-xl font-bold text-sm bg-green-500 text-white hover:bg-green-600 shadow-xl shadow-green-500/20 active:scale-95 transition-all disabled:opacity-50"
+                                    >
+                                        {actionLoading === order.id ? 'Processing...' : '✅ Mark as Delivered'}
+                                    </button>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {/* Delivered Orders History */}
+                {myOrders.filter(o => o.status === 'DELIVERED').length > 0 && (
+                    <div className="bg-white dark:bg-unizy-dark p-6 rounded-[2rem] shadow-sm border border-gray-100 dark:border-white/5">
+                        <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-4">
+                            Delivered Today ({myOrders.filter(o => o.status === 'DELIVERED').length})
+                        </h3>
+                        <div className="space-y-3">
+                            {myOrders.filter(o => o.status === 'DELIVERED').slice(0, 5).map(o => (
+                                <div key={o.id} className="flex justify-between items-center p-3 bg-gray-50 dark:bg-unizy-navy/50 rounded-2xl">
+                                    <div>
+                                        <p className="text-sm font-bold text-gray-900 dark:text-white">{o.user?.name || 'Customer'}</p>
+                                        <p className="text-xs text-gray-400">EGP {o.total}</p>
+                                    </div>
+                                    <span className="text-[10px] font-bold bg-green-100 text-green-600 px-2 py-0.5 rounded-md">Delivered</span>
+                                </div>
+                            ))}
                         </div>
                     </div>
                 )}
 
-                {/* Recent Activity List (Real Settlements) */}
-                {(!isOnline || !currentTask) && (
+                {/* Recent Settlements (when offline or no orders) */}
+                {(!isOnline || (availableOrders.length === 0 && myOrders.length === 0)) && (
                     <div className="bg-white dark:bg-unizy-dark p-6 rounded-[2rem] shadow-sm border border-gray-100 dark:border-white/5">
                         <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-6">Recent Settlements</h3>
                         <div className="space-y-6">

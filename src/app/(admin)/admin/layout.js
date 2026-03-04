@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
     LayoutDashboard, Users, ShoppingBag, Truck,
     Home, Tag, Utensils, ShieldAlert, LogOut,
-    Menu, X, Bell, Settings, ChevronRight, MapPin, DollarSign, Percent, CreditCard
+    Menu, X, Bell, Settings, ChevronRight, MapPin, DollarSign, Percent, CreditCard, Database
 } from 'lucide-react';
 
 const ADMIN_ROLES = {
@@ -34,6 +34,7 @@ const ADMIN_ROLES = {
             { label: 'Staff Management', icon: Users, href: '/admin/staff' },
             { label: 'Audit Logs', icon: Users, href: '/admin/audit-logs' },
             { label: 'Finance', icon: ShoppingBag, href: '/admin/finance' },
+            { label: 'Data Hub', icon: Database, href: '/admin/data' },
         ]
     },
     ADMIN_DELIVERY: {

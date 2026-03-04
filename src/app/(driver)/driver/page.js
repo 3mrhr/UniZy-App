@@ -1,7 +1,6 @@
 import DriverClient from './DriverClient';
 import { getCurrentUser } from '@/app/actions/auth';
-import { getSettlements } from '@/app/actions/finance';
-import { getActiveJobsForDriver } from '@/app/actions/dispatch';
+import { getDriverOrders } from '@/app/actions/orders';
 import { prisma } from '@/lib/prisma';
 import { redirect } from 'next/navigation';
 
@@ -16,15 +15,16 @@ export default async function DriverPage() {
         redirect('/login');
     }
 
-    // Fetch the driver's specific settlements directly via Prisma (since getSettlements action needs admin perms)
+    // Fetch the driver's specific settlements
     const settlements = await prisma.settlement.findMany({
         where: { providerId: user.id },
         orderBy: { createdAt: 'desc' },
         take: 10
     });
 
-    const activeJobsResult = await getActiveJobsForDriver();
-    const activeJobs = activeJobsResult.jobs || [];
+    // Fetch available + assigned orders
+    const dbOrders = await getDriverOrders();
+    const orders = Array.isArray(dbOrders) ? dbOrders : [];
 
-    return <DriverClient settlements={settlements} activeJobs={activeJobs} />;
+    return <DriverClient settlements={settlements} dbOrders={orders} driverName={user.name} />;
 }

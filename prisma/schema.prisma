@@ -42,6 +42,7 @@ model User {
   meals               Meal[]
   notifications       Notification[]
   orders              Order[]
+  driverOrders        Order[]                @relation("DriverOrders")
   payoutsProcessed    Payout[]               @relation("PayoutProcessor")
   referralsUsed       Referral[]             @relation("referred")
   referralsMade       Referral[]             @relation("referrer")
@@ -97,22 +98,24 @@ model VerificationDocument {
 }
 
 model Order {
-  id          String              @id @default(uuid())
-  service     String
-  status      String              @default("PENDING")
-  total       Float
-  details     String
-  userId      String
-  driverId    String?
-  promoCodeId String?
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
-  dispatches  Dispatch[]
-  promoCode   PromoCode?          @relation(fields: [promoCodeId], references: [id])
-  user        User                @relation(fields: [userId], references: [id])
-  orderItems  OrderItem[]
-  refunds     Refund[]
-  rewardTxns  RewardTransaction[]
+  id           String              @id @default(uuid())
+  service      String
+  status       String              @default("PENDING")
+  total        Float
+  details      String
+  userId       String
+  driverId     String?
+  promoCodeId  String?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  dispatches   Dispatch[]
+  promoCode    PromoCode?          @relation(fields: [promoCodeId], references: [id])
+  user         User                @relation(fields: [userId], references: [id])
+  driver       User?               @relation("DriverOrders", fields: [driverId], references: [id])
+  orderItems   OrderItem[]
+  refunds      Refund[]
+  rewardTxns   RewardTransaction[]
+  transactions Transaction[]
 }
 
 model Review {
@@ -463,6 +466,7 @@ model Transaction {
   status                String               @default("PENDING")
   userId                String
   providerId            String?
+  orderId               String?
   housingId             String?
   serviceBookingId      String?
   cleaningBookingId     String?
@@ -497,10 +501,13 @@ model Transaction {
   deal                  Deal?                @relation(fields: [dealId], references: [id])
   housing               HousingListing?      @relation(fields: [housingId], references: [id])
   meal                  Meal?                @relation(fields: [mealId], references: [id])
+  order                 Order?               @relation(fields: [orderId], references: [id])
   promoCode             PromoCode?           @relation(fields: [promoCodeId], references: [id])
   serviceBooking        ServiceBooking?      @relation(fields: [serviceBookingId], references: [id])
   user                  User                 @relation(fields: [userId], references: [id])
   history               TransactionHistory[]
+
+  @@index([orderId])
 }
 
 model TransactionHistory {

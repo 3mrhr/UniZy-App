@@ -35,7 +35,7 @@ export async function createOrder(service, details, clientTotal, promoCodeStr = 
             return { error: 'A similar order was just placed. Please wait a moment before trying again.' };
         }
 
-        return await prisma.$transaction(async (tx) => {
+        const result = await prisma.$transaction(async (tx) => {
             let subtotal = 0;
             let orderItemCreates = [];
             let providerId = details.vendorId || null;
@@ -205,7 +205,7 @@ export async function createOrder(service, details, clientTotal, promoCodeStr = 
                     amount: grandTotal,
                     providerId, // Link merchant if exists
                     promoCodeId,
-                    // orderId: order.id, Removed because it is not in the DB schema
+                    orderId: order.id,
 
                     // Explicit math fields
                     subtotal,
@@ -254,14 +254,14 @@ export async function createOrder(service, details, clientTotal, promoCodeStr = 
             return { success: true, order, transaction: txnRecord };
         });
 
-        // Log analytics outside transaction for guaranteed history insertion even on edge fail
-        if (result.success) {
-            await logEvent('ORDER_CREATED', result.order.id, { service, total: result.order.total });
-            // Assuming payment is captured immediately upon order creation for simplicity
-            await logEvent('PAYMENT_SUCCEEDED', result.order.id, { amount: result.order.total });
+        // Log analytics outside transaction
+        if (result?.success) {
+            try {
+                await logEvent('ORDER_CREATED', result.order.id, { service, total: result.order.total });
+                await logEvent('PAYMENT_SUCCEEDED', result.order.id, { amount: result.order.total });
+                await createNotification(user.id, 'Order Placed', `Your ${service.toLowerCase()} order has been placed.`, 'SYSTEM', `/activity/tracking/${result.order.id}`);
+            } catch (_) { /* non-critical */ }
         }
-
-        await createNotification(user.id, 'Order Placed', `Your ${service.toLowerCase()} order has been placed.`, 'SYSTEM', `/activity/tracking/${result.order.id}`);
         return result;
     } catch (error) {
         console.error('Failed to create order:', error);
@@ -299,11 +299,12 @@ export async function getDriverOrders() {
             return { error: 'Unauthorized.' };
         }
 
-        // Drivers see pending orders or their accepted orders
+        // Drivers see READY delivery orders (available to pick up) + their own assigned orders
         const orders = await prisma.order.findMany({
             where: {
+                service: 'DELIVERY',
                 OR: [
-                    { status: 'PENDING' },
+                    { status: 'READY', driverId: null },
                     { driverId: user.id }
                 ]
             },
@@ -312,6 +313,13 @@ export async function getDriverOrders() {
                     select: {
                         name: true,
                         phone: true,
+                    }
+                },
+                orderItems: {
+                    select: {
+                        nameSnapshot: true,
+                        qty: true,
+                        basePriceSnapshot: true,
                     }
                 }
             },
@@ -334,30 +342,60 @@ export async function acceptOrder(orderId) {
             return { error: 'Unauthorized. Only drivers can accept orders.' };
         }
 
-        const order = await prisma.order.update({
+        // Conditional update: only accept if status is READY and no driver assigned (prevents double-accept)
+        const updated = await prisma.order.updateMany({
             where: {
                 id: orderId,
-                status: 'PENDING' // Ensure it's not already taken
+                status: 'READY',
+                driverId: null
             },
             data: {
-                status: 'ACCEPTED',
+                status: 'PICKED_UP',
                 driverId: user.id
             }
         });
 
+        if (updated.count === 0) {
+            return { error: 'Order is no longer available. It may have been taken by another driver.' };
+        }
+
+        const order = await prisma.order.findUnique({ where: { id: orderId } });
+
+        try {
+            await createNotification(order.userId, 'Driver Assigned', `A driver has picked up your order!`, 'SYSTEM', `/activity/tracking/${order.id}`);
+        } catch (_) { /* non-critical */ }
+
         revalidatePath('/driver');
+        revalidatePath('/merchant');
         return { success: true, order };
     } catch (error) {
-        console.error('Failed to accept order (possibly already taken):', error);
-        return { error: 'Failed to accept order. It might have been taken by someone else.' };
+        console.error('Failed to accept order:', error);
+        return { error: 'Failed to accept order.' };
     }
 }
+
+// Allowed driver transitions
+const DRIVER_TRANSITIONS = {
+    'PICKED_UP': ['DELIVERED'],
+};
 
 export async function updateOrderStatus(orderId, newStatus) {
     try {
         const user = await getCurrentUser();
         if (!user || user.role !== 'DRIVER') {
             return { error: 'Unauthorized.' };
+        }
+
+        // Verify ownership: driver can only update their own orders
+        const existingOrder = await prisma.order.findUnique({ where: { id: orderId } });
+        if (!existingOrder || existingOrder.driverId !== user.id) {
+            return { error: 'Order not found or not assigned to you.' };
+        }
+
+        // Enforce state machine
+        const allowed = DRIVER_TRANSITIONS[existingOrder.status];
+        if (!allowed || !allowed.includes(newStatus)) {
+            return { error: `Cannot transition from ${existingOrder.status} to ${newStatus}.` };
         }
 
         const result = await prisma.$transaction(async (tx) => {
@@ -371,7 +409,7 @@ export async function updateOrderStatus(orderId, newStatus) {
                 }
             });
 
-            // If order is completed/delivered (payment captured), trigger Rewards EARN
+            // If order is completed/delivered, trigger Rewards EARN
             if (newStatus === 'DELIVERED') {
                 const txn = await tx.transaction.findFirst({
                     where: { orderId: order.id }
@@ -396,29 +434,43 @@ export async function updateOrderStatus(orderId, newStatus) {
                         update: { currentBalance: { increment: points } },
                         create: { userId: order.userId, currentBalance: points }
                     });
+
+                    // Update transaction status to COMPLETED
+                    await tx.transaction.update({
+                        where: { id: txn.id },
+                        data: { status: 'COMPLETED' }
+                    });
+
+                    await tx.transactionHistory.create({
+                        data: {
+                            transactionId: txn.id,
+                            oldStatus: txn.status,
+                            newStatus: 'COMPLETED',
+                            actorId: user.id,
+                            reason: 'Order delivered'
+                        }
+                    });
                 }
             }
 
             return order;
         });
 
-        // Analytics log for success
-        if (newStatus === 'DELIVERED') {
-            await logEvent('PAYMENT_SUCCEEDED', result.id, { amount: result.total });
-            await logEvent('ORDER_STATUS_TRANSITION', result.id, { newStatus: 'DELIVERED' });
-        } else {
-            await logEvent('ORDER_STATUS_TRANSITION', result.id, { newStatus });
-        }
-
-        // Audit trail for order status transitions
+        // Analytics log
         try {
+            if (newStatus === 'DELIVERED') {
+                await logEvent('PAYMENT_SUCCEEDED', result.id, { amount: result.total });
+                await logEvent('ORDER_STATUS_TRANSITION', result.id, { newStatus: 'DELIVERED' });
+            } else {
+                await logEvent('ORDER_STATUS_TRANSITION', result.id, { newStatus });
+            }
             await logAdminAction(
                 `ORDER_STATUS_${newStatus}`,
                 'ORDERS',
                 result.id,
-                { driverId: user.id, orderId: result.id, previousStatus: null, newStatus }
+                { driverId: user.id, orderId: result.id, previousStatus: existingOrder.status, newStatus }
             );
-        } catch (_) { /* Non-critical: audit log failure should not break order flow */ }
+        } catch (_) { /* non-critical */ }
 
         await createNotification(result.userId, 'Order Update', `Your order status changed to ${newStatus}.`, 'SYSTEM', `/activity/tracking/${result.id}`);
 
@@ -426,6 +478,106 @@ export async function updateOrderStatus(orderId, newStatus) {
         return { success: true, order: result };
     } catch (error) {
         console.error('Failed to update order status:', error);
+        return { error: 'Failed to update order status.' };
+    }
+}
+
+// ============================================================
+// MERCHANT ORDER ACTIONS
+// ============================================================
+
+// Allowed merchant transitions
+const MERCHANT_TRANSITIONS = {
+    'PENDING': ['ACCEPTED'],
+    'ACCEPTED': ['PREPARING'],
+    'PREPARING': ['READY'],
+};
+
+export async function getMerchantOrders() {
+    try {
+        const user = await getCurrentUser();
+        if (!user || user.role !== 'MERCHANT') {
+            return { error: 'Unauthorized.' };
+        }
+
+        // Only return orders that contain this merchant's meals (ownership enforcement)
+        const orders = await prisma.order.findMany({
+            where: {
+                service: 'DELIVERY',
+                orderItems: {
+                    some: {
+                        meal: {
+                            merchantId: user.id
+                        }
+                    }
+                }
+            },
+            include: {
+                user: { select: { name: true, phone: true } },
+                orderItems: {
+                    select: {
+                        nameSnapshot: true,
+                        qty: true,
+                        basePriceSnapshot: true,
+                    }
+                }
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 50
+        });
+
+        return { success: true, orders };
+    } catch (error) {
+        console.error('Failed to fetch merchant orders:', error);
+        return { error: 'Failed to fetch orders.' };
+    }
+}
+
+export async function updateMerchantOrderStatus(orderId, newStatus) {
+    try {
+        const user = await getCurrentUser();
+        if (!user || user.role !== 'MERCHANT') {
+            return { error: 'Unauthorized. Only merchants can update order status.' };
+        }
+
+        // Ownership check: ensure order contains this merchant's meals
+        const order = await prisma.order.findFirst({
+            where: {
+                id: orderId,
+                orderItems: {
+                    some: {
+                        meal: {
+                            merchantId: user.id
+                        }
+                    }
+                }
+            }
+        });
+
+        if (!order) {
+            return { error: 'Order not found or does not belong to you.' };
+        }
+
+        // Enforce state machine
+        const allowed = MERCHANT_TRANSITIONS[order.status];
+        if (!allowed || !allowed.includes(newStatus)) {
+            return { error: `Cannot transition from ${order.status} to ${newStatus}.` };
+        }
+
+        const updated = await prisma.order.update({
+            where: { id: orderId },
+            data: { status: newStatus }
+        });
+
+        try {
+            await createNotification(order.userId, 'Order Update', `Your order is now ${newStatus}.`, 'SYSTEM', `/activity/tracking/${order.id}`);
+            await logEvent('ORDER_STATUS_TRANSITION', order.id, { newStatus, actor: 'MERCHANT' });
+        } catch (_) { /* non-critical */ }
+
+        revalidatePath('/merchant');
+        return { success: true, order: updated };
+    } catch (error) {
+        console.error('Failed to update merchant order status:', error);
         return { error: 'Failed to update order status.' };
     }
 }

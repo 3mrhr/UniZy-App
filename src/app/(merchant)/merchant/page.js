@@ -1,5 +1,6 @@
 import MerchantClient from './MerchantClient';
 import { getCurrentUser } from '@/app/actions/auth';
+import { getMerchantOrders } from '@/app/actions/orders';
 import { prisma } from '@/lib/prisma';
 import { redirect } from 'next/navigation';
 
@@ -20,13 +21,9 @@ export default async function MerchantPage() {
         take: 10
     });
 
-    // Fetch real orders linked to this merchant's meals
-    const orders = await prisma.order.findMany({
-        where: { service: 'DELIVERY' },
-        orderBy: { createdAt: 'desc' },
-        take: 20,
-        include: { user: { select: { name: true } } },
-    });
+    // Fetch real orders linked to this merchant's meals (ownership enforced)
+    const ordersResult = await getMerchantOrders();
+    const orders = ordersResult?.orders || [];
 
     // Fetch merchant's meals for menu management
     const meals = await prisma.meal.findMany({
@@ -40,5 +37,5 @@ export default async function MerchantPage() {
         orderBy: { createdAt: 'desc' },
     });
 
-    return <MerchantClient settlements={settlements} dbOrders={orders} dbMeals={meals} dbDeals={deals} />;
+    return <MerchantClient settlements={settlements} dbOrders={orders} dbMeals={meals} dbDeals={deals} merchantName={user.storeName || user.name} />;
 }
