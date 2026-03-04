@@ -7,9 +7,6 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "prisma:migrate": "prisma migrate dev",
-    "prisma:deploy": "prisma migrate deploy",
-    "seed": "node prisma/seed.mjs",
     "test": "jest --testMatch=\"**/__tests__/**/*.test.js\""
   },
   "prisma": {
