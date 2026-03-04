@@ -59,7 +59,7 @@ export default function RootLayout({ children }) {
               {/* Mobile Header - Only for authenticated students on mobile */}
               <MobileHeader />
 
-              <main className="flex-1">
+              <main className="flex-1 pb-20 sm:pb-0">
                 {children}
               </main>
 
