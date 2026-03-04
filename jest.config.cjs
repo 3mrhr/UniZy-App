@@ -14,9 +14,15 @@ const customJestConfig = {
   },
   modulePathIgnorePatterns: ['<rootDir>/.next/'],
   transformIgnorePatterns: [
-    '/node_modules/(?!(uncrypto|iron-session)/)'
+    '/node_modules/(?!(uncrypto|iron-session|next/dist/server/web/spec-extension/adapters/next-request)/)'
   ]
 };
 
 // createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async
-module.exports = createJestConfig(customJestConfig);
+module.exports = async () => {
+  const config = await createJestConfig(customJestConfig)();
+
+  // Custom fix to ensure transformIgnorePatterns works with next/jest
+  config.transformIgnorePatterns = customJestConfig.transformIgnorePatterns;
+  return config;
+};
