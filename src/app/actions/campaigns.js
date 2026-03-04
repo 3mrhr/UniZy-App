@@ -52,21 +52,44 @@ export async function sendCampaign(campaignId) {
         if (campaign.targetRole) where.role = campaign.targetRole;
         if (campaign.targetUni) where.university = campaign.targetUni;
 
-        const targetUsers = await prisma.user.findMany({
-            where,
-            select: { id: true }
-        });
+        const totalRecipients = await prisma.user.count({ where });
 
-        // Create notification for each target user
-        if (targetUsers.length > 0) {
-            await prisma.notification.createMany({
-                data: targetUsers.map(u => ({
-                    title: campaign.title,
-                    message: campaign.message,
-                    type: 'CAMPAIGN',
-                    userId: u.id,
-                }))
-            });
+        if (totalRecipients > 0) {
+            const BATCH_SIZE = 5000;
+            let lastId = undefined;
+            let hasMore = true;
+
+            while (hasMore) {
+                const queryOptions = {
+                    where,
+                    select: { id: true },
+                    take: BATCH_SIZE,
+                    orderBy: { id: 'asc' },
+                };
+
+                if (lastId) {
+                    queryOptions.skip = 1;
+                    queryOptions.cursor = { id: lastId };
+                }
+
+                const targetUsers = await prisma.user.findMany(queryOptions);
+
+                if (targetUsers.length === 0) {
+                    hasMore = false;
+                    break;
+                }
+
+                await prisma.notification.createMany({
+                    data: targetUsers.map(u => ({
+                        title: campaign.title,
+                        message: campaign.message,
+                        type: 'CAMPAIGN',
+                        userId: u.id,
+                    }))
+                });
+
+                lastId = targetUsers[targetUsers.length - 1].id;
+            }
         }
 
         // Mark campaign as sent
@@ -79,10 +102,10 @@ export async function sendCampaign(campaignId) {
             'SEND_CAMPAIGN',
             'MARKETING',
             campaignId,
-            { recipients: targetUsers.length, title: campaign.title }
+            { recipients: totalRecipients, title: campaign.title }
         );
 
-        return { success: true, recipientCount: targetUsers.length };
+        return { success: true, recipientCount: totalRecipients };
     } catch (error) {
         console.error('Send campaign error:', error);
         return { error: 'Failed to send campaign.' };
