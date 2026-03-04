@@ -17,7 +17,7 @@ export default function RolesPermissionsPage() {
     ];
 
     useEffect(() => {
-        // Fetch users from backend (mock for now until we wire the server action)
+        // Fetch users from backend
         const fetchUsers = async () => {
             setIsLoading(true);
             const res = await getUsers();
