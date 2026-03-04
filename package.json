@@ -33,6 +33,7 @@
   "devDependencies": {
     "@babel/core": "^7.29.0",
     "@babel/preset-env": "^7.29.0",
+    "@babel/preset-react": "^7.28.5",
     "@swc/core": "^1.15.18",
     "@swc/jest": "^0.2.39",
     "@tailwindcss/postcss": "^4",
@@ -40,6 +41,7 @@
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
+    "babel-jest": "^30.2.0",
     "dotenv": "^17.3.1",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
