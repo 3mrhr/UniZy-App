@@ -121,28 +121,35 @@ export async function getRetentionCohorts(weeks = 4) {
         const admin = await getCurrentUser();
         if (!admin || !admin.role?.startsWith('ADMIN')) return { error: 'Unauthorized' };
 
-        const cohorts = [];
+        const weekRanges = [];
         for (let i = 0; i < weeks; i++) {
             const weekStart = new Date();
             weekStart.setDate(weekStart.getDate() - (i + 1) * 7);
             const weekEnd = new Date();
             weekEnd.setDate(weekEnd.getDate() - i * 7);
-
-            const activeUsers = await prisma.order.findMany({
-                where: {
-                    createdAt: { gte: weekStart, lt: weekEnd },
-                },
-                select: { userId: true },
-                distinct: ['userId'],
-            });
-
-            cohorts.push({
-                week: `Week -${i + 1}`,
-                startDate: weekStart.toISOString().split('T')[0],
-                endDate: weekEnd.toISOString().split('T')[0],
-                activeUsers: activeUsers.length,
-            });
+            weekRanges.push({ i, weekStart, weekEnd });
         }
+
+        // Execute all week queries concurrently using Promise.all
+        // This resolves the N+1 sequential query issue inside the loop
+        const activeUsersResults = await Promise.all(
+            weekRanges.map((range) =>
+                prisma.order.findMany({
+                    where: {
+                        createdAt: { gte: range.weekStart, lt: range.weekEnd },
+                    },
+                    select: { userId: true },
+                    distinct: ['userId'],
+                })
+            )
+        );
+
+        const cohorts = weekRanges.map((range, index) => ({
+            week: `Week -${range.i + 1}`,
+            startDate: range.weekStart.toISOString().split('T')[0],
+            endDate: range.weekEnd.toISOString().split('T')[0],
+            activeUsers: activeUsersResults[index].length,
+        }));
 
         return { success: true, cohorts };
     } catch (error) {
