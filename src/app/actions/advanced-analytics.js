@@ -121,28 +121,33 @@ export async function getRetentionCohorts(weeks = 4) {
         const admin = await getCurrentUser();
         if (!admin || !admin.role?.startsWith('ADMIN')) return { error: 'Unauthorized' };
 
-        const cohorts = [];
-        for (let i = 0; i < weeks; i++) {
+        const weekData = Array.from({ length: weeks }).map((_, i) => {
             const weekStart = new Date();
             weekStart.setDate(weekStart.getDate() - (i + 1) * 7);
             const weekEnd = new Date();
             weekEnd.setDate(weekEnd.getDate() - i * 7);
 
-            const activeUsers = await prisma.order.findMany({
-                where: {
-                    createdAt: { gte: weekStart, lt: weekEnd },
-                },
-                select: { userId: true },
-                distinct: ['userId'],
-            });
+            return { i, weekStart, weekEnd };
+        });
 
-            cohorts.push({
-                week: `Week -${i + 1}`,
-                startDate: weekStart.toISOString().split('T')[0],
-                endDate: weekEnd.toISOString().split('T')[0],
-                activeUsers: activeUsers.length,
-            });
-        }
+        const activeUsersResults = await prisma.$transaction(
+            weekData.map(({ weekStart, weekEnd }) =>
+                prisma.order.findMany({
+                    where: {
+                        createdAt: { gte: weekStart, lt: weekEnd },
+                    },
+                    select: { userId: true },
+                    distinct: ['userId'],
+                })
+            )
+        );
+
+        const cohorts = weekData.map(({ i, weekStart, weekEnd }, index) => ({
+            week: `Week -${i + 1}`,
+            startDate: weekStart.toISOString().split('T')[0],
+            endDate: weekEnd.toISOString().split('T')[0],
+            activeUsers: activeUsersResults[index].length,
+        }));
 
         return { success: true, cohorts };
     } catch (error) {
