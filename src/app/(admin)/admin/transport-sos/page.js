@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma';
-import { requireRole } from '@/lib/auth';
+import { requireRole } from '@/lib/authz';
 import { revalidatePath } from 'next/cache';
 
 export const metadata = {

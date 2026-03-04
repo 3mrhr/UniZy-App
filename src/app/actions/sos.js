@@ -1,7 +1,7 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
-import { requireRole } from '@/lib/auth';
+import { requireRole } from '@/lib/authz';
 import { revalidatePath } from 'next/cache';
 
 export async function createTransportSOS({ transportOrderId, message, contextData }) {
