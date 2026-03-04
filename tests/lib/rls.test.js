@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { withRLSContext, withRLSTransaction } from '../../src/lib/rls.js';
-import { prisma } from '../../src/lib/prisma.js';
+import { withRLSContext, withRLSTransaction } from '@/lib/rls.js';
+import { prisma } from '@/lib/prisma.js';
 
-vi.mock('../../src/lib/prisma.js', () => ({
+vi.mock('@/lib/prisma.js', () => ({
     prisma: {
         $executeRaw: vi.fn(),
         $transaction: vi.fn(),
