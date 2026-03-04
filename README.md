@@ -1,135 +1,199 @@
-# UniZy - The Student Super App MVP
+# UniZy — Student Super App (MVP)
 
-Welcome to the **UniZy MVP** repository! UniZy is a comprehensive, multi-service platform designed specifically for university students, simplifying campus life by offering everything from housing and transportation to food delivery and administrative services in one cohesive, premium application.
+UniZy is a multi-service platform designed for university students, bringing **Housing**, **Transport**, **Delivery**, **Local Deals**, and **Student Services** into one cohesive experience.
 
-This repository contains the source code for the Minimum Viable Product (MVP), structured around distinct user roles: Students, Drivers, Housing Providers (Landlords), Merchants (Restaurants/Stores), and Super Admins.
+This repository contains the MVP built with **Next.js App Router** and a **Prisma + PostgreSQL** backend, structured around distinct roles:
 
----
+- **Student** (demand side)
+- **Merchant** (restaurants/stores)
+- **Provider** (housing/landlords + service providers)
+- **Driver** (transport + delivery logistics)
+- **Admin** (operations + moderation)
 
-## 🚀 Features by Modules
-
-The application has been built across 8 iterative phases and is **Beta-Ready**. All primary screens are fully wired to the SQLite Prisma database.
-
-### 1. Core Student App (The "Demand Side")
-*   **Premium Landing Page:** A high-conversion public entry point with animated service blocks.
-*   **Student Hub:** A centralized "Service Menu" dashboard where students select their primary need (Housing, Transport, Delivery). Includes quick actions and rewards tracking.
-*   **Housing Module:** A browsable feed of student housing options with "Verified" badges and detailed property pages (amenities, galleries, landlord info).
-*   **Transport Module:** A ride-booking interface with vehicle selection and route visualization.
-*   **Delivery Module:** A campus food and product marketplace with vendor categorizations.
-
-### 2. Provider Portals (The "Supply Side")
-*   **Driver Dashboard (`/driver`):** A mobile-first hub for drivers featuring a live Online/Offline status toggle, earnings tracking, and job request feeds.
-*   **Housing Provider Console (`/provider`):** A management dashboard for landlords to track property views and manage incoming student leads with direct contact actions.
-*   **Merchant Dashboard (`/merchant`):** A Kanban-style live order management board for restaurants, complete with quick menu availability toggles.
-
-### 3. Admin Panel
-*   **Overview Dashboard:** High-level metric cards (users, revenue, orders) and activity streams.
-*   **Housing Moderation:** Data tables for approving/rejecting listed properties.
-*   **Verification Center:** A highly efficient dual-pane work queue designed for rapid approval of Student IDs and Landlord Deeds.
-
-### 4. Smart Authentication & Routing
-*   **Role-Based Redirection:** The `/login` flow automatically detects user roles and routes them to their specialized hubs (Student, Admin, Driver, Landlord, Merchant).
-
-### 5. Localization & Personalization
-*   **Bilingual System (i18n):** Full support for English and Egyptian Arabic, managed via a custom global context.
-*   **RTL/LTR Engine:** Dynamic layout flipping based on the selected language.
-*   **Dark/Light Mode:** Seamless theme switching with a custom `--color-unizy-navy` color scheme applied universally.
+> Note: Payments and Password Reset are intentionally deferred for later phases. Verification/OTP is currently simulated/optional.
 
 ---
 
-## 🛠 Tech Stack
+## Features (High-Level)
 
-Our stack is chosen for performance, developer experience, and rapid scalability.
+### Student App
+- Student hub (service menu)
+- Delivery marketplace (browse merchants → view menu → cart → checkout → tracking)
+- Housing browsing and requests
+- Transport booking UI
+- Rewards and activity tracking
+- i18n: English + Egyptian Arabic (RTL/LTR)
+- Dark/Light theming
 
-*   **Framework:** [Next.js](https://nextjs.org/) (App Router)
-*   **UI Library:** [React](https://react.dev/)
-*   **Styling:** [Tailwind CSS](https://tailwindcss.com/) & Vanilla CSS (for custom glassmorphism and animations)
-*   **Database:** SQLite (Development)
-*   **ORM:** [Prisma](https://www.prisma.io/)
-*   **Theming:** `next-themes`
-*   **Icons & Assets:** Custom UI components + SVG icons
+### Supply Portals
+- **Merchant** portal: order management + menu controls
+- **Provider** portal: housing listings + lead/request management
+- **Driver** portal: availability, assignments, basic earnings/settlements views
+
+### Admin Panel
+- Overview dashboard & metrics
+- Moderation workflows (e.g., housing approvals)
+- Verification queue (simulated/optional)
 
 ---
 
-## 📂 Project Structure
+## Tech Stack
 
-The project utilizes Next.js Route Groups to keep distinct sections of the app cleanly separated:
+- **Framework:** Next.js (App Router)
+- **UI:** React + Tailwind CSS
+- **State:** Zustand
+- **DB:** PostgreSQL
+- **ORM:** Prisma
+- **Auth/session:** iron-session
+- **Media:** Cloudinary (optional; can run without it)
 
-```text
+---
+
+## Project Structure
+
+```txt
 src/
-├── app/
-│   ├── (public)/      # Landing page and open routes
-│   ├── (auth)/        # Login and registration flows
-│   ├── (student)/     # The core student-facing Super App services
-│   ├── (admin)/       # The secure administrative control panel
-│   ├── (driver)/      # Tools for transport operators
-│   ├── (provider)/    # Tools for real estate landlords
-│   └── (merchant)/    # Tools for campus restaurants & stores
-├── components/        # Reusable UI elements (Navigation, Theme Controls)
-├── i18n/              # Language dictionaries (en.js, ar.js) and Provider
-└── prisma/            # Database schema and seed scripts
+  app/
+    (public)/     Public landing pages
+    (auth)/       Login/Register flows
+    (student)/    Student application modules
+    (admin)/      Admin panel
+    (driver)/     Driver portal
+    (provider)/   Housing provider / landlord portal
+    (merchant)/   Merchant portal
+  components/     Reusable UI components
+  i18n/           Language dictionaries + provider
+prisma/
+  schema.prisma   Prisma schema
+  seed.mjs        Seed script
+docker-compose.yml
+Dockerfile
+QA_CORE_CHECKLIST.md
+QA_BETA_CHECKLIST.md
 ```
 
 ---
 
-## 💻 Running Locally
+## Getting Started (Recommended: Docker)
 
-To get the UniZy MVP running on your local machine, follow these steps:
+This repo includes docker-compose.yml with PostgreSQL and the app container.
 
-### Prerequisites
-*   Node.js (v18 or higher recommended)
-*   npm or yarn
+1) Clone & run
 
-### Installation Steps
+```bash
+git clone https://github.com/3mrhr/UniZy-App.git
+cd UniZy-App
+docker compose up --build
+```
 
-1.  **Clone the repository:**
-    ```bash
-    git clone https://github.com/3mrhr/UniZy-App.git
-    cd UniZy-App
-    ```
+2) Initialize DB (first run)
 
-2.  **Install dependencies:**
-    ```bash
-    npm install
-    ```
+In another terminal:
 
-3.  **Setup the Database:**
-    The project uses SQLite for local development. We included a schema and seed data.
-    ```bash
-    # Generate Prisma Client
-    npx prisma generate
-    
-    # Push the schema to create dev.db
-    npx prisma db push
-    
-    # Seed the database with comprehensive mock users, merchants, and orders
-    npm run seed
-    ```
+```bash
+docker compose exec app npx prisma generate
+docker compose exec app npx prisma db push
+docker compose exec app npm run seed
+```
 
-4.  **Start the Development Server:**
-    ```bash
-    npm run dev
-    ```
-
-5.  **Access the Application:**
-    Open your browser and navigate to `http://localhost:3000`.
-
-### Testing User Roles
-The application is strictly protected by role-based authorization. After seeding the database, log in at `/login` using the password `unizy2026` and any of these accounts:
-*   **Admin**: `admin@unizy.com` -> Admin Panel
-*   **Driver**: `driver1@unizy.com` -> Driver Hub
-*   **Provider**: `provider1@unizy.com` -> Housing Provider Console
-*   **Merchant**: `merchant_pizza@unizy.com` -> Merchant Dashboard
-*   **Student**: `student1@unizy.com` -> Student Hub
+3) Open the app
+	•	http://localhost:3000
 
 ---
 
-## 📅 Roadmap (Next Phases)
+## Getting Started (Local Node + Your Own PostgreSQL)
 
-*   **Phase 9: Real-Time Services** - Websockets or polling optimizations for live driver tracking and immediate order updates.
-*   **Phase 10: Production Deployment** - Migrating the SQLite database to PostgreSQL on Vercel or Railway.
-*   **Phase 11: Production Payments** - Integrate Paymob or Stripe for live checkout instead of MVP stubs.
+1) Install deps
+
+```bash
+npm install
+```
+
+2) Create .env
+
+Create a .env file in the repo root:
+
+```env
+# Required
+DATABASE_URL="postgresql://USER:PASSWORD@localhost:5432/unizy_dev"
+SESSION_SECRET="change-me-to-a-long-random-string"
+
+# Optional (only needed if you enable image uploads)
+CLOUDINARY_CLOUD_NAME=""
+CLOUDINARY_API_KEY=""
+CLOUDINARY_API_SECRET=""
+```
+
+3) Prisma setup
+
+```bash
+npx prisma generate
+npx prisma db push
+npm run seed
+```
+
+4) Run dev server
+
+```bash
+npm run dev
+```
 
 ---
 
-*Built with passion for simplifying the student experience.* 🎓
+## Scripts
+
+```bash
+npm run dev        # start dev server
+npm run build      # build production output
+npm run start      # run production server
+npm run lint       # eslint
+npm run seed       # seed database (prisma/seed.mjs)
+```
+
+---
+
+## Login & Roles (Seeded Accounts)
+
+After running npm run seed, log in at:
+	•	/login
+
+Default seeded password:
+	•	unizy2026
+
+Example seeded accounts (may expand depending on seed script):
+	•	Admin: admin@unizy.com
+	•	Driver: driver1@unizy.com
+	•	Provider: provider1@unizy.com
+	•	Merchant: merchant_pizza@unizy.com
+
+---
+
+## QA / Testing
+
+Use the included checklists:
+	•	QA_CORE_CHECKLIST.md — core flows (recommended for quick regression testing)
+	•	QA_BETA_CHECKLIST.md — deeper scenario coverage (edge cases / “unthinkables”)
+
+---
+
+## Current Intentional Limitations
+
+These are deliberately not final yet:
+	•	Payments: deferred (no real gateway behavior required right now)
+	•	Password Reset: deferred (no production-ready reset email flow yet)
+	•	OTP/Verification: simulated/optional (placeholders allowed)
+
+---
+
+## Contributing / Workflow
+
+Recommended workflow:
+	1.	Create a feature branch
+	2.	Keep changes small and testable
+	3.	Update QA checklist entries when you change user-facing behavior
+
+---
+
+## License
+
+Private/internal MVP (add license later if open-sourcing).
