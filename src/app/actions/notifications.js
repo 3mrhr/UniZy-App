@@ -52,6 +52,25 @@ export async function getMyNotifications() {
 }
 
 /**
+ * Fetch only the unread count (for lightweight UI polling)
+ */
+export async function getUnreadNotificationCount() {
+    try {
+        const user = await getCurrentUser();
+        if (!user) return { success: false, error: 'Not authenticated' };
+
+        const unreadCount = await prisma.notification.count({
+            where: { userId: user.id, isRead: false }
+        });
+
+        return { success: true, unreadCount };
+    } catch (error) {
+        console.error('Failed to get unread count', error);
+        return { success: false, error: 'Database error' };
+    }
+}
+
+/**
  * Mark notifications as read
  */
 export async function markNotificationsAsRead(notificationIds = null) {

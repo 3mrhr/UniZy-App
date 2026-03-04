@@ -64,6 +64,8 @@ model User {
   ticketMessages      TicketMessage[]
   transactions        Transaction[]
   verifications       VerificationDocument[]
+  tripsRequested      TransportTrip[]        @relation("TripUser")
+  tripsDriven         TransportTrip[]        @relation("TripDriver")
 }
 
 model HousingListing {
@@ -101,24 +103,26 @@ model VerificationDocument {
 }
 
 model Order {
-  id           String              @id @default(uuid())
-  service      String
-  status       OrderStatus         @default(PENDING)
-  total        Float
-  details      String
-  userId       String
-  driverId     String?
-  promoCodeId  String?
-  createdAt    DateTime            @default(now())
-  updatedAt    DateTime            @updatedAt
-  dispatches   Dispatch[]
-  promoCode    PromoCode?          @relation(fields: [promoCodeId], references: [id])
-  user         User                @relation(fields: [userId], references: [id])
-  driver       User?               @relation("DriverOrders", fields: [driverId], references: [id])
-  orderItems   OrderItem[]
-  refunds      Refund[]
-  rewardTxns   RewardTransaction[]
-  transactions Transaction[]
+  id                String              @id @default(uuid())
+  service           String
+  status            OrderStatus         @default(PENDING)
+  total             Float
+  details           String
+  userId            String
+  driverId          String?
+  promoCodeId       String?
+  pickupProofImage  String?
+  dropoffProofImage String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  dispatches        Dispatch[]
+  promoCode         PromoCode?          @relation(fields: [promoCodeId], references: [id])
+  user              User                @relation(fields: [userId], references: [id])
+  driver            User?               @relation("DriverOrders", fields: [driverId], references: [id])
+  orderItems        OrderItem[]
+  refunds           Refund[]
+  rewardTxns        RewardTransaction[]
+  transactions      Transaction[]
 
   @@index([userId, status])
 }
@@ -513,6 +517,7 @@ model Transaction {
   serviceBooking        ServiceBooking?      @relation(fields: [serviceBookingId], references: [id])
   user                  User                 @relation(fields: [userId], references: [id])
   history               TransactionHistory[]
+  transportTrip         TransportTrip?
 
   @@index([orderId])
   @@index([userId, status])
@@ -846,4 +851,41 @@ enum TicketStatus {
   IN_PROGRESS
   RESOLVED
   CLOSED
+}
+
+enum TripStatus {
+  REQUESTED
+  ACCEPTED
+  ARRIVED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+model TransportTrip {
+  id              String     @id @default(uuid())
+  userId          String
+  driverId        String?
+  status          TripStatus @default(REQUESTED)
+  pickupLocation  String
+  pickupLat       Float?
+  pickupLng       Float?
+  dropoffLocation String
+  dropoffLat      Float?
+  dropoffLng      Float?
+  vehicleType     String
+  estimatedPrice  Float
+  finalPrice      Float?
+  transactionId   String?    @unique
+  scheduledTime   DateTime?
+  cancelReason    String?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  user        User         @relation("TripUser", fields: [userId], references: [id])
+  driver      User?        @relation("TripDriver", fields: [driverId], references: [id])
+  transaction Transaction? @relation(fields: [transactionId], references: [id])
+
+  @@index([userId, status])
+  @@index([driverId, status])
 }
