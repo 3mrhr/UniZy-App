@@ -43,7 +43,7 @@ export async function generateSettlements(providerId, periodStart, periodEnd) {
         return { success: true, settlement };
     } catch (error) {
         console.error('Settlement error:', error);
-        return { error: error.message };
+        return { error: 'An unexpected error occurred' };
     }
 }
 
@@ -72,7 +72,8 @@ export async function getSettlements({ page = 1, limit = 20, status = null } = {
 
         return { settlements, total, totalPages: Math.ceil(total / limit) };
     } catch (error) {
-        return { error: error.message };
+        console.error('Finance error:', error);
+        return { error: 'An unexpected error occurred' };
     }
 }
 
@@ -111,7 +112,8 @@ export async function processPayout(settlementId, method, reference = null) {
 
         return { success: true, payout };
     } catch (error) {
-        return { error: error.message };
+        console.error('Finance error:', error);
+        return { error: 'An unexpected error occurred' };
     }
 }
 
@@ -142,6 +144,7 @@ export async function getFinanceReports() {
             }
         };
     } catch (error) {
-        return { error: error.message };
+        console.error('Finance error:', error);
+        return { error: 'An unexpected error occurred' };
     }
 }
