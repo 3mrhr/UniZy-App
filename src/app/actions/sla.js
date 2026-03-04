@@ -144,7 +144,7 @@ export async function checkSLABreaches() {
 
         const newBreaches = [];
 
-        for (const rule of rules) {
+        const rulePromises = rules.map(async (rule) => {
             // Calculate cutoff time limit. Transactions created before this limit breach the SLA.
             const earliestValidTime = new Date(Date.now() - (rule.thresholdMinutes * 60 * 1000));
 
@@ -171,7 +171,7 @@ export async function checkSLABreaches() {
                 });
             }
 
-            if (targetTransactions.length === 0) continue;
+            if (targetTransactions.length === 0) return [];
 
             // Extract target IDs to query existing breaches
             const targetIds = targetTransactions.map(txn => txn.id);
@@ -188,21 +188,24 @@ export async function checkSLABreaches() {
             const existingTargetIds = new Set(existingBreaches.map(b => b.targetId));
 
             // Filter targets that don't have an existing breach and prepare for creation
-            const breachesToCreate = targetTransactions
+            return targetTransactions
                 .filter(txn => !existingTargetIds.has(txn.id))
                 .map(txn => ({
                     ruleId: rule.id,
                     targetId: txn.id,
                     status: "OPEN"
                 }));
+        });
 
-            if (breachesToCreate.length > 0) {
-                // Bulk insert using createManyAndReturn
-                const createdBreaches = await prisma.sLABreach.createManyAndReturn({
-                    data: breachesToCreate
-                });
-                newBreaches.push(...createdBreaches);
-            }
+        const results = await Promise.all(rulePromises);
+        const allBreachesToCreate = results.flat();
+
+        if (allBreachesToCreate.length > 0) {
+            // Bulk insert using createManyAndReturn
+            const createdBreaches = await prisma.sLABreach.createManyAndReturn({
+                data: allBreachesToCreate
+            });
+            newBreaches.push(...createdBreaches);
         }
 
         return { success: true, newBreaches, count: newBreaches.length };
