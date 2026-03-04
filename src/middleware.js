@@ -30,11 +30,9 @@ export async function middleware(request) {
         return NextResponse.next();
     }
 
-    // Read session using iron-session Edge support
+    // Read session using iron-session Edge support over Response/Request natively
     const res = NextResponse.next();
-    const cookieStore = await cookies();
-    const session = await getIronSession(cookieStore, sessionOptions);
-
+    const session = await getIronSession(request, res, sessionOptions);
     const user = session.user;
 
     // If no user found and hitting a protected route
