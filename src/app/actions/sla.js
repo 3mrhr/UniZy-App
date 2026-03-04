@@ -171,22 +171,36 @@ export async function checkSLABreaches() {
                 });
             }
 
-            // Create breach records only if one doesn't already exist for this rule and transaction
-            for (const txn of targetTransactions) {
-                const existing = await prisma.sLABreach.findFirst({
-                    where: { ruleId: rule.id, targetId: txn.id }
-                });
+            if (targetTransactions.length === 0) continue;
 
-                if (!existing) {
-                    const breach = await prisma.sLABreach.create({
-                        data: {
-                            ruleId: rule.id,
-                            targetId: txn.id,
-                            status: "OPEN"
-                        }
-                    });
-                    newBreaches.push(breach);
-                }
+            // Extract target IDs to query existing breaches
+            const targetIds = targetTransactions.map(txn => txn.id);
+
+            // Fetch existing breaches in bulk
+            const existingBreaches = await prisma.sLABreach.findMany({
+                where: {
+                    ruleId: rule.id,
+                    targetId: { in: targetIds }
+                },
+                select: { targetId: true }
+            });
+            const existingTargetIds = new Set(existingBreaches.map(b => b.targetId));
+
+            // Filter targets that don't have an existing breach and prepare for creation
+            const breachesToCreate = targetTransactions
+                .filter(txn => !existingTargetIds.has(txn.id))
+                .map(txn => ({
+                    ruleId: rule.id,
+                    targetId: txn.id,
+                    status: "OPEN"
+                }));
+
+            if (breachesToCreate.length > 0) {
+                // Bulk insert using createManyAndReturn
+                const createdBreaches = await prisma.sLABreach.createManyAndReturn({
+                    data: breachesToCreate
+                });
+                newBreaches.push(...createdBreaches);
             }
         }
 
