@@ -54,7 +54,7 @@ export async function getDealById(dealId) {
             where: { id: dealId },
             include: {
                 merchant: {
-                    select: { name: true, phone: true }
+                    select: { name: true, phone: true, storeName: true, storeAddress: true }
                 }
             }
         });

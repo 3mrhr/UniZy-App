@@ -111,11 +111,14 @@ export default function DealDetailsPage({ params }) {
         );
     }
 
-    // Default branches if missing from schema 
-    const branches = [
-        { name: 'University Campus Branch', distance: '1.2 km' },
-        { name: 'Downtown Main Branch', distance: '4.5 km' }
-    ];
+    // Dynamically derive branches from merchant data
+    const branches = [];
+    if (deal.merchant) {
+        branches.push({
+            name: deal.merchant.storeName || deal.merchant.name || 'Main Branch',
+            details: deal.merchant.storeAddress || 'Contact store for location'
+        });
+    }
 
     return (
         <main className="min-h-screen pb-24 bg-gray-50 dark:bg-unizy-navy transition-colors duration-300">
@@ -257,12 +260,12 @@ export default function DealDetailsPage({ params }) {
                         </h3>
                         <div className="grid sm:grid-cols-2 gap-4">
                             {branches.map((branch, index) => (
-                                <div key={index} className="flex justify-between items-center p-5 bg-gray-50 dark:bg-unizy-navy rounded-2xl border border-gray-100 dark:border-gray-800 hover:border-brand-500/30 transition-colors">
-                                    <span className="font-bold text-gray-900 dark:text-white">
+                                <div key={index} className="flex justify-between items-center p-5 bg-gray-50 dark:bg-unizy-navy rounded-2xl border border-gray-100 dark:border-gray-800 hover:border-brand-500/30 transition-colors gap-3">
+                                    <span className="font-bold text-gray-900 dark:text-white truncate">
                                         {branch.name}
                                     </span>
-                                    <span className="text-xs font-black text-brand-600 bg-brand-50 dark:bg-brand-500/10 px-3 py-1.5 rounded-xl border border-brand-100 dark:border-brand-500/20">
-                                        {branch.distance}
+                                    <span className="text-xs font-black text-brand-600 bg-brand-50 dark:bg-brand-500/10 px-3 py-1.5 rounded-xl border border-brand-100 dark:border-brand-500/20 text-right whitespace-normal break-words">
+                                        {branch.details}
                                     </span>
                                 </div>
                             ))}
