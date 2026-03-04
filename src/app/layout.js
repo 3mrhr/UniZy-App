@@ -18,13 +18,16 @@ export default function RootLayout({ children }) {
 
   const isPublicPage = pathname === '/';
   const isLoginPage = pathname === '/login';
-  const isAuthPage = isLoginPage || pathname === '/signup';
+  const isAuthPage = isLoginPage || pathname === '/signup' || pathname.startsWith('/auth');
 
   // Specific portals manage their own headers
   const isSpecialPortal = pathname.startsWith('/admin') ||
     pathname.startsWith('/driver') ||
     pathname.startsWith('/provider') ||
-    pathname.startsWith('/merchant');
+    pathname.startsWith('/merchant') ||
+    pathname.startsWith('/owner');
+
+  const showBottomNav = !isPublicPage && !isAuthPage && !isSpecialPortal && !pathname.startsWith('/legal');
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -59,12 +62,12 @@ export default function RootLayout({ children }) {
               {/* Mobile Header - Only for authenticated students on mobile */}
               <MobileHeader />
 
-              <main className="flex-1">
+              <main className={`flex-1 ${showBottomNav ? 'pb-20 sm:pb-0' : ''}`}>
                 {children}
               </main>
 
-              {/* Bottom Mobile Nav - Only for Students/Logged in area */}
-              {!isPublicPage && !isAuthPage && <Navigation />}
+              {/* Bottom Mobile Nav - Visibility logic handled within component */}
+              {showBottomNav && <Navigation />}
             </div>
           </LanguageProvider>
         </ThemeProvider>
