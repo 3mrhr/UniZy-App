@@ -103,20 +103,39 @@ export async function getRefundRates() {
 
         const modules = ['HOUSING', 'TRANSPORT', 'DELIVERY', 'DEALS', 'MEALS', 'SERVICES', 'CLEANING'];
 
-        const byModule = await Promise.all(
-            modules.map(async (mod) => {
-                const [total, refunded] = await Promise.all([
-                    prisma.transaction.count({ where: { type: mod } }),
-                    prisma.transaction.count({ where: { type: mod, status: 'REFUNDED' } }),
-                ]);
-                return {
-                    module: mod,
-                    totalTransactions: total,
-                    refundedTransactions: refunded,
-                    refundRate: total > 0 ? Math.round((refunded / total) * 100) : 0,
-                };
-            })
-        );
+        const stats = await prisma.transaction.groupBy({
+            by: ['type', 'status'],
+            _count: {
+                _all: true,
+            },
+            where: {
+                type: { in: modules },
+            },
+        });
+
+        const statsMap = modules.reduce((acc, mod) => {
+            acc[mod] = { total: 0, refunded: 0 };
+            return acc;
+        }, {});
+
+        for (const stat of stats) {
+            if (!statsMap[stat.type]) continue;
+            statsMap[stat.type].total += stat._count._all;
+            if (stat.status === 'REFUNDED') {
+                statsMap[stat.type].refunded += stat._count._all;
+            }
+        }
+
+        const byModule = modules.map((mod) => {
+            const total = statsMap[mod].total;
+            const refunded = statsMap[mod].refunded;
+            return {
+                module: mod,
+                totalTransactions: total,
+                refundedTransactions: refunded,
+                refundRate: total > 0 ? Math.round((refunded / total) * 100) : 0,
+            };
+        });
 
         return { success: true, byModule };
     } catch (error) {
