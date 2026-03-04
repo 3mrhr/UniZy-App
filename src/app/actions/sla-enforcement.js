@@ -18,6 +18,10 @@ export async function checkSLABreaches() {
 
         let breachesCreated = 0;
 
+        const rulesWithTargets = [];
+        const allTargetIds = new Set();
+        const ruleIds = [];
+
         for (const rule of activeRules) {
             const thresholdMinutes = rule.thresholdMinutes || 30;
             const cutoff = new Date(Date.now() - thresholdMinutes * 60 * 1000);
@@ -57,18 +61,31 @@ export async function checkSLABreaches() {
             if (breachableTargets.length === 0) continue;
 
             const targetIds = breachableTargets.map(t => t.id);
+            rulesWithTargets.push({ rule, targetIds, thresholdMinutes });
+            ruleIds.push(rule.id);
+            targetIds.forEach(id => allTargetIds.add(id));
+        }
 
-            // Bulk check for existing breaches
-            const existingBreaches = await prisma.sLABreach.findMany({
+        // Bulk check for existing breaches across all rules and targets at once
+        let allExistingBreaches = [];
+        if (rulesWithTargets.length > 0) {
+            allExistingBreaches = await prisma.sLABreach.findMany({
                 where: {
-                    ruleId: rule.id,
-                    targetId: { in: targetIds },
+                    ruleId: { in: ruleIds },
+                    targetId: { in: Array.from(allTargetIds) },
                 },
-                select: { targetId: true },
+                select: { ruleId: true, targetId: true },
             });
+        }
 
-            const existingTargetIds = new Set(existingBreaches.map(b => b.targetId));
-            const newTargets = targetIds.filter(id => !existingTargetIds.has(id));
+        // Pre-index existing breaches in a map for O(1) lookup
+        const existingBreachesMap = new Map();
+        for (const b of allExistingBreaches) {
+            existingBreachesMap.set(`${b.ruleId}_${b.targetId}`, true);
+        }
+
+        for (const { rule, targetIds, thresholdMinutes } of rulesWithTargets) {
+            const newTargets = targetIds.filter(id => !existingBreachesMap.has(`${rule.id}_${id}`));
 
             if (newTargets.length > 0) {
                 // Bulk create breaches
