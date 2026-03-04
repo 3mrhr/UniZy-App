@@ -10,25 +10,6 @@ export default function Navigation() {
     const { dict } = useLanguage();
     const t = dict?.nav || {};
 
-    // 1. Route-based hiding (Role Awareness + Auth fallback)
-    const isPublicPage = pathname === '/';
-    const isLoginPage = pathname === '/login';
-    const isSignupPage = pathname === '/signup';
-    const isAuthPage = isLoginPage || isSignupPage || pathname.startsWith('/auth');
-
-    // Hide for other portals completely
-    const isSpecialPortal =
-        pathname.startsWith('/admin') ||
-        pathname.startsWith('/driver') ||
-        pathname.startsWith('/provider') ||
-        pathname.startsWith('/merchant') ||
-        pathname.startsWith('/owner');
-
-    // If it's a public, auth, or non-student portal page, hide the bottom nav completely
-    if (isPublicPage || isAuthPage || isSpecialPortal) {
-        return null;
-    }
-
     // TODO: wire from orders state
     const pendingCount = 0; // Set to actual count when global state is implemented
 
