@@ -4,8 +4,8 @@ import Link from 'next/link';
 
 import React, { useState, useEffect, useTransition } from 'react';
 import { useLanguage } from '@/i18n/LanguageProvider';
-import { Users, Megaphone, Edit3, MessageCircle, Heart, Share2, MoreHorizontal, Image as ImageIcon, Flag, Loader2 } from 'lucide-react';
-import { getPosts, createPost, flagPost } from '@/app/actions/hub';
+import { Users, Megaphone, Edit3, MessageCircle, Heart, Share2, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { getPosts, createPost } from '@/app/actions/hub';
 import { getCurrentUser } from '@/app/actions/auth';
 import ReportButton from '@/components/ReportButton';
 
@@ -50,7 +50,6 @@ export default function HubPage() {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
     const [isPending, startTransition] = useTransition();
-    const [reportedIds, setReportedIds] = useState(new Set());
 
     // Load posts from DB
     useEffect(() => {
