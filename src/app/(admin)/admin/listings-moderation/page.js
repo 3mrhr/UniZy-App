@@ -49,15 +49,15 @@ export default function ListingsModerationPage() {
         <div className="flex flex-col gap-6 h-full">
             <div className="flex justify-between items-end mb-2">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-900 mb-1">Listings Moderation</h1>
-                    <p className="text-slate-500 text-sm">Review housing listings submitted by providers before they go live.</p>
+                    <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">Listings Moderation</h1>
+                    <p className="text-slate-500 dark:text-slate-400 text-sm">Review housing listings submitted by providers before they go live.</p>
                 </div>
             </div>
 
             {loading ? (
-                <div className="flex-1 flex items-center justify-center text-slate-400">Loading listings...</div>
+                <div className="flex-1 flex items-center justify-center text-slate-400 dark:text-slate-500">Loading listings...</div>
             ) : pendingListings.length === 0 ? (
-                <div className="flex-1 flex items-center justify-center bg-white rounded-2xl shadow-sm border border-slate-100 p-12 text-center text-slate-500">
+                <div className="flex-1 flex items-center justify-center bg-white dark:bg-unizy-dark rounded-2xl shadow-sm border border-slate-100 dark:border-white/5 p-12 text-center text-slate-500 dark:text-slate-400">
                     No pending housing listings for moderation.
                 </div>
             ) : (
@@ -65,12 +65,12 @@ export default function ListingsModerationPage() {
                     {pendingListings.map((listing) => {
                         const images = listing.images ? JSON.parse(listing.images) : [];
                         return (
-                            <div key={listing.id} className="bg-white rounded-2xl shadow-sm border border-slate-100 flex flex-col overflow-hidden">
-                                <div className="h-48 bg-slate-200 relative mb-4">
+                            <div key={listing.id} className="bg-white dark:bg-unizy-dark rounded-2xl shadow-sm border border-slate-100 dark:border-white/5 flex flex-col overflow-hidden">
+                                <div className="h-48 bg-slate-200 dark:bg-unizy-navy relative mb-4">
                                     {images.length > 0 ? (
                                         <img src={images[0]} alt="Property" className="w-full h-full object-cover" />
                                     ) : (
-                                        <div className="flex items-center justify-center h-full text-slate-400">No Image</div>
+                                        <div className="flex items-center justify-center h-full text-slate-400 dark:text-slate-500">No Image</div>
                                     )}
                                     <div className="absolute top-3 right-3 bg-black/70 text-white px-2 py-1 rounded text-xs font-bold">
                                         EGP {listing.price}/mo
@@ -78,16 +78,16 @@ export default function ListingsModerationPage() {
                                 </div>
 
                                 <div className="p-4 flex-1 flex flex-col gap-2">
-                                    <h3 className="font-bold text-slate-900">{listing.title}</h3>
-                                    <p className="text-sm text-slate-500 line-clamp-2">{listing.description}</p>
+                                    <h3 className="font-bold text-slate-900 dark:text-white">{listing.title}</h3>
+                                    <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-2">{listing.description}</p>
 
-                                    <div className="mt-2 text-xs text-slate-600 space-y-1">
+                                    <div className="mt-2 text-xs text-slate-600 dark:text-slate-400 space-y-1">
                                         <p><strong>Provider:</strong> {listing.provider?.name} ({listing.provider?.phone})</p>
                                         <p><strong>Location:</strong> {listing.location}</p>
                                         <p><strong>Type:</strong> {listing.type}</p>
                                     </div>
 
-                                    <div className="flex gap-2 mt-auto pt-4 border-t border-slate-100">
+                                    <div className="flex gap-2 mt-auto pt-4 border-t border-slate-100 dark:border-white/5">
                                         <button
                                             onClick={() => handleReject(listing.id)}
                                             disabled={actionLoading === listing.id}

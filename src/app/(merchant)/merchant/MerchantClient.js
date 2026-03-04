@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useLanguage } from '@/i18n/LanguageProvider';
 import ThemeLangControls from '@/components/ThemeLangControls';
 
@@ -154,9 +155,9 @@ export default function MerchantClient({ settlements, dbOrders = [], dbMeals = [
                                 </div>
                             ))}
                         </div>
-                        <button className="w-full mt-6 py-4 rounded-2xl bg-gray-100 dark:bg-white/5 font-bold text-xs text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10 transition-colors">
+                        <Link href="/merchant/menu" className="w-full mt-6 py-4 rounded-2xl bg-gray-100 dark:bg-white/5 font-bold text-xs text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10 transition-colors block text-center">
                             Manage Full Menu
-                        </button>
+                        </Link>
                     </div>
 
                     <div className="bg-white dark:bg-unizy-dark p-8 rounded-[2.5rem] shadow-sm border border-gray-100 dark:border-white/5 animate-fade-in delay-300">

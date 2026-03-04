@@ -14,13 +14,14 @@ const sessionOptions = {
 export async function middleware(request) {
     const { pathname } = request.nextUrl;
 
-    // Bypass public/static files
+    // Bypass public/static files and login routes
     if (
         pathname.startsWith('/_next') ||
         pathname.startsWith('/api') ||
         pathname.includes('.') ||
         pathname === '/' ||
         pathname === '/login' ||
+        pathname === '/admin/login' ||
         pathname.startsWith('/register') ||
         pathname.startsWith('/forgot-password') ||
         pathname === '/terms' ||

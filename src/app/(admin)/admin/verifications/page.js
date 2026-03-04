@@ -59,20 +59,20 @@ export default function AdminVerifications() {
             {/* Header */}
             <div className="flex justify-between items-end mb-2">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-900 mb-1">Verification Center</h1>
-                    <p className="text-slate-500 text-sm">Review documents submitted by Students, Drivers, and Providers.</p>
+                    <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">Verification Center</h1>
+                    <p className="text-slate-500 dark:text-slate-400 text-sm">Review documents submitted by Students, Drivers, and Providers.</p>
                 </div>
             </div>
 
             {/* Tabs */}
-            <div className="flex gap-4 border-b border-slate-200 pb-0">
+            <div className="flex gap-4 border-b border-slate-200 dark:border-white/10 pb-0">
                 {["STUDENT", "DRIVER", "PROVIDER", "MERCHANT"].map((role) => (
                     <button
                         key={role}
                         onClick={() => setActiveTab(role)}
                         className={`px-6 py-3 font-semibold text-sm transition-all border-b-2 ${activeTab === role
-                                ? "border-brand-600 text-brand-700 bg-brand-50 rounded-t-lg"
-                                : "border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50 rounded-t-lg"
+                            ? "border-brand-600 text-brand-700 dark:text-brand-400 bg-brand-50 dark:bg-brand-900/20 rounded-t-lg"
+                            : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-white/5 rounded-t-lg"
                             }`}
                     >
                         {role}s
@@ -81,22 +81,22 @@ export default function AdminVerifications() {
             </div>
 
             {loading ? (
-                <div className="flex-1 flex items-center justify-center text-slate-400">Loading documents...</div>
+                <div className="flex-1 flex items-center justify-center text-slate-400 dark:text-slate-500">Loading documents...</div>
             ) : filteredDocs.length === 0 ? (
-                <div className="flex-1 flex items-center justify-center bg-white rounded-2xl shadow-sm border border-slate-100 p-12 text-center text-slate-500">
+                <div className="flex-1 flex items-center justify-center bg-white dark:bg-unizy-dark rounded-2xl shadow-sm border border-slate-100 dark:border-white/5 p-12 text-center text-slate-500 dark:text-slate-400">
                     No pending {activeTab.toLowerCase()} verifications found.
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {filteredDocs.map((doc) => (
-                        <div key={doc.id} className="bg-white rounded-2xl shadow-sm border border-slate-100 flex flex-col overflow-hidden">
-                            <div className="p-4 border-b border-slate-100 bg-slate-50">
-                                <h3 className="font-bold text-slate-900">{doc.user?.name}</h3>
-                                <p className="text-xs text-slate-500">{doc.user?.email} • {doc.user?.phone || 'No phone'}</p>
+                        <div key={doc.id} className="bg-white dark:bg-unizy-dark rounded-2xl shadow-sm border border-slate-100 dark:border-white/5 flex flex-col overflow-hidden">
+                            <div className="p-4 border-b border-slate-100 dark:border-white/5 bg-slate-50 dark:bg-unizy-navy/50">
+                                <h3 className="font-bold text-slate-900 dark:text-white">{doc.user?.name}</h3>
+                                <p className="text-xs text-slate-500 dark:text-slate-400">{doc.user?.email} • {doc.user?.phone || 'No phone'}</p>
                             </div>
 
                             {/* Document Preview */}
-                            <div className="w-full h-48 bg-slate-200 relative">
+                            <div className="w-full h-48 bg-slate-200 dark:bg-unizy-navy relative">
                                 {doc.fileUrl ? (
                                     <Image
                                         src={doc.fileUrl}
@@ -105,13 +105,13 @@ export default function AdminVerifications() {
                                         className="object-cover"
                                     />
                                 ) : (
-                                    <div className="flex items-center justify-center h-full text-slate-400">No Image Preview</div>
+                                    <div className="flex items-center justify-center h-full text-slate-400 dark:text-slate-500">No Image Preview</div>
                                 )}
                             </div>
 
                             <div className="p-4 flex flex-col gap-4 flex-1">
                                 <div>
-                                    <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded bg-brand-100 text-brand-700">
+                                    <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded bg-brand-100 dark:bg-brand-900/30 text-brand-700 dark:text-brand-400">
                                         {doc.type.replace('_', ' ')}
                                     </span>
                                 </div>

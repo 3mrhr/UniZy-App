@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { ChevronLeft, Star, Clock, Info, Heart, Minus, Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ReportButton from '@/components/ReportButton';
+import { useCartStore } from '@/store/cartStore';
 
 function MerchantDetailContent() {
     const router = useRouter();
@@ -15,8 +16,16 @@ function MerchantDetailContent() {
     const [merchant, setMerchant] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
 
-    // Simple frontend cart state
-    const [cart, setCart] = useState({});
+    // Use global Zustand cart state
+    const {
+        items,
+        merchantId: cartMerchantId,
+        addToCart,
+        removeFromCart,
+        getCartTotal,
+        getCartCount
+    } = useCartStore();
+
     const [promoCode, setPromoCode] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -41,28 +50,9 @@ function MerchantDetailContent() {
         if (id) fetchMerchantDetails();
     }, [id]);
 
-    const addToCart = (meal) => {
-        setCart(prev => {
-            const qty = (prev[meal.id]?.quantity || 0) + 1;
-            return { ...prev, [meal.id]: { meal, quantity: qty } };
-        });
-    };
-
-    const removeFromCart = (mealId) => {
-        setCart(prev => {
-            const current = prev[mealId]?.quantity || 0;
-            if (current <= 1) {
-                const next = { ...prev };
-                delete next[mealId];
-                return next;
-            }
-            return { ...prev, [mealId]: { ...prev[mealId], quantity: current - 1 } };
-        });
-    };
-
-    const cartItems = Object.values(cart);
-    const cartTotal = cartItems.reduce((sum, item) => sum + (item.meal.price * item.quantity), 0);
-    const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+    const cartItems = Object.values(items).filter(Boolean);
+    const cartTotal = getCartTotal();
+    const cartCount = getCartCount();
 
     const handleCheckout = async () => {
         if (cartCount === 0) return;
@@ -70,16 +60,23 @@ function MerchantDetailContent() {
         try {
             const { createOrder } = await import('@/app/actions/orders');
 
-            // Format items into string array as required by the MVP schema
-            const itemStrings = cartItems.map(i => `${i.quantity}x ${i.meal.name}`);
+            // Format items natively
+            const lineItems = cartItems.map(i => ({
+                mealId: i.meal.id,
+                quantity: i.quantity,
+                variants: [],
+                addons: [],
+                notes: ''
+            }));
 
+            // We still pass details for legacy compatibility, but lineItems is what the backend uses now for math
             const result = await createOrder('DELIVERY', {
                 vendor: merchant.name,
-                items: itemStrings,
                 vendorId: merchant.id
-            }, cartTotal, promoCode);
+            }, cartTotal, promoCode, lineItems);
 
             if (result.success) {
+                useCartStore.getState().clearCart();
                 router.push(`/activity/tracking/${result.order.id}`);
             } else {
                 toast.error(result.error || 'Failed to checkout');
@@ -160,7 +157,7 @@ function MerchantDetailContent() {
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {merchant.meals.map(meal => {
-                            const qty = cart[meal.id]?.quantity || 0;
+                            const qty = items[meal.id]?.quantity || 0;
                             return (
                                 <div key={meal.id} className="bg-white dark:bg-unizy-dark p-4 rounded-3xl border border-gray-100 dark:border-white/5 shadow-sm flex gap-4">
                                     {/* Image Holder */}

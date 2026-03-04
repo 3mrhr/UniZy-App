@@ -29,7 +29,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.className} bg-white dark:bg-unizy-navy text-gray-900 dark:text-white transition-colors duration-300`}>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+        <ThemeProvider attribute="data-theme" defaultTheme="system" enableSystem>
           <LanguageProvider>
             <div className="min-h-screen flex flex-col">
 

@@ -8,15 +8,15 @@ import { getVerifiedMerchants } from '@/app/actions/merchants';
 
 function DeliveryContent() {
     const { dict } = useLanguage();
-    const t = dict?.landing?.delivery || "Delivery";
-    const homeDict = dict?.home || {};
+    const d = dict?.delivery || {};
+    const c = dict?.common || {};
 
     const categories = [
-        { id: 'fastfood', name: 'Fast Food', icon: '🍔' },
-        { id: 'healthy', name: 'Healthy', icon: '🥗' },
-        { id: 'dessert', name: 'Desserts', icon: '🍰' },
-        { id: 'groceries', name: 'Groceries', icon: '🛒' },
-        { id: 'drinks', name: 'Coffee & Drinks', icon: '☕' },
+        { id: 'fastfood', name: d?.categories?.fastFood || 'Fast Food', icon: '🍔' },
+        { id: 'healthy', name: d?.categories?.healthy || 'Healthy', icon: '🥗' },
+        { id: 'dessert', name: d?.categories?.desserts || 'Desserts', icon: '🍰' },
+        { id: 'groceries', name: d?.categories?.groceries || 'Groceries', icon: '🛒' },
+        { id: 'drinks', name: d?.categories?.coffeeAndDrinks || 'Coffee & Drinks', icon: '☕' },
     ];
 
     const [vendors, setVendors] = useState([]);
@@ -75,7 +75,7 @@ function DeliveryContent() {
                     <Link href="/students" className="w-10 h-10 rounded-full bg-white dark:bg-unizy-dark flex items-center justify-center shadow-md hover:bg-gray-100 dark:hover:bg-white/5 transition-colors">
                         <span className="text-lg">←</span>
                     </Link>
-                    <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight leading-none">{homeDict.delivery || "Delivery"}</h1>
+                    <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight leading-none">{d.title || "Delivery"}</h1>
                 </div>
 
                 <div className="relative group animate-fade-in delay-100 mb-8">
@@ -85,7 +85,7 @@ function DeliveryContent() {
                     <input
                         type="text"
                         className="w-full bg-white dark:bg-unizy-dark border-none rounded-[2rem] pl-14 rtl:pl-4 rtl:pr-14 p-6 text-lg font-medium shadow-2xl shadow-gray-200/50 dark:shadow-none focus:ring-4 focus:ring-brand-500/10 focus:bg-white dark:focus:bg-unizy-navy transition-all outline-none text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600"
-                        placeholder="Search for food or products..."
+                        placeholder={d.searchPlaceholder || "Search for food or products..."}
                     />
                 </div>
 
@@ -107,8 +107,8 @@ function DeliveryContent() {
             {/* Vendors Grid */}
             <main className="px-6 max-w-7xl mx-auto w-full">
                 <div className="flex justify-between items-end mb-8 animate-fade-in delay-300">
-                    <h2 className="text-2xl font-black text-gray-900 dark:text-white">Popular Near You</h2>
-                    <button className="text-brand-600 font-bold text-sm hover:underline">{dict?.common?.viewAll || "View All"}</button>
+                    <h2 className="text-2xl font-black text-gray-900 dark:text-white">{d.popularNearYou || "Popular Near You"}</h2>
+                    <button className="text-brand-600 font-bold text-sm hover:underline">{c.viewAll || "View All"}</button>
                 </div>
 
                 {isLoading ? (
@@ -116,10 +116,10 @@ function DeliveryContent() {
                 ) : vendors.length === 0 ? (
                     <div className="col-span-full py-20 text-center flex flex-col items-center">
                         <span className="text-4xl mb-4">🏪</span>
-                        <h3 className="font-bold text-lg mb-2">No merchants found</h3>
-                        <p className="text-gray-500 text-sm">Try exploring a different category!</p>
+                        <h3 className="font-bold text-lg mb-2">{d.noMerchants || "No merchants found"}</h3>
+                        <p className="text-gray-500 text-sm">{d.tryDifferentCategory || "Try exploring a different category!"}</p>
                         {selectedCategory && (
-                            <button onClick={() => setSelectedCategory(null)} className="mt-4 text-brand-600 font-bold hover:underline">Clear Filter</button>
+                            <button onClick={() => setSelectedCategory(null)} className="mt-4 text-brand-600 font-bold hover:underline">{c.clearFilter || "Clear Filter"}</button>
                         )}
                     </div>
                 ) : (
@@ -150,7 +150,7 @@ function DeliveryContent() {
                                     <div className="flex items-center gap-3 text-[11px] font-bold text-gray-400 dark:text-gray-500">
                                         <span className="flex items-center gap-1">🕒 {vendor.time}</span>
                                         <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-700"></span>
-                                        <span>Free Delivery</span>
+                                        <span>{d.freeDelivery || "Free Delivery"}</span>
                                     </div>
                                     {vendor.meals && vendor.meals.length > 0 && (
                                         <p className="text-xs text-gray-400 mt-2 truncate">
@@ -162,7 +162,7 @@ function DeliveryContent() {
                                 <Link
                                     href={`/delivery/merchant/${vendor.id}`}
                                     className={`w-full flex items-center justify-center bg-gray-50 dark:bg-unizy-navy/50 hover:bg-brand-600 hover:text-white dark:hover:bg-brand-600 transition-all py-4 rounded-2xl font-black text-xs uppercase tracking-widest text-gray-900 dark:text-white hover:text-white`}>
-                                    View Menu
+                                    {d.viewMenu || "View Menu"}
                                 </Link>
                             </div>
                         ))}

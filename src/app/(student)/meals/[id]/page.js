@@ -7,6 +7,7 @@ import {
     Clock, Star, UtensilsCrossed, ChevronLeft, Heart,
     Share2, Plus, Minus, Info, Flame, Leaf, ChefHat
 } from 'lucide-react';
+import { useCartStore } from '@/store/cartStore';
 
 export default function MealDetailPage() {
     const { id } = useParams();
@@ -209,7 +210,21 @@ export default function MealDetailPage() {
                         </button>
                     </div>
 
-                    <button className="flex-1 w-full sm:w-auto h-16 bg-brand-600 hover:bg-brand-700 text-white rounded-[1.5rem] font-black text-lg shadow-xl shadow-brand-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-3">
+                    <button
+                        onClick={() => {
+                            useCartStore.getState().addToCart(meal, quantity);
+                            // Simple visual feedback before redirect or staying
+                            const btn = document.getElementById('add-to-order-btn');
+                            const originalText = btn.innerHTML;
+                            btn.innerHTML = '✨ Added to Cart!';
+                            btn.classList.add('bg-green-500');
+                            btn.classList.remove('bg-brand-600');
+                            setTimeout(() => {
+                                router.push(`/delivery/merchant/${meal.merchantId}`);
+                            }, 800);
+                        }}
+                        id="add-to-order-btn"
+                        className="flex-1 w-full sm:w-auto h-16 bg-brand-600 hover:bg-brand-700 text-white rounded-[1.5rem] font-black text-lg shadow-xl shadow-brand-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-3">
                         {isRTL ? 'إضافة للطلب' : 'Add to Order'}
                         <span className="opacity-50">•</span>
                         <span>{(meal.price * quantity).toFixed(2)} {meal.currency}</span>

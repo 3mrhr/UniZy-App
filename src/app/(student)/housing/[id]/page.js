@@ -13,9 +13,9 @@ export default async function ListingDetails({ params }) {
 
     if (!listingData) {
         return (
-            <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-gray-50 text-center">
-                <h1 className="text-2xl font-bold text-gray-900 mb-2">Listing Not Found</h1>
-                <p className="text-gray-500 mb-6">This property might have been removed or is no longer available.</p>
+            <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-gray-50 dark:bg-unizy-navy text-center">
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Listing Not Found</h1>
+                <p className="text-gray-500 dark:text-gray-400 mb-6">This property might have been removed or is no longer available.</p>
                 <Link href="/housing" className="bg-brand-600 text-white px-6 py-3 rounded-xl font-bold">Back to Housing</Link>
             </div>
         );
@@ -34,7 +34,7 @@ export default async function ListingDetails({ params }) {
     const landlordName = listing.provider?.name || "Unknown Landlord";
 
     return (
-        <div className="flex flex-col min-h-screen bg-white pb-28 relative">
+        <div className="flex flex-col min-h-screen bg-white dark:bg-unizy-navy pb-28 relative">
 
             {/* Header / Back Button Over Image */}
             <Link href="/housing" className="absolute top-6 left-6 z-20 bg-white/20 hover:bg-white/40 backdrop-blur-md p-3 rounded-full text-white shadow-lg transition-colors border border-white/30">
@@ -61,53 +61,53 @@ export default async function ListingDetails({ params }) {
             <main className="px-6 md:px-12 py-6 -mt-8 md:-mt-16 relative z-10 animate-fade-in max-w-5xl mx-auto w-full">
 
                 {/* Title & Price Card */}
-                <div className="bg-white rounded-3xl p-6 shadow-xl border border-gray-100 mb-6">
+                <div className="bg-white dark:bg-unizy-dark rounded-3xl p-6 shadow-xl border border-gray-100 dark:border-white/5 mb-6">
                     <div className="flex justify-between items-start gap-4 mb-4">
-                        <h1 className="text-2xl font-bold text-gray-900 leading-tight">{listing.title}</h1>
-                        <div className="bg-green-50 text-green-700 p-2 rounded-full border border-green-100 flex-shrink-0" title="Verified Listing">
+                        <h1 className="text-2xl font-bold text-gray-900 dark:text-white leading-tight">{listing.title}</h1>
+                        <div className="bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 p-2 rounded-full border border-green-100 dark:border-green-900/30 flex-shrink-0" title="Verified Listing">
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7"></path></svg>
                         </div>
                     </div>
 
                     <div className="flex items-end gap-2 mb-4">
                         <span className="text-3xl font-extrabold text-brand-600">{listing.price}</span>
-                        <span className="text-sm text-gray-500 font-medium mb-1">EGP / month</span>
+                        <span className="text-sm text-gray-500 dark:text-gray-400 font-medium mb-1">EGP / month</span>
                     </div>
 
                     <div className="flex flex-wrap gap-2 md:gap-4 text-xs md:text-sm font-medium">
-                        <span className="bg-gray-100 text-gray-700 px-3 py-1.5 rounded-xl">{listing.type}</span>
-                        <span className="bg-blue-50 text-brand-700 px-3 py-1.5 rounded-xl border border-brand-100">{listing.location}</span>
+                        <span className="bg-gray-100 dark:bg-unizy-navy text-gray-700 dark:text-gray-300 px-3 py-1.5 rounded-xl">{listing.type}</span>
+                        <span className="bg-blue-50 dark:bg-brand-900/20 text-brand-700 dark:text-brand-400 px-3 py-1.5 rounded-xl border border-brand-100 dark:border-brand-900/30">{listing.location}</span>
                     </div>
                 </div>
 
                 {/* Quick Details */}
                 <div className="grid grid-cols-2 gap-4 mb-8">
-                    <div className="bg-gray-50 p-4 rounded-2xl flex flex-col gap-1">
+                    <div className="bg-gray-50 dark:bg-unizy-dark p-4 rounded-2xl flex flex-col gap-1">
                         <span className="text-xl">🚶</span>
-                        <span className="text-xs text-gray-500 font-medium">Distance</span>
-                        <span className="text-sm font-bold text-gray-900">Near Campus</span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">Distance</span>
+                        <span className="text-sm font-bold text-gray-900 dark:text-white">Near Campus</span>
                     </div>
-                    <div className="bg-gray-50 p-4 rounded-2xl flex flex-col gap-1">
+                    <div className="bg-gray-50 dark:bg-unizy-dark p-4 rounded-2xl flex flex-col gap-1">
                         <span className="text-xl">💰</span>
-                        <span className="text-xs text-gray-500 font-medium">Deposit</span>
-                        <span className="text-sm font-bold text-gray-900">{listing.price} EGP</span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">Deposit</span>
+                        <span className="text-sm font-bold text-gray-900 dark:text-white">{listing.price} EGP</span>
                     </div>
                 </div>
 
                 {/* Description */}
                 <section className="mb-8">
-                    <h2 className="text-lg font-bold text-gray-900 mb-3">About this place</h2>
-                    <p className="text-gray-600 leading-relaxed text-sm">{listing.description}</p>
+                    <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-3">About this place</h2>
+                    <p className="text-gray-600 dark:text-gray-400 leading-relaxed text-sm">{listing.description}</p>
                 </section>
 
                 {/* Amenities */}
                 {amenities && amenities.length > 0 && (
                     <section className="mb-8">
-                        <h2 className="text-lg font-bold text-gray-900 mb-4">Amenities</h2>
+                        <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Amenities</h2>
                         <div className="grid grid-cols-2 gap-y-4 gap-x-2">
                             {amenities.map(amenity => (
-                                <div key={amenity} className="flex items-center gap-3 text-gray-700 text-sm font-medium">
-                                    <div className="w-8 h-8 rounded-full bg-brand-50 flex items-center justify-center text-brand-600">✓</div>
+                                <div key={amenity} className="flex items-center gap-3 text-gray-700 dark:text-gray-300 text-sm font-medium">
+                                    <div className="w-8 h-8 rounded-full bg-brand-50 dark:bg-brand-900/20 flex items-center justify-center text-brand-600">✓</div>
                                     {amenity}
                                 </div>
                             ))}
@@ -116,20 +116,20 @@ export default async function ListingDetails({ params }) {
                 )}
 
                 {/* Landlord Info and Aggregated Reviews */}
-                <section className="bg-gray-50 rounded-2xl p-5 flex items-center justify-between mb-8">
+                <section className="bg-gray-50 dark:bg-unizy-dark rounded-2xl p-5 flex items-center justify-between mb-8">
                     <div className="flex items-center gap-4">
                         <div className="w-12 h-12 rounded-full bg-gray-300 overflow-hidden">
                             {/* Placeholder Avatar */}
                             <div className="w-full h-full bg-gradient-to-tr from-gray-400 to-gray-200"></div>
                         </div>
                         <div>
-                            <p className="font-bold text-gray-900 text-sm">Hosted by {landlordName}</p>
+                            <p className="font-bold text-gray-900 dark:text-white text-sm">Hosted by {landlordName}</p>
                             <div className="flex items-center gap-1 text-xs text-yellow-500 mt-1">
-                                <span>★</span> <span className="text-gray-700 font-medium">{reviewData.average > 0 ? reviewData.average : 'New'} ({reviewData.count} reviews)</span>
+                                <span>★</span> <span className="text-gray-700 dark:text-gray-300 font-medium">{reviewData.average > 0 ? reviewData.average : 'New'} ({reviewData.count} reviews)</span>
                             </div>
                         </div>
                     </div>
-                    <a href={`https://wa.me/${listing.provider?.phone}?text=Hi, I am interested in your property on UniZy: ${listing.title}`} target="_blank" rel="noopener noreferrer" className="bg-white p-2 rounded-full shadow-sm text-brand-600 border border-gray-100 hover:bg-gray-50 transition-colors">
+                    <a href={`https://wa.me/${listing.provider?.phone}?text=Hi, I am interested in your property on UniZy: ${listing.title}`} target="_blank" rel="noopener noreferrer" className="bg-white dark:bg-unizy-navy p-2 rounded-full shadow-sm text-brand-600 border border-gray-100 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
                         💬
                     </a>
                 </section>
@@ -137,23 +137,23 @@ export default async function ListingDetails({ params }) {
                 {/* Real Reviews Stream */}
                 <section className="mb-12">
                     <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-lg font-bold text-gray-900">Guest Reviews</h2>
-                        <Link href={`/housing/${id}/review`} className="text-xs font-bold text-brand-600 bg-brand-50 px-3 py-1.5 rounded-xl hover:bg-brand-100 transition-colors">
+                        <h2 className="text-lg font-bold text-gray-900 dark:text-white">Guest Reviews</h2>
+                        <Link href={`/housing/${id}/review`} className="text-xs font-bold text-brand-600 bg-brand-50 dark:bg-brand-900/20 px-3 py-1.5 rounded-xl hover:bg-brand-100 dark:hover:bg-brand-900/30 transition-colors">
                             Write Review
                         </Link>
                     </div>
                     <div className="space-y-4">
                         {reviewData.reviews && reviewData.reviews.length > 0 ? (
                             reviewData.reviews.map(review => (
-                                <div key={review.id} className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+                                <div key={review.id} className="bg-white dark:bg-unizy-dark p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-white/5">
                                     <div className="flex items-center justify-between mb-3">
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 rounded-full bg-brand-100 text-brand-700 font-bold flex items-center justify-center">
                                                 {review.user?.name?.charAt(0) || 'U'}
                                             </div>
                                             <div>
-                                                <p className="font-bold text-gray-900 text-sm">{review.user?.name || 'A Student'}</p>
-                                                <p className="text-xs text-gray-500">{new Date(review.createdAt).toLocaleDateString()}</p>
+                                                <p className="font-bold text-gray-900 dark:text-white text-sm">{review.user?.name || 'A Student'}</p>
+                                                <p className="text-xs text-gray-500 dark:text-gray-400">{new Date(review.createdAt).toLocaleDateString()}</p>
                                             </div>
                                         </div>
                                         <div className="bg-yellow-50 text-yellow-600 px-2 py-1 rounded-lg text-xs font-bold flex items-center gap-1">
@@ -161,13 +161,13 @@ export default async function ListingDetails({ params }) {
                                         </div>
                                     </div>
                                     {review.comment && (
-                                        <p className="text-gray-600 text-sm">{review.comment}</p>
+                                        <p className="text-gray-600 dark:text-gray-400 text-sm">{review.comment}</p>
                                     )}
                                 </div>
                             ))
                         ) : (
-                            <div className="text-center p-8 bg-gray-50 rounded-2xl border border-gray-100 border-dashed">
-                                <p className="text-gray-500 text-sm text-center italic">No reviews yet for this listing.</p>
+                            <div className="text-center p-8 bg-gray-50 dark:bg-unizy-dark rounded-2xl border border-gray-100 dark:border-white/5 border-dashed">
+                                <p className="text-gray-500 dark:text-gray-400 text-sm text-center italic">No reviews yet for this listing.</p>
                             </div>
                         )}
                     </div>
@@ -184,14 +184,14 @@ export default async function ListingDetails({ params }) {
             </main>
 
             {/* Floating Action Bar */}
-            <div className="fixed bottom-0 left-0 right-0 w-full bg-white/90 backdrop-blur-xl border-t border-gray-100 p-4 px-6 md:px-12 flex justify-center z-50 rounded-t-3xl md:rounded-none shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)]">
+            <div className="fixed bottom-0 left-0 right-0 w-full bg-white/90 dark:bg-unizy-dark/90 backdrop-blur-xl border-t border-gray-100 dark:border-white/5 p-4 px-6 md:px-12 flex justify-center z-50 rounded-t-3xl md:rounded-none shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)]">
                 <div className="max-w-5xl w-full flex items-center justify-between">
                     <div>
-                        <p className="text-xs text-gray-500 font-medium mb-0.5">Total per month</p>
-                        <p className="text-xl md:text-3xl font-extrabold text-gray-900">{listing.price} <span className="text-sm font-medium text-gray-500">EGP</span></p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-0.5">Total per month</p>
+                        <p className="text-xl md:text-3xl font-extrabold text-gray-900 dark:text-white">{listing.price} <span className="text-sm font-medium text-gray-500 dark:text-gray-400">EGP</span></p>
                     </div>
                     <div className="flex gap-2">
-                        <Link href={`/housing/${id}/viewing`} className="bg-white text-gray-900 border border-gray-200 hover:bg-gray-50 px-4 md:px-6 py-3.5 md:py-4 rounded-2xl font-bold shadow-sm transition-all active:scale-95 text-sm md:text-base text-center">
+                        <Link href={`/housing/${id}/viewing`} className="bg-white dark:bg-unizy-navy text-gray-900 dark:text-white border border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/5 px-4 md:px-6 py-3.5 md:py-4 rounded-2xl font-bold shadow-sm transition-all active:scale-95 text-sm md:text-base text-center">
                             Viewing
                         </Link>
                         <Link href={`/housing/${id}/booking`} className="bg-gray-900 hover:bg-black text-white px-6 md:px-12 py-3.5 md:py-4 rounded-2xl font-bold shadow-lg transition-all active:scale-95 text-sm md:text-base text-center">

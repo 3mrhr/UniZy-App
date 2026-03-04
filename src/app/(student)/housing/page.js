@@ -8,6 +8,8 @@ import { useLanguage } from '@/i18n/LanguageProvider';
 
 function HousingHomeContent() {
     const { dict } = useLanguage();
+    const h = dict?.housing || {};
+    const c = dict?.common || {};
     const router = useRouter();
     const searchParams = useSearchParams();
 
@@ -54,36 +56,36 @@ function HousingHomeContent() {
                     <Link href="/students" className="text-gray-500 dark:text-gray-400 hover:text-brand-600 dark:hover:text-white transition-colors p-2 -ml-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/5">
                         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"></path></svg>
                     </Link>
-                    <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">{dict.home.housing}</h1>
+                    <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">{h.title || "Housing"}</h1>
                 </div>
                 <button className="text-gray-600 dark:text-gray-400 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/5 transition-colors bg-gray-50 dark:bg-unizy-navy/50">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path></svg>
                 </button>
                 <div className="flex gap-2 ml-2">
-                    <Link href="/housing/saved" className="px-3 py-1.5 bg-brand-50 dark:bg-brand-900/20 text-brand-600 rounded-xl text-xs font-bold hover:bg-brand-100 transition-colors">❤️ Saved</Link>
-                    <Link href="/housing/compare" className="px-3 py-1.5 bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-300 rounded-xl text-xs font-bold hover:bg-gray-200 transition-colors">⚖️ Compare</Link>
+                    <Link href="/housing/saved" className="px-3 py-1.5 bg-brand-50 dark:bg-brand-900/20 text-brand-600 rounded-xl text-xs font-bold hover:bg-brand-100 transition-colors">❤️ {h.saved || "Saved"}</Link>
+                    <Link href="/housing/compare" className="px-3 py-1.5 bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-300 rounded-xl text-xs font-bold hover:bg-gray-200 transition-colors">⚖️ {h.compare || "Compare"}</Link>
                 </div>
             </header>
 
             {/* Filter Chips */}
             <div className="px-6 md:px-12 py-4 flex gap-2 overflow-x-auto hide-scrollbar bg-white dark:bg-unizy-dark shadow-sm border-t border-gray-50 dark:border-white/5 max-w-7xl mx-auto w-full">
-                {['All', 'Studio', 'Shared', 'Apartment', 'Female Only', 'Male Only'].map((filter) => (
+                {[{ key: 'All', label: h?.filters?.all || 'All' }, { key: 'Studio', label: h?.filters?.studio || 'Studio' }, { key: 'Shared', label: h?.filters?.shared || 'Shared' }, { key: 'Apartment', label: h?.filters?.apartment || 'Apartment' }, { key: 'Female Only', label: h?.filters?.femaleOnly || 'Female Only' }, { key: 'Male Only', label: h?.filters?.maleOnly || 'Male Only' }].map((filter) => (
                     <button
-                        key={filter}
-                        onClick={() => router.push(`/housing?type=${filter}`)}
-                        className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-all ${activeFilter === filter
+                        key={filter.key}
+                        onClick={() => router.push(`/housing?type=${filter.key}`)}
+                        className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-all ${activeFilter === filter.key
                             ? "bg-brand-600 text-white shadow-md shadow-brand-500/20"
                             : "bg-gray-100 dark:bg-unizy-navy/50 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-unizy-navy"
                             }`}
                     >
-                        {filter}
+                        {filter.label}
                     </button>
                 ))}
             </div>
 
             <main className="px-6 md:px-12 py-6 flex flex-col gap-5 animate-fade-in max-w-7xl mx-auto w-full">
 
-                <h2 className="font-bold text-lg text-gray-900 dark:text-white">Featured Near You</h2>
+                <h2 className="font-bold text-lg text-gray-900 dark:text-white">{h.featuredNearYou || "Featured Near You"}</h2>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {isLoading ? (
@@ -107,12 +109,12 @@ function HousingHomeContent() {
                                         {listing.verified && (
                                             <div className="absolute top-4 left-4 bg-white/90 dark:bg-unizy-dark/90 backdrop-blur-md px-3 py-1 rounded-full flex items-center gap-1 shadow-sm border border-white/50 dark:border-white/10">
                                                 <span className="text-green-500 text-sm">✓</span>
-                                                <span className="text-xs font-bold tracking-wide text-gray-800 dark:text-gray-200">Verified</span>
+                                                <span className="text-xs font-bold tracking-wide text-gray-800 dark:text-gray-200">{c.verified || "Verified"}</span>
                                             </div>
                                         )}
 
                                         <div className="absolute bottom-4 right-4 bg-white/90 dark:bg-unizy-dark/90 backdrop-blur-md px-3 py-1.5 rounded-2xl shadow-sm border border-white/50 dark:border-white/10">
-                                            <p className="font-bold text-gray-900 dark:text-white">{listing.price} <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">EGP/mo</span></p>
+                                            <p className="font-bold text-gray-900 dark:text-white">{listing.price} <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">{h.perMonth || "EGP/mo"}</span></p>
                                         </div>
                                     </div>
 
@@ -138,11 +140,11 @@ function HousingHomeContent() {
                     ) : (
                         <div className="col-span-full py-12 flex flex-col items-center bg-white dark:bg-unizy-dark rounded-3xl border border-gray-100 dark:border-white/5">
                             <span className="text-5xl mb-4">🏠</span>
-                            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">No listings found</h3>
-                            <p className="text-gray-500 dark:text-gray-400 text-center text-sm max-w-sm">There are no {activeFilter !== 'All' ? activeFilter : ''} listings matching your current criteria. Consider adjusting your filters.</p>
+                            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">{h.noListings || "No listings found"}</h3>
+                            <p className="text-gray-500 dark:text-gray-400 text-center text-sm max-w-sm">{h.noListingsDesc || "There are no listings matching your current criteria. Consider adjusting your filters."}</p>
                             {activeFilter !== 'All' && (
                                 <button onClick={() => router.push('/housing')} className="mt-4 px-6 py-2 bg-brand-50 dark:bg-brand-900/20 text-brand-600 dark:text-brand-400 font-bold rounded-xl hover:bg-brand-100 dark:hover:bg-brand-900/40 transition-colors text-sm">
-                                    Clear Filters
+                                    {h.clearFilters || "Clear Filters"}
                                 </button>
                             )}
                         </div>

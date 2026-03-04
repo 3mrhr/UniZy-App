@@ -4,8 +4,12 @@ import React, { useState, useEffect } from 'react';
 import { Activity, Clock, Package, ShoppingBag, Utensils, Home as HomeIcon, CheckCircle2, XCircle, ChevronRight, Tags } from 'lucide-react';
 import Link from 'next/link';
 import { getUserTransactions } from '@/app/actions/transactions';
+import { useLanguage } from '@/i18n/LanguageProvider';
 
 export default function ActivityPage() {
+    const { dict } = useLanguage();
+    const t = dict?.activity || {};
+    const c = dict?.common || {};
     const [transactions, setTransactions] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [filterCategory, setFilterCategory] = useState('ALL');
@@ -71,12 +75,12 @@ export default function ActivityPage() {
     };
 
     const filterOptions = [
-        { id: 'ALL', label: 'All Activity' },
-        { id: 'SERVICE', label: 'Services' },
-        { id: 'CLEANING', label: 'Cleaning' },
-        { id: 'MEALS', label: 'Meals' },
-        { id: 'DEALS', label: 'Deals' },
-        { id: 'HOUSING', label: 'Housing' },
+        { id: 'ALL', label: t.title || 'All Activity' },
+        { id: 'SERVICE', label: dict?.services?.title || 'Services' },
+        { id: 'CLEANING', label: dict?.services?.cleaning || 'Cleaning' },
+        { id: 'MEALS', label: dict?.meals?.title || 'Meals' },
+        { id: 'DEALS', label: dict?.deals?.title || 'Deals' },
+        { id: 'HOUSING', label: dict?.housing?.title || 'Housing' },
     ];
 
     return (
@@ -85,9 +89,9 @@ export default function ActivityPage() {
             <div>
                 <h1 className="text-2xl font-black text-gray-900 dark:text-white flex items-center gap-2">
                     <Activity className="w-8 h-8 text-brand-600" />
-                    My Activity
+                    {t.title || 'My Activity'}
                 </h1>
-                <p className="text-gray-500 mt-1">Track all your bookings, orders, and service statuses in one place.</p>
+                <p className="text-gray-500 mt-1">{t.noOrdersDesc || 'Track all your bookings, orders, and service statuses in one place.'}</p>
             </div>
 
             {/* Filter Tabs */}
@@ -110,12 +114,12 @@ export default function ActivityPage() {
             <div className="space-y-3">
                 {isLoading ? (
                     <div className="p-8 text-center text-gray-500 font-bold bg-white dark:bg-[#1E293B] rounded-2xl border border-gray-100 dark:border-gray-800">
-                        Loading your activity history...
+                        {c.loading || 'Loading your activity history...'}
                     </div>
                 ) : transactions.length === 0 ? (
                     <div className="p-8 text-center bg-white dark:bg-[#1E293B] rounded-2xl border border-gray-100 dark:border-gray-800 flex flex-col items-center">
                         <Activity className="w-12 h-12 text-gray-300 dark:text-gray-700 mb-3" />
-                        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">No activity found</h3>
+                        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">{t.noOrders || 'No activity found'}</h3>
                         <p className="text-sm text-gray-500 max-w-xs mx-auto">
                             You haven't made any {filterCategory !== 'ALL' ? filterCategory.toLowerCase() : ''} bookings or orders yet.
                         </p>

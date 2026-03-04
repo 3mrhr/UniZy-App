@@ -1,19 +1,35 @@
 "use client";
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLanguage } from '@/i18n/LanguageProvider';
-import { User, MapPin, CreditCard, Bell, Shield, LogOut, ChevronRight, CheckCircle2 } from 'lucide-react';
+import { User as UserIcon, MapPin, CreditCard, Bell, Shield, LogOut, ChevronRight, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
+import { getCurrentUser } from '@/app/actions/auth';
+import { useRouter } from 'next/navigation';
 
 export default function AccountPage() {
     const { language, toggleLanguage } = useLanguage();
     const isRTL = language === 'ar-EG';
+    const [user, setUser] = useState(null);
+    const router = useRouter();
+
+    useEffect(() => {
+        const fetchUser = async () => {
+            const currentUser = await getCurrentUser();
+            if (currentUser) {
+                setUser(currentUser);
+            } else {
+                router.push('/login');
+            }
+        };
+        fetchUser();
+    }, [router]);
 
     const SETTINGS_SECTIONS = [
         {
             title: isRTL ? 'حسابي' : 'My Account',
             items: [
-                { id: 'profile', icon: User, en: 'Personal Details', ar: 'التفاصيل الشخصية' },
+                { id: 'profile', icon: UserIcon, en: 'Personal Details', ar: 'التفاصيل الشخصية' },
                 { id: 'addresses', icon: MapPin, en: 'Saved Addresses', ar: 'العناوين المحفوظة' },
                 { id: 'payment', icon: CreditCard, en: 'Payment Methods', ar: 'طرق الدفع' },
             ]
@@ -38,24 +54,31 @@ export default function AccountPage() {
         }
     ];
 
+    if (!user) {
+        return <div className="min-h-screen flex items-center justify-center"><div className="w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full animate-spin"></div></div>;
+    }
+
+    // Default avatar if none exists
+    const avatarUrl = user?.profileImage || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'User')}&background=random&color=fff&size=150`;
+
     return (
         <main className="min-h-screen pb-24 bg-[var(--unizy-bg-light)] dark:bg-[var(--unizy-bg-dark)] px-4 sm:px-6 lg:px-8 max-w-3xl mx-auto pt-6 transition-colors duration-300">
 
             {/* Header Profile Summary */}
             <div className="bg-white dark:bg-[#1E293B] rounded-3xl p-6 border border-gray-100 dark:border-gray-800 shadow-sm flex items-center gap-5 mb-8">
-                <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-[var(--unizy-primary)] to-blue-400 p-1">
+                <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-[var(--unizy-primary)] to-blue-400 p-1 shrink-0">
                     <div className="w-full h-full rounded-full bg-white dark:bg-[#1E293B] overflow-hidden border-2 border-white dark:border-[#1E293B]">
-                        <img src="https://ui-avatars.com/api/?name=Omar+Hassan&background=random&color=fff&size=150" alt="Avatar" className="w-full h-full object-cover" />
+                        <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                     </div>
                 </div>
                 <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                        <h1 className="text-xl font-bold text-[var(--unizy-text-dark)] dark:text-white truncate">Omar Hassan</h1>
-                        <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
+                        <h1 className="text-xl font-bold text-[var(--unizy-text-dark)] dark:text-white truncate">{user.name}</h1>
+                        {user.isVerified && <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />}
                     </div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-2 truncate">omar.hassan@student.aun.edu.eg</p>
-                    <div className="inline-flex items-center gap-1.5 bg-yellow-50 dark:bg-yellow-900/20 px-2.5 py-1 rounded-md border border-yellow-100 dark:border-yellow-900">
-                        <span className="text-xs font-bold text-yellow-600 dark:text-yellow-500">Gold Student</span>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-2 truncate">{user.email}</p>
+                    <div className="inline-flex items-center gap-1.5 bg-brand-50 dark:bg-brand-900/20 px-2.5 py-1 rounded-md border border-brand-100 dark:border-brand-900">
+                        <span className="text-xs font-bold text-brand-600 dark:text-brand-500">{user.role}</span>
                     </div>
                 </div>
             </div>

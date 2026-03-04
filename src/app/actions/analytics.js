@@ -86,3 +86,33 @@ export async function getDashboardAnalytics() {
         return { success: false, error: 'Database error' };
     }
 }
+
+/**
+ * Helper to record system events globally for analytics.
+ * Reuses the AuditLog table but bypasses the "Admin Only" requirement 
+ * since students and guests can trigger analytics events.
+ * 
+ * @param {string} eventName - The action taken (e.g., "SIGNUP", "ORDER_CREATED")
+ * @param {string} targetId - ID of the affected entity (e.g., UserId, OrderId)
+ * @param {object} details - Additional optional JSON details
+ */
+export async function logEvent(eventName, targetId = null, details = null) {
+    try {
+        const user = await getCurrentUser();
+
+        await prisma.auditLog.create({
+            data: {
+                action: eventName.toUpperCase(),
+                module: 'ANALYTICS',
+                targetId: targetId,
+                details: details ? JSON.stringify(details) : null,
+                adminId: user ? user.id : null, // Uses adminId column historically, but stores any userId for analytics
+            }
+        });
+
+        return true;
+    } catch (error) {
+        console.error('[ANALYTICS_ERROR] Failed to save event log:', error);
+        return false;
+    }
+}

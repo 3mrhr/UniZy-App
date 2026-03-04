@@ -22,7 +22,6 @@ export async function getVerifiedMerchants(category = null) {
                     take: 5
                 },
                 deals: {
-                    where: { status: 'ACTIVE' },
                     select: { id: true, title: true, discountPrice: true, currency: true, image: true, rating: true },
                     take: 2
                 }
@@ -63,7 +62,7 @@ export async function getVerifiedMerchants(category = null) {
         if (category) {
             // Simplified category matching logic mapping the UI filter to meals' tags
             const tagMap = {
-                fastfood: ['fastfood', 'burger', 'pizza', 'fries'],
+                fastfood: ['fast food', 'fastfood', 'burger', 'pizza', 'fries'],
                 healthy: ['healthy', 'salad', 'vegan', 'organic'],
                 dessert: ['dessert', 'sweet', 'cake', 'chocolate'],
                 groceries: ['grocery', 'mart', 'store'],
@@ -100,7 +99,7 @@ export async function getMerchantDetails(merchantId) {
                     where: { status: 'ACTIVE' }
                 },
                 deals: {
-                    where: { status: 'ACTIVE' }
+                    take: 2
                 }
             }
         });

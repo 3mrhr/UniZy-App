@@ -1,5 +1,3 @@
-// This is your Prisma schema file.
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,306 +8,342 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  role      String   @default("STUDENT") // STUDENT, PROVIDER, ADMIN, DRIVER, MERCHANT, SUPPORT, AMBASSADOR
-  name      String
-  email     String   @unique
-  password  String // bcrypt hashed
-  phone     String?
-  scopes    String? // JSON array for module-admin scopes (e.g. ["HOUSING", "TRANSPORT"])
-  
-  // Phase 16: Expanded Profile
-  university   String?  @default("Assiut University")
-  faculty      String?
-  academicYear String?
-  gender       String?
-  referralCode String?  @unique
-  isVerified   Boolean  @default(false)
-  verificationStatus String @default("UNVERIFIED") // UNVERIFIED, PENDING, VERIFIED, REJECTED
-  profileImage String?
-  notificationPrefs String? @default("{\"email\": true, \"push\": true, \"sms\": false}")
-
-  points    Int      @default(0) // UniZy rewards
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  listings       HousingListing[]
-  verifications  VerificationDocument[]
-  orders         Order[]
-  reviews        Review[]
-  supportTickets SupportTicket[]
-  assignedTickets SupportTicket[] @relation("AssignedAgent")
-  ticketMessages  TicketMessage[]
-  deals          Deal[]
-  savedDeals     SavedDeal[]
-  meals          Meal[]
-  hubPosts       HubPost[]
-  notifications  Notification[]
-  referralsMade  Referral[]  @relation("referrer")
-  referralsUsed  Referral[]  @relation("referred")
-  serviceBookings   ServiceBooking[]
-  cleaningBookings  CleaningBooking[]
-  auditLogs         AuditLog[]  @relation("AdminAuditLogs")
-  transactions      Transaction[]
-  
-  // Phase 38-40 back-relations
-  refundRequests    Refund[]    @relation("RefundRequests")
-  refundApprovals   Refund[]    @relation("RefundApprovals")
-  providerSettlements Settlement[] @relation("ProviderSettlements")
-  payoutsProcessed  Payout[]    @relation("PayoutProcessor")
-  driverDispatches  Dispatch[]  @relation("DriverDispatches")
-  
-  // Phase 44 back-relations
-  savedHousing    SavedHousing[]   @relation("SavedHousing")
-  housingRequests HousingRequest[] @relation("HousingRequests")
-  
-  // Phase 46: Trust & Safety
-  reportsSubmitted Report[] @relation("Reporter")
-  reportsAgainst   Report[] @relation("TargetUser")
+  id                  String                 @id @default(uuid())
+  role                String                 @default("STUDENT")
+  name                String
+  email               String                 @unique
+  password            String
+  phone               String?                @unique
+  scopes              String?
+  university          String?                @default("Assiut University")
+  faculty             String?
+  academicYear        String?
+  gender              String?
+  referralCode        String?                @unique
+  isVerified          Boolean                @default(false)
+  verificationStatus  String                 @default("UNVERIFIED")
+  profileImage        String?
+  notificationPrefs   String?                @default("{\"email\": true, \"push\": true, \"sms\": false}")
+  points              Int                    @default(0)
+  // Merchant-specific store fields
+  storeName           String?
+  storeAddress        String?
+  storeDescription    String?
+  storeOpen           Boolean                @default(false)
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+  auditLogs           AuditLog[]             @relation("AdminAuditLogs")
+  cleaningBookings    CleaningBooking[]
+  deals               Deal[]
+  driverDispatches    Dispatch[]             @relation("DriverDispatches")
+  listings            HousingListing[]
+  housingRequests     HousingRequest[]       @relation("HousingRequests")
+  hubPosts            HubPost[]
+  meals               Meal[]
+  notifications       Notification[]
+  orders              Order[]
+  payoutsProcessed    Payout[]               @relation("PayoutProcessor")
+  referralsUsed       Referral[]             @relation("referred")
+  referralsMade       Referral[]             @relation("referrer")
+  refundApprovals     Refund[]               @relation("RefundApprovals")
+  refundsProcessed    Refund[]               @relation("RefundProcessor")
+  refundRequests      Refund[]               @relation("RefundRequests")
+  reportsSubmitted    Report[]               @relation("Reporter")
+  reportsAgainst      Report[]               @relation("TargetUser")
+  reviews             Review[]
+  rewardAccount       RewardAccount?
+  rewardTransactions  RewardTransaction[]
+  savedDeals          SavedDeal[]
+  savedHousing        SavedHousing[]         @relation("SavedHousing")
+  serviceBookings     ServiceBooking[]
+  providerSettlements Settlement[]           @relation("ProviderSettlements")
+  assignedTickets     SupportTicket[]        @relation("AssignedAgent")
+  supportTickets      SupportTicket[]
+  ticketMessages      TicketMessage[]
+  transactions        Transaction[]
+  verifications       VerificationDocument[]
 }
 
 model HousingListing {
-  id          String @id @default(uuid())
-  title       String
-  description String
-  price       Float
-  type        String // Shared, Studio, Apartment
-  status      String @default("PENDING") // PENDING, ACTIVE, REJECTED, RENTED
-  location    String
-  savedBy      SavedHousing[]
+  id           String           @id @default(uuid())
+  title        String
+  description  String
+  price        Float
+  type         String
+  status       String           @default("PENDING")
+  location     String
+  images       String
+  amenities    String
+  contact      String
+  providerId   String
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  provider     User             @relation(fields: [providerId], references: [id])
   requests     HousingRequest[]
-  
-  images      String // JSON string array
-  amenities   String // JSON string array of strings
-  contact     String
-
-  providerId String
-  provider   User   @relation(fields: [providerId], references: [id])
-
+  savedBy      SavedHousing[]
   transactions Transaction[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }
 
 model VerificationDocument {
-  id      String @id @default(uuid())
-  type    String // STUDENT_ID, DRIVERS_LICENSE, VEHICLE_REGISTRATION, BUSINESS_LICENSE, FOOD_PERMIT, DEED
-  status  String @default("PENDING") // PENDING, VERIFIED, REJECTED
-  fileUrl String
+  id              String   @id @default(uuid())
+  type            String
+  status          String   @default("PENDING")
+  fileUrl         String
   rejectionReason String?
-
-  userId String
-  user   User   @relation(fields: [userId], references: [id])
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  userId          String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  user            User     @relation(fields: [userId], references: [id])
 }
 
 model Order {
-  id      String @id @default(uuid())
-  service String // TRANSPORT, DELIVERY
-  status  String @default("PENDING") // PENDING, ACCEPTED, IN_TRANSIT, COMPLETED
-  total   Float
-  details String // JSON stringified specific details (pickup/dropoff or food items)
-
-  userId   String
-  user     User    @relation(fields: [userId], references: [id])
-  driverId String?
-
+  id          String              @id @default(uuid())
+  service     String
+  status      String              @default("PENDING")
+  total       Float
+  details     String
+  userId      String
+  driverId    String?
   promoCodeId String?
-  promoCode   PromoCode? @relation(fields: [promoCodeId], references: [id])
-
-  dispatches Dispatch[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  dispatches  Dispatch[]
+  promoCode   PromoCode?          @relation(fields: [promoCodeId], references: [id])
+  user        User                @relation(fields: [userId], references: [id])
+  orderItems  OrderItem[]
+  refunds     Refund[]
+  rewardTxns  RewardTransaction[]
 }
 
 model Review {
-  id      String  @id @default(uuid())
-  rating  Int
-  comment String?
+  id               String   @id @default(uuid())
+  rating           Int
+  comment          String?
+  userId           String
+  targetUserId     String?
+  housingListingId String?
+  orderId          String?
+  createdAt        DateTime @default(now())
+  user             User     @relation(fields: [userId], references: [id])
+}
 
-  userId String
-  user   User   @relation(fields: [userId], references: [id])
+model OrderItem {
+  id                String                      @id @default(uuid())
+  orderId           String
+  mealId            String?
+  nameSnapshot      String
+  basePriceSnapshot Float
+  qty               Int
+  notes             String?
+  createdAt         DateTime                    @default(now())
+  order             Order                       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  addonSelections   OrderItemAddonSelection[]
+  variantSelections OrderItemVariantSelection[]
+}
 
-  // Optional relations - What is being reviewed?
-  targetUserId     String?  // Reviewing a driver or landlord
-  housingListingId String?  // Reviewing a specific house
-  orderId          String?  // Reviewing a specific transport/delivery order
+model OrderItemVariantSelection {
+  id                 String    @id @default(uuid())
+  orderItemId        String
+  groupNameSnapshot  String
+  optionNameSnapshot String
+  priceDeltaSnapshot Float
+  createdAt          DateTime  @default(now())
+  orderItem          OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+}
 
-  createdAt DateTime @default(now())
+model OrderItemAddonSelection {
+  id                 String    @id @default(uuid())
+  orderItemId        String
+  groupNameSnapshot  String
+  optionNameSnapshot String
+  priceDeltaSnapshot Float     @default(0)
+  createdAt          DateTime  @default(now())
+  orderItem          OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
 }
 
 model SupportTicket {
-  id              String   @id @default(uuid())
+  id              String          @id @default(uuid())
   subject         String
-  description     String   @default("")
-  category        String   // HOUSING, TRANSPORT, DELIVERY, DEALS, MEALS, OTHER
-  priority        String   @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
-  status          String   @default("OPEN")   // OPEN, IN_PROGRESS, RESOLVED, CLOSED
-  
+  description     String          @default("")
+  category        String
+  priority        String          @default("MEDIUM")
+  status          String          @default("OPEN")
   userId          String
-  user            User     @relation(fields: [userId], references: [id])
-  
   assignedAgentId String?
-  assignedAgent   User?    @relation("AssignedAgent", fields: [assignedAgentId], references: [id])
-  
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  assignedAgent   User?           @relation("AssignedAgent", fields: [assignedAgentId], references: [id])
+  user            User            @relation(fields: [userId], references: [id])
   messages        TicketMessage[]
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
 }
 
 model TicketMessage {
-  id        String   @id @default(uuid())
+  id        String        @id @default(uuid())
   content   String
-  isAdmin   Boolean  @default(false)
-  
+  isAdmin   Boolean       @default(false)
   ticketId  String
-  ticket    SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  
   senderId  String
-  sender    User     @relation(fields: [senderId], references: [id])
-  
-  createdAt DateTime @default(now())
+  createdAt DateTime      @default(now())
+  sender    User          @relation(fields: [senderId], references: [id])
+  ticket    SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 }
 
 model Deal {
-  id          String @id @default(uuid())
-  title       String
-  description String
-  discount    String
-  
-  category    String @default("other")
-  image       String?
+  id            String        @id @default(uuid())
+  title         String
+  description   String
+  discount      String
+  category      String        @default("other")
+  image         String?
   originalPrice Float?
   discountPrice Float?
-  currency    String @default("EGP")
-  
-  rating      Float @default(5.0)
-  reviews     Int @default(0)
-  expiresIn   String? 
-  promoCode   String?
-  
-  status      String @default("ACTIVE") // ACTIVE, EXPIRED
-
-  merchantId String
-  merchant   User   @relation(fields: [merchantId], references: [id])
-
-  savedBy      SavedDeal[]
-  transactions Transaction[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  currency      String        @default("EGP")
+  rating        Float         @default(5.0)
+  reviews       Int           @default(0)
+  expiresIn     String?
+  promoCode     String?
+  status        String        @default("ACTIVE")
+  merchantId    String
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  merchant      User          @relation(fields: [merchantId], references: [id])
+  savedBy       SavedDeal[]
+  transactions  Transaction[]
 }
 
 model SavedDeal {
   id        String   @id @default(uuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id])
   dealId    String
-  deal      Deal     @relation(fields: [dealId], references: [id])
-  
   createdAt DateTime @default(now())
+  deal      Deal     @relation(fields: [dealId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
 
   @@unique([userId, dealId])
 }
 
 model Meal {
-  id          String   @id @default(uuid())
-  name        String
-  arName      String?
-  description String?
-  price       Float
-  currency    String   @default("EGP")
-  image       String?
-  rating      Float    @default(5.0)
-  calories    String?
-  prepTime    String?
-  tags        String   @default("daily") // JSON stringified array or comma separated
-  isPopular   Boolean  @default(false)
-  status      String   @default("ACTIVE") // ACTIVE, UNAVAILABLE
-
-  merchantId  String
-  merchant    User     @relation(fields: [merchantId], references: [id])
-  
-  transactions Transaction[]
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                String             @id @default(uuid())
+  name              String
+  arName            String?
+  description       String?
+  price             Float
+  currency          String             @default("EGP")
+  image             String?
+  rating            Float              @default(5.0)
+  calories          String?
+  prepTime          String?
+  tags              String             @default("daily")
+  isPopular         Boolean            @default(false)
+  status            String             @default("ACTIVE")
+  stockCount        Int?
+  isSoldOut         Boolean            @default(false)
+  trackInventory    Boolean            @default(false)
+  lowStockThreshold Int?
+  merchantId        String
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  merchant          User               @relation(fields: [merchantId], references: [id])
+  addonGroups       MealAddonGroup[]
+  variantGroups     MealVariantGroup[]
+  transactions      Transaction[]
 }
 
-// ========== Phase 22: Hub Posts ==========
+model MealVariantGroup {
+  id        String              @id @default(uuid())
+  mealId    String
+  name      String
+  required  Boolean             @default(true)
+  minSelect Int                 @default(1)
+  maxSelect Int                 @default(1)
+  sortOrder Int                 @default(0)
+  meal      Meal                @relation(fields: [mealId], references: [id], onDelete: Cascade)
+  options   MealVariantOption[]
+}
+
+model MealVariantOption {
+  id          String           @id @default(uuid())
+  groupId     String
+  name        String
+  priceDelta  Float            @default(0.0)
+  isAvailable Boolean          @default(true)
+  sortOrder   Int              @default(0)
+  group       MealVariantGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+}
+
+model MealAddonGroup {
+  id        String            @id @default(uuid())
+  mealId    String
+  name      String
+  required  Boolean           @default(false)
+  minSelect Int               @default(0)
+  maxSelect Int               @default(99)
+  sortOrder Int               @default(0)
+  meal      Meal              @relation(fields: [mealId], references: [id], onDelete: Cascade)
+  options   MealAddonOption[]
+}
+
+model MealAddonOption {
+  id          String         @id @default(uuid())
+  groupId     String
+  name        String
+  priceDelta  Float          @default(0.0)
+  isAvailable Boolean        @default(true)
+  sortOrder   Int            @default(0)
+  group       MealAddonGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+}
 
 model HubPost {
-  id        String   @id @default(uuid())
-  content   String
-  category  String   @default("general") // general, study_help, lost_found, housing, marketplace
-  imageUrl  String?
-  likes     Int      @default(0)
-  comments  Int      @default(0)
-  isFlagged Boolean  @default(false)
+  id         String   @id @default(uuid())
+  content    String
+  category   String   @default("general")
+  imageUrl   String?
+  likes      Int      @default(0)
+  comments   Int      @default(0)
+  isFlagged  Boolean  @default(false)
   flagReason String?
-  status    String   @default("ACTIVE") // ACTIVE, FLAGGED, REMOVED
-
-  authorId  String
-  author    User     @relation(fields: [authorId], references: [id])
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  status     String   @default("ACTIVE")
+  authorId   String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  author     User     @relation(fields: [authorId], references: [id])
 }
-
-// ========== Phase 23: Referrals ==========
 
 model Referral {
-  id          String   @id @default(uuid())
-  code        String   // The referral code used
-  status      String   @default("COMPLETED") // COMPLETED, PENDING
-  pointsAwarded Int    @default(50)
-
-  referrerId  String
-  referrer    User     @relation("referrer", fields: [referrerId], references: [id])
-
-  referredId  String
-  referred    User     @relation("referred", fields: [referredId], references: [id])
-
-  createdAt   DateTime @default(now())
+  id            String   @id @default(uuid())
+  code          String
+  status        String   @default("COMPLETED")
+  pointsAwarded Int      @default(50)
+  referrerId    String
+  referredId    String
+  createdAt     DateTime @default(now())
+  referred      User     @relation("referred", fields: [referredId], references: [id])
+  referrer      User     @relation("referrer", fields: [referrerId], references: [id])
 }
-
-// ========== Phase 23: Campaigns ==========
 
 model Campaign {
-  id          String   @id @default(uuid())
+  id          String    @id @default(uuid())
   title       String
   message     String
-  targetRole  String?  // null = all, or STUDENT, DRIVER, etc.
-  targetUni   String?  // null = all universities
-  status      String   @default("DRAFT") // DRAFT, SENT, SCHEDULED
+  targetRole  String?
+  targetUni   String?
+  status      String    @default("DRAFT")
   sentAt      DateTime?
   scheduledAt DateTime?
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }
-
-// ========== Notifications ==========
 
 model Notification {
   id        String   @id @default(uuid())
   title     String
   message   String
-  type      String   @default("GENERAL") // GENERAL, CAMPAIGN, REFERRAL, ORDER, SYSTEM
+  type      String   @default("GENERAL")
   isRead    Boolean  @default(false)
-
   userId    String
-  user      User     @relation(fields: [userId], references: [id])
-
   createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
 }
-
-// ========== Password Reset ==========
 
 model PasswordReset {
   id        String   @id @default(uuid())
@@ -317,528 +351,428 @@ model PasswordReset {
   email     String
   expiresAt DateTime
   used      Boolean  @default(false)
-
   createdAt DateTime @default(now())
 }
-
-// ========== Phase 48: Promotions & Coupons ==========
 
 model PromoCode {
-  id              String   @id @default(uuid())
-  code            String   @unique
-  discountType    String   // PERCENTAGE, FIXED
-  discountAmount  Float
-  maxUses         Int      @default(0) // 0 = unlimited
-  currentUses     Int      @default(0)
-  expiresAt       DateTime?
-  applicableType  String   // ALL, DELIVERY, TRANSPORT, HOUSING, SERVICES
-  isActive        Boolean  @default(true)
-  
-  orders          Order[]
-  transactions    Transaction[]
-
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id             String        @id @default(uuid())
+  code           String        @unique
+  discountType   String
+  discountAmount Float
+  maxUses        Int           @default(0)
+  currentUses    Int           @default(0)
+  expiresAt      DateTime?
+  applicableType String
+  isActive       Boolean       @default(true)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  orders         Order[]
+  transactions   Transaction[]
 }
-
-// ========== OTP Verification ==========
 
 model OTP {
-  id        String   @id @default(uuid())
-  identifier String  // email or phone
-  code      String   // 6 digits
-  expiresAt DateTime
-  used      Boolean  @default(false)
-
-  createdAt DateTime @default(now())
+  id         String   @id @default(uuid())
+  identifier String
+  code       String
+  expiresAt  DateTime
+  used       Boolean  @default(false)
+  createdAt  DateTime @default(now())
 }
 
-// ========== Home Services ==========
-
 model ServiceProvider {
-  id          String   @id @default(uuid())
+  id          String           @id @default(uuid())
   name        String
   phone       String
-  category    String   // PLUMBER, ELECTRICIAN, CARPENTER, AC_TECH, PAINTER, GENERAL
+  category    String
   description String?
-  priceRange  String?  // e.g. "150-300 EGP"
-  rating      Float    @default(0)
-  reviewCount Int      @default(0)
-  available   Boolean  @default(true)
-  verified    Boolean  @default(false)
+  priceRange  String?
+  rating      Float            @default(0)
+  reviewCount Int              @default(0)
+  available   Boolean          @default(true)
+  verified    Boolean          @default(false)
   imageUrl    String?
-  location    String?  @default("Assiut")
-
+  location    String?          @default("Assiut")
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
   bookings    ServiceBooking[]
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
 }
 
 model ServiceBooking {
-  id          String   @id @default(uuid())
-  status      String   @default("PENDING") // PENDING, CONFIRMED, IN_PROGRESS, COMPLETED, CANCELLED
-  date        String   // e.g. "2026-03-15"
-  timeSlot    String   // e.g. "10:00 AM - 12:00 PM"
-  notes       String?
-  rating      Int?     // 1-5 star rating after completion
-  review      String?
-
-  userId      String
-  user        User     @relation(fields: [userId], references: [id])
-
-  providerId  String
-  provider    ServiceProvider @relation(fields: [providerId], references: [id])
-
+  id           String          @id @default(uuid())
+  status       String          @default("PENDING")
+  date         String
+  timeSlot     String
+  notes        String?
+  rating       Int?
+  review       String?
+  userId       String
+  providerId   String
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  provider     ServiceProvider @relation(fields: [providerId], references: [id])
+  user         User            @relation(fields: [userId], references: [id])
   transactions Transaction[]
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
 }
 
-// ========== Housing Cleaning Services ==========
-
 model CleaningPackage {
-  id          String   @id @default(uuid())
-  name        String   // e.g. "Deep Clean", "Weekly Standard", "Move-in/Move-out"
+  id          String            @id @default(uuid())
+  name        String
   description String?
   price       Float
-  duration    String?  // e.g. "2-3 hours"
-  frequency   String   @default("ONE_TIME") // ONE_TIME, WEEKLY, BI_WEEKLY, MONTHLY
-  includes    String?  // JSON list of what's included
-  active      Boolean  @default(true)
-
+  duration    String?
+  frequency   String            @default("ONE_TIME")
+  includes    String?
+  active      Boolean           @default(true)
+  createdAt   DateTime          @default(now())
   bookings    CleaningBooking[]
-
-  createdAt   DateTime @default(now())
 }
 
 model CleaningBooking {
-  id          String   @id @default(uuid())
-  status      String   @default("PENDING") // PENDING, CONFIRMED, IN_PROGRESS, COMPLETED, CANCELLED
-  date        String
-  timeSlot    String
-  address     String
-  notes       String?
-  rating      Int?
-  review      String?
-
-  userId      String
-  user        User     @relation(fields: [userId], references: [id])
-
-  packageId   String
-  package     CleaningPackage @relation(fields: [packageId], references: [id])
-
+  id           String          @id @default(uuid())
+  status       String          @default("PENDING")
+  date         String
+  timeSlot     String
+  address      String
+  notes        String?
+  rating       Int?
+  review       String?
+  userId       String
+  packageId    String
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  package      CleaningPackage @relation(fields: [packageId], references: [id])
+  user         User            @relation(fields: [userId], references: [id])
   transactions Transaction[]
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
 }
-
-// ========== Phase 32: Audit Logs ==========
 
 model AuditLog {
   id        String   @id @default(uuid())
-  action    String   // e.g., "UPDATE_ROLE", "APPROVE_LISTING", "PRICE_CHANGE"
-  module    String   // e.g., "USERS", "HOUSING", "TRANSPORT", "FINANCE"
-  targetId  String?  // ID of the affected user, listing, or order
-  details   String?  // JSON stringified additional info
-
+  action    String
+  module    String
+  targetId  String?
+  details   String?
   adminId   String
-  admin     User     @relation("AdminAuditLogs", fields: [adminId], references: [id])
-
   createdAt DateTime @default(now())
+  admin     User     @relation("AdminAuditLogs", fields: [adminId], references: [id])
 }
 
-// ========== Phase 33-34: Core Transaction Engine ==========
-
 model Transaction {
-  id              String      @id @default(uuid())
-  txnCode         String      @unique // e.g. TXN-2026-XXXXXX
-  type            String      // e.g., "HOUSING", "TRANSPORT", "DELIVERY", "DEALS", "MEALS", "SERVICE"
-  status          String      @default("PENDING") // PENDING, CONFIRMED, IN_PROGRESS, COMPLETED, CANCELLED, REFUNDED
-  
-  userId          String
-  user            User        @relation(fields: [userId], references: [id])
-  
-  // Provider who fulfills this transaction (driver, merchant, landlord, etc.)
-  providerId      String?
-  
-  // Optional relations to specific modules
-  housingId       String?
-  housing         HousingListing? @relation(fields: [housingId], references: [id], onDelete: SetNull)
-  serviceBookingId String?
-  serviceBooking  ServiceBooking? @relation(fields: [serviceBookingId], references: [id], onDelete: SetNull)
-  cleaningBookingId String?
-  cleaningBooking CleaningBooking? @relation(fields: [cleaningBookingId], references: [id], onDelete: SetNull)
-  dealId          String?
-  deal            Deal?           @relation(fields: [dealId], references: [id], onDelete: SetNull)
-  mealId          String?
-  meal            Meal?           @relation(fields: [mealId], references: [id], onDelete: SetNull)
-
-  promoCodeId     String?
-  promoCode       PromoCode?      @relation(fields: [promoCodeId], references: [id], onDelete: SetNull)
-
-  amount          Float       @default(0.0)
-  currency        String      @default("EGP")
-  
-  // ===== IMMUTABLE PRICING SNAPSHOT (frozen at creation time) =====
-  basePriceSnapshot     Float?      // Original base price before fees/discounts
-  feeComponentsSnapshot String?     // JSON: fee breakdown at time of transaction
-  zoneSnapshot          String?     // Zone name at time of transaction
-  pricingRuleId         String?     // Which PricingRule was applied (reference, not FK)
-
-  // ===== IMMUTABLE COMMISSION SNAPSHOT (frozen at creation time) =====
-  commissionRuleId      String?     // Which CommissionRule was applied (reference, not FK)
-  unizyCommissionAmount Float       @default(0.0) // UniZy's cut in EGP
-  providerNetAmount     Float       @default(0.0) // Provider's payout in EGP
-  promoSubsidyAmount    Float       @default(0.0) // How much UniZy subsidized for promo
-  
-  notes           String?
-  
-  history         TransactionHistory[]
-  payments        Payment[]
-  refunds         Refund[]
-  dispatches      Dispatch[]
-
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  id                    String               @id @default(uuid())
+  txnCode               String               @unique
+  type                  String
+  status                String               @default("PENDING")
+  userId                String
+  providerId            String?
+  housingId             String?
+  serviceBookingId      String?
+  cleaningBookingId     String?
+  dealId                String?
+  mealId                String?
+  promoCodeId           String?
+  amount                Float                @default(0.0)
+  currency              String               @default("EGP")
+  subtotal              Float                @default(0.0)
+  discountTotal         Float                @default(0.0)
+  feesTotal             Float                @default(0.0)
+  deliveryFee           Float                @default(0.0)
+  grandTotal            Float                @default(0.0)
+  basePriceSnapshot     Float?
+  feeComponentsSnapshot String?
+  pricingSnapshot       String?
+  zoneSnapshot          String?
+  pricingRuleId         String?
+  commissionRuleId      String?
+  commissionSnapshot    String?
+  fxSnapshot            String?
+  unizyCommissionAmount Float                @default(0.0)
+  providerNetAmount     Float                @default(0.0)
+  promoSubsidyAmount    Float                @default(0.0)
+  notes                 String?
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+  dispatches            Dispatch[]
+  payments              Payment[]
+  refunds               Refund[]
+  cleaningBooking       CleaningBooking?     @relation(fields: [cleaningBookingId], references: [id])
+  deal                  Deal?                @relation(fields: [dealId], references: [id])
+  housing               HousingListing?      @relation(fields: [housingId], references: [id])
+  meal                  Meal?                @relation(fields: [mealId], references: [id])
+  promoCode             PromoCode?           @relation(fields: [promoCodeId], references: [id])
+  serviceBooking        ServiceBooking?      @relation(fields: [serviceBookingId], references: [id])
+  user                  User                 @relation(fields: [userId], references: [id])
+  history               TransactionHistory[]
 }
 
 model TransactionHistory {
-  id              String      @id @default(uuid())
-  transactionId   String
-  transaction     Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
-  
-  oldStatus       String?
-  newStatus       String
-  actorId         String      // User ID of who made the change
-  reason          String?     // Optional explanation for the change (e.g. cancellation reason)
-
-  createdAt       DateTime    @default(now())
+  id            String      @id @default(uuid())
+  transactionId String
+  oldStatus     String?
+  newStatus     String
+  actorId       String
+  reason        String?
+  createdAt     DateTime    @default(now())
+  transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
 }
 
-
 model Zone {
-  id          String        @id @default(uuid())
-  name        String        @unique
-  city        String?
-  isActive    Boolean       @default(true)
-  
-  pricingRules PricingRule[]
+  id              String           @id @default(uuid())
+  name            String           @unique
+  city            String?
+  isActive        Boolean          @default(true)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
   commissionRules CommissionRule[]
-  driverZones DriverZone[]
-  
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  driverZones     DriverZone[]
+  pricingRules    PricingRule[]
 }
 
 model PricingRule {
-  id            String      @id @default(uuid())
-  module        String      // HOUSING, TRANSPORT, DELIVERY, DEALS, MEALS, SERVICES, CLEANING
-  serviceType   String      // BASE_FARE, LISTING_FEE, COMMISSION, DELIV_FEE, etc.
-  basePrice     Float       @default(0)
-  feeComponents String?     // JSON string for complex fee structures
-  
-  zoneId        String?     // Optional: If null, applies globally
-  zone          Zone?       @relation(fields: [zoneId], references: [id], onDelete: SetNull)
-  
-  effectiveDate DateTime    @default(now())
-  isActive      Boolean     @default(true)
-  
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  id            String   @id @default(uuid())
+  module        String
+  serviceType   String
+  basePrice     Float    @default(0)
+  feeComponents String?
+  zoneId        String?
+  effectiveDate DateTime @default(now())
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  zone          Zone?    @relation(fields: [zoneId], references: [id])
 }
 
 model CommissionRule {
-  id                    String      @id @default(uuid())
-  module                String      // HOUSING, TRANSPORT, DELIVERY, DEALS, MEALS, SERVICES, CLEANING
-  providerType          String      // DRIVER, MERCHANT, LANDLORD, CLEANER, PROVIDER
-  unizySharePercent     Float       @default(0) // e.g. 15.5 for 15.5%
-  providerSharePercent  Float       @default(100) // The remaining cut
-  promoSubsidyImpact    String?     // Optional JSON: e.g. {"whoPaysDiscount": "UNIZY", "amount": 100}
-
-  zoneId                String?     
-  zone                  Zone?       @relation(fields: [zoneId], references: [id], onDelete: SetNull)
-
-  effectiveDate         DateTime    @default(now())
-  isActive              Boolean     @default(true)
-
-  createdAt             DateTime    @default(now())
-  updatedAt             DateTime    @updatedAt
+  id                   String   @id @default(uuid())
+  module               String
+  providerType         String
+  unizySharePercent    Float    @default(0)
+  providerSharePercent Float    @default(100)
+  promoSubsidyImpact   String?
+  zoneId               String?
+  effectiveDate        DateTime @default(now())
+  isActive             Boolean  @default(true)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  zone                 Zone?    @relation(fields: [zoneId], references: [id])
 }
 
 model Payment {
   id              String      @id @default(uuid())
-  
   transactionId   String
-  transaction     Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
-  
   amount          Float       @default(0)
   currency        String      @default("EGP")
-  method          String      // COD, CASH, CARD, WALLET
-  status          String      @default("PENDING") // PENDING, PAID, FAILED, REFUNDED, EXPIRED
-  
-  // Payment gateway fields
-  idempotencyKey  String?     @unique // Prevents double charges
-  gatewayRef      String?     // External reference from Paymob/Stripe
-  gatewayProvider String?     // "PAYMOB", "STRIPE", "CASH", etc.
-  
+  method          String
+  status          String      @default("PENDING")
+  idempotencyKey  String?     @unique
+  gatewayRef      String?
+  gatewayProvider String?
   paidAt          DateTime?
   failedReason    String?
-  expiresAt       DateTime?   // Auto-cancel after this time
-  
+  expiresAt       DateTime?
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
+  transaction     Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
 }
-
-// ========== Phase 38: Refunds & Adjustments ==========
 
 model Refund {
-  id              String      @id @default(uuid())
-  
-  transactionId   String
-  transaction     Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
-  
-  amount          Float
-  currency        String      @default("EGP")
-  type            String      @default("FULL") // FULL, PARTIAL
-  reason          String
-  status          String      @default("REQUESTED") // REQUESTED, APPROVED, REJECTED, PROCESSED
-  
-  requestedById   String
-  requestedBy     User        @relation("RefundRequests", fields: [requestedById], references: [id])
-  
-  approvedById    String?
-  approvedBy      User?       @relation("RefundApprovals", fields: [approvedById], references: [id])
-  
-  processedAt     DateTime?
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  id             String       @id @default(uuid())
+  transactionId  String?
+  orderId        String?
+  amount         Float
+  amountSnapshot Float?
+  currency       String       @default("EGP")
+  type           String       @default("FULL")
+  reason         String
+  status         String       @default("REQUESTED")
+  requestedById  String
+  approvedById   String?
+  processedById  String?
+  processedAt    DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  approvedBy     User?        @relation("RefundApprovals", fields: [approvedById], references: [id])
+  order          Order?       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  processedBy    User?        @relation("RefundProcessor", fields: [processedById], references: [id])
+  requestedBy    User         @relation("RefundRequests", fields: [requestedById], references: [id])
+  transaction    Transaction? @relation(fields: [transactionId], references: [id], onDelete: Cascade)
 }
 
-// ========== Phase 39: Settlement & Payout Engine ==========
-
 model Settlement {
-  id              String      @id @default(uuid())
-  
-  providerId      String
-  provider        User        @relation("ProviderSettlements", fields: [providerId], references: [id])
-  
-  periodStart     DateTime
-  periodEnd       DateTime
-  
-  grossAmount     Float       @default(0)
-  commissionAmount Float      @default(0)
-  netAmount       Float       @default(0)
-  currency        String      @default("EGP")
-  
-  status          String      @default("PENDING") // PENDING, PROCESSING, PAID, FAILED
-  
-  payouts         Payout[]
-  
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  id               String   @id @default(uuid())
+  providerId       String
+  periodStart      DateTime
+  periodEnd        DateTime
+  grossAmount      Float    @default(0)
+  commissionAmount Float    @default(0)
+  netAmount        Float    @default(0)
+  currency         String   @default("EGP")
+  status           String   @default("PENDING")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  payouts          Payout[]
+  provider         User     @relation("ProviderSettlements", fields: [providerId], references: [id])
 }
 
 model Payout {
-  id              String      @id @default(uuid())
-  
-  settlementId    String
-  settlement      Settlement  @relation(fields: [settlementId], references: [id], onDelete: Cascade)
-  
-  amount          Float
-  currency        String      @default("EGP")
-  method          String      // BANK_TRANSFER, MOBILE_WALLET, CASH
-  reference       String?     // External transaction reference
-  status          String      @default("PENDING") // PENDING, PROCESSING, PAID, FAILED
-  
-  processedById   String?
-  processedBy     User?       @relation("PayoutProcessor", fields: [processedById], references: [id])
-  
-  paidAt          DateTime?
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  id            String     @id @default(uuid())
+  settlementId  String
+  amount        Float
+  currency      String     @default("EGP")
+  method        String
+  reference     String?
+  status        String     @default("PENDING")
+  processedById String?
+  paidAt        DateTime?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  processedBy   User?      @relation("PayoutProcessor", fields: [processedById], references: [id])
+  settlement    Settlement @relation(fields: [settlementId], references: [id], onDelete: Cascade)
 }
-
-// ========== Phase 40: Dispatch System ==========
 
 model Dispatch {
-  id              String      @id @default(uuid())
-  
-  orderId         String
-  order           Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  
-  transactionId   String?
-  transaction     Transaction? @relation(fields: [transactionId], references: [id], onDelete: Cascade)
-  
-  driverId        String?
-  driver          User?       @relation("DriverDispatches", fields: [driverId], references: [id])
-  
-  status          String      @default("PENDING") // PENDING, ASSIGNED, ACCEPTED, DECLINED, FAILED, COMPLETED, CANCELLED
-  assignedById    String?     // ID of the admin who manually assigned, if applicable
-  delayReason     String?
-  isOverride      Boolean     @default(false)
-  
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  id            String       @id @default(uuid())
+  orderId       String
+  transactionId String?
+  driverId      String?
+  status        String       @default("PENDING")
+  assignedById  String?
+  delayReason   String?
+  isOverride    Boolean      @default(false)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  driver        User?        @relation("DriverDispatches", fields: [driverId], references: [id])
+  order         Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  transaction   Transaction? @relation(fields: [transactionId], references: [id], onDelete: Cascade)
 }
-
-// ========== Phase 42: SLA Rules & Monitoring ==========
 
 model SLARule {
   id               String      @id @default(uuid())
-  module           String      // "TRANSPORT", "DELIVERY", "HOUSING", "SUPPORT"
-  metric           String      // "ASSIGNMENT_TIME", "RESPONSE_TIME", "RESOLUTION_TIME"
+  module           String
+  metric           String
   thresholdMinutes Int
-  breachAction     String      // "ALERT_ADMIN", "AUTO_CANCEL", "ESCALATE"
+  breachAction     String
   active           Boolean     @default(true)
-  breaches         SLABreach[]
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
+  breaches         SLABreach[]
 }
 
 model SLABreach {
-  id         String    @id @default(uuid())
-  ruleId     String
-  rule       SLARule   @relation(fields: [ruleId], references: [id], onDelete: Cascade)
-  targetId   String    // ID of the breached transaction/order
-  status     String    @default("OPEN") // "OPEN", "RESOLVED"
-  resolvedAt DateTime?
-  resolvedById String? // Admin who resolved it
-  notes      String?   // Resolution notes
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  id           String    @id @default(uuid())
+  ruleId       String
+  targetId     String
+  status       String    @default("OPEN")
+  resolvedAt   DateTime?
+  resolvedById String?
+  notes        String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  rule         SLARule   @relation(fields: [ruleId], references: [id], onDelete: Cascade)
 }
-
-// ========== Phase 4: Driver-Zone Linking ==========
 
 model DriverZone {
   id        String   @id @default(uuid())
   driverId  String
   zoneId    String
-  zone      Zone     @relation(fields: [zoneId], references: [id])
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
-  
+  zone      Zone     @relation(fields: [zoneId], references: [id])
+
   @@unique([driverId, zoneId])
 }
 
-// ========== Phase 44: End-to-End Tracking Models ==========
-
 model SavedHousing {
-  id               String          @id @default(uuid())
+  id               String         @id @default(uuid())
   userId           String
-  user             User            @relation("SavedHousing", fields: [userId], references: [id])
   housingListingId String
-  listing          HousingListing  @relation(fields: [housingListingId], references: [id])
-  
-  createdAt        DateTime        @default(now())
+  createdAt        DateTime       @default(now())
+  listing          HousingListing @relation(fields: [housingListingId], references: [id])
+  user             User           @relation("SavedHousing", fields: [userId], references: [id])
 
   @@unique([userId, housingListingId])
 }
 
 model HousingRequest {
-  id               String          @id @default(uuid())
+  id               String         @id @default(uuid())
   userId           String
-  user             User            @relation("HousingRequests", fields: [userId], references: [id])
   housingListingId String
-  listing          HousingListing  @relation(fields: [housingListingId], references: [id])
-  
-  type             String          // VIEWING, BOOKING, INQUIRY
-  status           String          @default("PENDING") // PENDING, APPROVED, REJECTED, COMPLETED
-  message          String?         // Optional message from the requester
-  date             DateTime?       // Requested date for viewing
-
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
+  type             String
+  status           String         @default("PENDING")
+  message          String?
+  date             DateTime?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  listing          HousingListing @relation(fields: [housingListingId], references: [id])
+  user             User           @relation("HousingRequests", fields: [userId], references: [id])
 }
-
-// ========== Phase 46: Trust, Reporting, and Abuse Handling ==========
 
 model Report {
-  id          String   @id @default(uuid())
-  type        String   // HOUSING, MERCHANT, DRIVER, HUB_POST, USER
-  targetId    String   // ID of the listing, merchant, post, etc.
-  
-  reason      String   // SCAM, HARASSMENT, INACCURATE, OFFENSIVE, OTHER
-  details     String?  // Additional context from the reporter
-  
-  status      String   @default("PENDING") // PENDING, INVESTIGATING, RESOLVED, DISMISSED
-  actionTaken String?  // WARNING, CONTENT_REMOVED, USER_BANNED, NONE
-  
-  reporterId  String
-  reporter    User     @relation("Reporter", fields: [reporterId], references: [id])
-  
-  // Optional: If the report is specifically against a user
+  id           String   @id @default(uuid())
+  type         String
+  targetId     String
+  reason       String
+  details      String?
+  status       String   @default("PENDING")
+  actionTaken  String?
+  reporterId   String
   targetUserId String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  reporter     User     @relation("Reporter", fields: [reporterId], references: [id])
   targetUser   User?    @relation("TargetUser", fields: [targetUserId], references: [id])
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
 }
 
-// ========== Phase 3: Rewards Engine ==========
+model RewardAccount {
+  id             String   @id @default(uuid())
+  userId         String   @unique
+  currentBalance Float    @default(0.0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
 
 model RewardTransaction {
-  id              String   @id @default(uuid())
-  type            String   // EARN, SPEND, REVERSE, EXPIRE, ADMIN_ADJUST
-  points          Float    // Positive for earn, negative for spend/reverse/expire
-  description     String?  // "Earned from TXN-2026-XXXXXX" etc.
-  
-  userId          String
-  
-  // Reference to the original financial transaction (nullable for admin adjustments)
-  transactionId   String?
-  
-  // Admin who made the adjustment (for ADMIN_ADJUST type)
-  adminId         String?
-  
-  // Expiry tracking
-  expiresAt       DateTime? // When these earned points expire
-  expired         Boolean   @default(false) // Whether this batch has been expired
-  
-  createdAt       DateTime @default(now())
+  id            String    @id @default(uuid())
+  type          String
+  points        Float
+  description   String?
+  userId        String
+  transactionId String?
+  orderId       String?
+  adminId       String?
+  expiresAt     DateTime?
+  expired       Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  order         Order?    @relation(fields: [orderId], references: [id])
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-// ========== Phase 3: Wallet System ==========
-
 model Wallet {
-  id        String   @id @default(uuid())
-  userId    String   @unique
-  balance   Float    @default(0.0)
-  currency  String   @default("EGP")
-  
+  id                 String              @id @default(uuid())
+  userId             String              @unique
+  balance            Float               @default(0.0)
+  currency           String              @default("EGP")
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
   walletTransactions WalletTransaction[]
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }
 
 model WalletTransaction {
-  id          String   @id @default(uuid())
-  type        String   // TOP_UP, SPEND, REFUND_CREDIT, WITHDRAWAL
-  amount      Float    // Positive for credit, negative for debit
-  description String?
-  
-  walletId    String
-  wallet      Wallet   @relation(fields: [walletId], references: [id])
-  
-  // Reference to the original transaction (for SPEND / REFUND_CREDIT)
+  id            String   @id @default(uuid())
+  type          String
+  amount        Float
+  description   String?
+  walletId      String
   transactionId String?
-  
-  createdAt   DateTime @default(now())
+  createdAt     DateTime @default(now())
+  wallet        Wallet   @relation(fields: [walletId], references: [id])
 }
-
-// ========== Phase 5: Analytics Events ==========
 
 model AnalyticsEvent {
   id        String   @id @default(uuid())
-  event     String   // EVENT_NAME e.g. "ORDER_CREATED", "DEAL_VIEWED"
+  event     String
   userId    String
-  module    String?  // TRANSPORT, DELIVERY, HOUSING, etc.
-  metadata  String?  // JSON blob for additional data
+  module    String?
+  metadata  String?
   sessionId String?
   createdAt DateTime @default(now())
 }
-

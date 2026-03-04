@@ -7,9 +7,12 @@ import Image from 'next/image';
 import ThemeLangControls from '@/components/ThemeLangControls';
 import { registerUser } from '@/app/actions/auth';
 import { requestOTP } from '@/app/actions/verification';
+import { useLanguage } from '@/i18n/LanguageProvider';
 
 export default function Register() {
     const router = useRouter();
+    const { dict } = useLanguage();
+    const a = dict?.auth || {};
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -84,8 +87,8 @@ export default function Register() {
                     <div className="w-16 h-16 bg-gradient-to-tr from-brand-600 to-cyan-400 rounded-2xl mx-auto flex items-center justify-center shadow-xl shadow-brand-500/40 mb-4 transform cursor-pointer">
                         <Image src="/images/unizy-logo-icon.png" alt="UniZy" width={32} height={32} className="object-contain" />
                     </div>
-                    <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tighter">Join UniZy</h1>
-                    <p className="text-gray-500 dark:text-gray-400 font-bold mt-2 text-xs uppercase tracking-widest italic">The Student Super App Experience</p>
+                    <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tighter">{a.signup || 'Join UniZy'}</h1>
+                    <p className="text-gray-500 dark:text-gray-400 font-bold mt-2 text-xs uppercase tracking-widest italic">{a.createAccountSub || 'The Student Super App Experience'}</p>
                 </div>
 
                 <form onSubmit={handleRegister} className="bg-white/70 dark:bg-unizy-dark/70 backdrop-blur-2xl rounded-[2.5rem] p-8 shadow-2xl border border-white/50 dark:border-white/5 animate-fade-in-up">
@@ -98,7 +101,7 @@ export default function Register() {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                         <div>
-                            <label className="block text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 ml-1">Full Name</label>
+                            <label className="block text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 ml-1">{a.name || 'Full Name'}</label>
                             <input
                                 type="text"
                                 value={name}
@@ -109,7 +112,7 @@ export default function Register() {
                             />
                         </div>
                         <div>
-                            <label className="block text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 ml-1">Email</label>
+                            <label className="block text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 ml-1">{a.email || 'Email'}</label>
                             <input
                                 type="email"
                                 value={email}
@@ -122,7 +125,7 @@ export default function Register() {
                     </div>
 
                     <div className="mb-4">
-                        <label className="block text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 ml-1">Phone Number</label>
+                        <label className="block text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 ml-1">{a.phone || 'Phone Number'}</label>
                         <input
                             type="tel"
                             value={phone}
@@ -138,7 +141,7 @@ export default function Register() {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                         <div>
-                            <label className="block text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 ml-1">Password</label>
+                            <label className="block text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 ml-1">{a.password || 'Password'}</label>
                             <input
                                 type="password"
                                 value={password}
@@ -150,16 +153,16 @@ export default function Register() {
                             />
                         </div>
                         <div>
-                            <label className="block text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 ml-1">I am a...</label>
+                            <label className="block text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 ml-1">{a.role || 'I am a...'}</label>
                             <select
                                 value={role}
                                 onChange={(e) => setRole(e.target.value)}
                                 className="w-full px-5 py-3 rounded-2xl bg-gray-50 dark:bg-unizy-navy/50 border-2 border-transparent focus:bg-white dark:focus:bg-unizy-navy focus:border-brand-500 focus:ring-0 outline-none transition-all text-gray-900 dark:text-white font-bold appearance-none cursor-pointer"
                             >
-                                <option value="STUDENT">Student</option>
-                                <option value="PROVIDER">Housing Provider</option>
-                                <option value="MERCHANT">Local Merchant</option>
-                                <option value="DRIVER">Delivery / Ride Driver</option>
+                                <option value="STUDENT">{a.student || 'Student'}</option>
+                                <option value="PROVIDER">{a.housingProvider || 'Housing Provider'}</option>
+                                <option value="MERCHANT">{a.merchant || 'Local Merchant'}</option>
+                                <option value="DRIVER">{a.driver || 'Delivery / Ride Driver'}</option>
                                 <option value="ADMIN">Administrator</option>
                             </select>
                         </div>
@@ -236,7 +239,7 @@ export default function Register() {
                     </button>
 
                     <p className="text-center text-sm font-bold text-gray-500 dark:text-gray-400 mt-8">
-                        Already have an account? <Link href="/login" className="text-brand-600 font-extrabold hover:underline">Sign In</Link>
+                        {a.alreadyHaveAccount || 'Already have an account?'} <Link href="/login" className="text-brand-600 font-extrabold hover:underline">{a.login || 'Sign In'}</Link>
                     </p>
                 </form>
             </div>

@@ -6,9 +6,12 @@ import Link from 'next/link';
 import Image from 'next/image';
 import ThemeLangControls from '@/components/ThemeLangControls';
 import { loginUser } from '@/app/actions/auth';
+import { useLanguage } from '@/i18n/LanguageProvider';
 
 export default function Login() {
     const router = useRouter();
+    const { dict, locale } = useLanguage();
+    const a = dict?.auth || {};
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -67,7 +70,7 @@ export default function Login() {
                         <Image src="/images/unizy-logo-icon.png" alt="UniZy" width={48} height={48} className="object-contain" />
                     </div>
                     <h1 className="text-4xl font-black text-gray-900 dark:text-white tracking-tighter">UniZy</h1>
-                    <p className="text-gray-500 dark:text-gray-400 font-bold mt-3 text-sm uppercase tracking-widest italic">Campus Life, Simplified</p>
+                    <p className="text-gray-500 dark:text-gray-400 font-bold mt-3 text-sm uppercase tracking-widest italic">{dict?.landing?.heroSub ? dict.common.appName : 'Campus Life, Simplified'}</p>
                 </div>
 
                 <form onSubmit={handleLogin} className="bg-white/70 dark:bg-unizy-dark/70 backdrop-blur-2xl rounded-[2.5rem] p-10 shadow-2xl border border-white/50 dark:border-white/5 animate-fade-in-up">
@@ -79,7 +82,7 @@ export default function Login() {
                     )}
 
                     <div className="mb-6">
-                        <label className="block text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3 ml-1">Email</label>
+                        <label className="block text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3 ml-1">{a.email || 'Email'}</label>
                         <input
                             type="text"
                             value={username}
@@ -91,7 +94,7 @@ export default function Login() {
                     </div>
 
                     <div className="mb-8">
-                        <label className="block text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3 ml-1">Password</label>
+                        <label className="block text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3 ml-1">{a.password || 'Password'}</label>
                         <input
                             type="password"
                             value={password}
@@ -105,9 +108,9 @@ export default function Login() {
                     <div className="flex items-center justify-between mb-10 px-1">
                         <label className="flex items-center gap-3 cursor-pointer group">
                             <input type="checkbox" className="w-5 h-5 rounded-lg border-gray-200 dark:border-gray-700 text-brand-600 focus:ring-brand-500 bg-white dark:bg-unizy-navy" />
-                            <span className="text-sm font-bold text-gray-600 dark:text-gray-400 group-hover:text-brand-600 transition-colors">Remember me</span>
+                            <span className="text-sm font-bold text-gray-600 dark:text-gray-400 group-hover:text-brand-600 transition-colors">{a.rememberMe || 'Remember me'}</span>
                         </label>
-                        <Link href="/forgot-password" className="text-sm font-black text-brand-600 hover:text-brand-700 tracking-tighter">Forgot Password?</Link>
+                        <Link href="/forgot-password" className="text-sm font-black text-brand-600 hover:text-brand-700 tracking-tighter">{a.forgotPassword || 'Forgot Password?'}</Link>
                     </div>
 
                     <button
@@ -118,12 +121,12 @@ export default function Login() {
                         {isLoading ? (
                             <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                         ) : (
-                            <>Sign In <span className="text-lg">→</span></>
+                            <>{a.login || 'Sign In'} <span className="text-lg">{locale === 'ar' ? '←' : '→'}</span></>
                         )}
                     </button>
 
                     <p className="text-center text-sm font-bold text-gray-500 dark:text-gray-400 mt-10">
-                        New on campus? <Link href="/register" className="text-brand-600 font-extrabold hover:underline">Join UniZy</Link>
+                        {a.dontHaveAccount || 'New on campus?'} <Link href="/register" className="text-brand-600 font-extrabold hover:underline">{a.signup || 'Join UniZy'}</Link>
                     </p>
 
                 </form>
@@ -134,11 +137,11 @@ export default function Login() {
                         Portal Access:
                     </p>
                     <div className="flex items-center justify-center gap-3 text-[11px] font-black uppercase tracking-wider">
-                        <Link href="/driver" className="text-brand-600 hover:underline">Driver</Link>
+                        <Link href="/driver" className="text-brand-600 hover:underline">{a.driver || 'Driver'}</Link>
                         <span className="text-gray-300">|</span>
-                        <Link href="/provider" className="text-brand-600 hover:underline">Landlord</Link>
+                        <Link href="/provider" className="text-brand-600 hover:underline">{a.housingProvider || 'Landlord'}</Link>
                         <span className="text-gray-300">|</span>
-                        <Link href="/merchant" className="text-brand-600 hover:underline">Merchant</Link>
+                        <Link href="/merchant" className="text-brand-600 hover:underline">{a.merchant || 'Merchant'}</Link>
                     </div>
                 </div>
             </div>

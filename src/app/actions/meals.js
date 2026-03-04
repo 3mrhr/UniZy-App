@@ -67,8 +67,7 @@ export async function getMealById(id) {
                 merchant: {
                     select: {
                         name: true,
-                        phone: true,
-                        merchantDetails: true // Assuming merchantDetails exists or handle gracefully
+                        phone: true
                     }
                 }
             }

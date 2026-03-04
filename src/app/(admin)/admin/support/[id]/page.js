@@ -97,7 +97,7 @@ export default function AdminTicketDetailPage() {
 
     if (isLoading) {
         return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center font-bold text-gray-400">
+            <div className="min-h-screen bg-gray-50 dark:bg-unizy-navy flex items-center justify-center font-bold text-gray-400 dark:text-gray-500">
                 <RefreshCw className="w-8 h-8 animate-spin text-unizy-primary mb-2" />
                 Loading Ticket...
             </div>
@@ -110,23 +110,23 @@ export default function AdminTicketDetailPage() {
     const statuses = ['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'];
 
     return (
-        <div className="min-h-screen bg-gray-50 flex flex-col h-screen overflow-hidden">
+        <div className="min-h-screen bg-gray-50 dark:bg-unizy-navy flex flex-col h-screen overflow-hidden">
             {/* Admin Header */}
-            <header className="bg-white border-b border-gray-100 py-4 px-8 shrink-0 z-10">
+            <header className="bg-white dark:bg-unizy-dark border-b border-gray-100 dark:border-white/5 py-4 px-8 shrink-0 z-10">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                        <button onClick={() => router.push('/admin/support')} className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors">
-                            <ChevronLeft className="w-5 h-5 text-gray-900" />
+                        <button onClick={() => router.push('/admin/support')} className="p-2 rounded-xl bg-gray-100 dark:bg-unizy-navy hover:bg-gray-200 dark:hover:bg-white/10 transition-colors">
+                            <ChevronLeft className="w-5 h-5 text-gray-900 dark:text-white" />
                         </button>
                         <div>
                             <div className="flex items-center gap-2">
-                                <h1 className="text-lg font-black text-gray-900">{ticket.subject}</h1>
+                                <h1 className="text-lg font-black text-gray-900 dark:text-white">{ticket.subject}</h1>
                                 <span className={`text-[10px] font-black px-2 py-0.5 rounded shadow-sm ${ticket.priority === 'URGENT' ? 'bg-red-500 text-white' :
-                                        ticket.priority === 'HIGH' ? 'bg-orange-500 text-white' :
-                                            'bg-gray-200 text-gray-600'
+                                    ticket.priority === 'HIGH' ? 'bg-orange-500 text-white' :
+                                        'bg-gray-200 text-gray-600'
                                     }`}>{ticket.priority}</span>
                             </div>
-                            <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-0.5">Ticket ID: {ticket.id}</p>
+                            <p className="text-xs text-gray-400 dark:text-gray-500 font-bold uppercase tracking-widest mt-0.5">Ticket ID: {ticket.id}</p>
                         </div>
                     </div>
 
@@ -140,7 +140,7 @@ export default function AdminTicketDetailPage() {
                             value={ticket.status}
                             onChange={(e) => handleStatusUpdate(e.target.value)}
                             disabled={isUpdatingStatus}
-                            className="bg-gray-50 border border-gray-100 rounded-xl px-4 py-2 text-sm font-black text-gray-600 focus:ring-2 focus:ring-unizy-primary"
+                            className="bg-gray-50 dark:bg-unizy-navy border border-gray-100 dark:border-white/10 rounded-xl px-4 py-2 text-sm font-black text-gray-600 dark:text-gray-300 focus:ring-2 focus:ring-unizy-primary"
                         >
                             {statuses.map(s => <option key={s} value={s}>{s}</option>)}
                         </select>
@@ -150,14 +150,14 @@ export default function AdminTicketDetailPage() {
 
             <div className="flex-1 flex overflow-hidden">
                 {/* Main Content (Chat) */}
-                <main className="flex-1 flex flex-col bg-white overflow-hidden border-r border-gray-100">
+                <main className="flex-1 flex flex-col bg-white dark:bg-unizy-dark overflow-hidden border-r border-gray-100 dark:border-white/5">
                     <div className="flex-1 overflow-y-auto p-6 space-y-6">
                         {/* Initial Description */}
-                        <div className="bg-gray-50 p-6 rounded-3xl mb-10 border border-gray-100">
+                        <div className="bg-gray-50 dark:bg-unizy-navy/50 p-6 rounded-3xl mb-10 border border-gray-100 dark:border-white/5">
                             <div className="flex items-center gap-2 mb-4 text-[10px] font-black uppercase tracking-widest text-unizy-primary">
                                 <Flag size={14} /> Initial Complaint
                             </div>
-                            <p className="text-sm text-gray-700 leading-relaxed font-bold">
+                            <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed font-bold">
                                 {ticket.description}
                             </p>
                         </div>
@@ -168,8 +168,8 @@ export default function AdminTicketDetailPage() {
                             return (
                                 <div key={msg.id} className={`flex ${fromStaff ? 'justify-end' : 'justify-start'}`}>
                                     <div className={`max-w-[70%] rounded-3xl p-5 shadow-sm ${fromStaff
-                                            ? 'bg-indigo-600 text-white rounded-br-none'
-                                            : 'bg-gray-100 text-gray-800 rounded-bl-none border border-gray-200'
+                                        ? 'bg-indigo-600 text-white rounded-br-none'
+                                        : 'bg-gray-100 dark:bg-unizy-navy text-gray-800 dark:text-gray-200 rounded-bl-none border border-gray-200 dark:border-white/5'
                                         }`}>
                                         <div className="flex items-center gap-2 mb-2">
                                             <span className="text-[10px] font-black uppercase tracking-widest opacity-60">
@@ -188,9 +188,9 @@ export default function AdminTicketDetailPage() {
                     </div>
 
                     {/* Admin Input Area */}
-                    <div className="p-6 border-t border-gray-100 bg-white">
+                    <div className="p-6 border-t border-gray-100 dark:border-white/5 bg-white dark:bg-unizy-dark">
                         <form onSubmit={handleSendMessage} className="flex items-center gap-4">
-                            <button type="button" className="p-4 bg-gray-100 rounded-2xl text-gray-400 hover:text-gray-900 transition-colors">
+                            <button type="button" className="p-4 bg-gray-100 dark:bg-unizy-navy rounded-2xl text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
                                 <Paperclip size={20} />
                             </button>
                             <input
@@ -198,7 +198,7 @@ export default function AdminTicketDetailPage() {
                                 placeholder="Type your response to the student..."
                                 value={message}
                                 onChange={(e) => setMessage(e.target.value)}
-                                className="flex-1 bg-gray-50 border-none rounded-2xl py-4 px-6 text-sm font-medium focus:ring-2 focus:ring-unizy-primary"
+                                className="flex-1 bg-gray-50 dark:bg-unizy-navy border-none rounded-2xl py-4 px-6 text-sm font-medium dark:text-white focus:ring-2 focus:ring-unizy-primary"
                             />
                             <button
                                 type="submit"
@@ -214,8 +214,8 @@ export default function AdminTicketDetailPage() {
                 </main>
 
                 {/* Sidebar (User Info) */}
-                <aside className="w-80 bg-gray-50 p-8 overflow-y-auto hidden lg:block">
-                    <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-6">Requester Profile</h3>
+                <aside className="w-80 bg-gray-50 dark:bg-unizy-dark p-8 overflow-y-auto hidden lg:block">
+                    <h3 className="text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-6">Requester Profile</h3>
 
                     <div className="flex flex-col items-center mb-8">
                         <div className="w-20 h-20 rounded-full bg-indigo-100 flex items-center justify-center text-unizy-primary mb-4 border-4 border-white shadow-sm overflow-hidden">
@@ -223,30 +223,30 @@ export default function AdminTicketDetailPage() {
                                 <img src={ticket.user.profileImage} alt={ticket.user.name} className="w-full h-full object-cover" />
                             ) : <User size={32} />}
                         </div>
-                        <h4 className="font-black text-gray-900 text-center">{ticket.user.name}</h4>
-                        <p className="text-xs text-gray-500 font-bold">Standard Student</p>
+                        <h4 className="font-black text-gray-900 dark:text-white text-center">{ticket.user.name}</h4>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 font-bold">Standard Student</p>
                     </div>
 
                     <div className="space-y-6">
-                        <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
-                            <p className="text-[10px] font-black text-gray-400 uppercase mb-2">Contact Details</p>
+                        <div className="bg-white dark:bg-unizy-navy p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-white/5">
+                            <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase mb-2">Contact Details</p>
                             <div className="space-y-3">
-                                <div className="flex items-center gap-3 text-xs font-bold text-gray-700">
+                                <div className="flex items-center gap-3 text-xs font-bold text-gray-700 dark:text-gray-300">
                                     <Mail size={14} className="text-gray-400" />
                                     <span className="truncate">{ticket.user.email}</span>
                                 </div>
-                                <div className="flex items-center gap-3 text-xs font-bold text-gray-700">
+                                <div className="flex items-center gap-3 text-xs font-bold text-gray-700 dark:text-gray-300">
                                     <Phone size={14} className="text-gray-400" />
                                     <span>+20 123 456 789</span>
                                 </div>
-                                <div className="flex items-center gap-3 text-xs font-bold text-gray-700">
+                                <div className="flex items-center gap-3 text-xs font-bold text-gray-700 dark:text-gray-300">
                                     <Calendar size={14} className="text-gray-400" />
                                     <span>Joined {new Date(ticket.user.createdAt).toLocaleDateString()}</span>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="bg-orange-50 p-4 rounded-2xl border border-orange-100">
+                        <div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-2xl border border-orange-100 dark:border-orange-900/30">
                             <div className="flex items-center gap-2 mb-2">
                                 <AlertTriangle size={14} className="text-orange-500" />
                                 <span className="text-[10px] font-black text-orange-600 uppercase">Warning</span>
@@ -256,7 +256,7 @@ export default function AdminTicketDetailPage() {
                             </p>
                         </div>
 
-                        <button className="w-full py-4 text-xs font-black text-gray-500 hover:text-red-500 transition-colors uppercase tracking-widest border border-dashed border-gray-300 rounded-2xl">
+                        <button className="w-full py-4 text-xs font-black text-gray-500 dark:text-gray-400 hover:text-red-500 transition-colors uppercase tracking-widest border border-dashed border-gray-300 dark:border-white/10 rounded-2xl">
                             Ban User Account
                         </button>
                     </div>

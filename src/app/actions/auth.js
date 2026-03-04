@@ -3,6 +3,7 @@
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/session';
 import bcrypt from 'bcryptjs';
+import { logEvent } from './analytics';
 
 export async function loginUser(username, password) {
     try {
@@ -119,6 +120,9 @@ export async function registerUser(data) {
             email: newUser.email,
         };
         await session.save();
+
+        // Log analytics event
+        await logEvent('SIGNUP', newUser.id, { role: newUser.role });
 
         return { success: true, role: newUser.role };
     } catch (error) {

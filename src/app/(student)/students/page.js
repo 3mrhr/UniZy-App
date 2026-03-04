@@ -26,8 +26,8 @@ const QUICK_ACTIONS = [
 ];
 
 export default function StudentHome() {
-  const { language } = useLanguage();
-  const isRTL = language === 'ar-EG';
+  const { locale, dict } = useLanguage();
+  const isRTL = locale === 'ar';
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
