@@ -1,5 +1,3 @@
-import { jest } from '@jest/globals';
-
 // Mock the getCurrentUser action
 jest.mock('@/app/actions/auth', () => ({
   getCurrentUser: jest.fn(),
