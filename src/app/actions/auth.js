@@ -223,7 +223,6 @@ export async function requestPasswordReset(email) {
 
         // In production, send email with reset link
         // For now, return the token directly so the user can use it
-        console.log(`[DEV] Password reset token for ${email}: ${token}`);
 
         return { success: true, token, message: 'Reset token generated. Check server console in dev mode.' };
     } catch (error) {
