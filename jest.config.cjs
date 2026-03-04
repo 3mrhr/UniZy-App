@@ -11,6 +11,7 @@ const customJestConfig = {
   testEnvironment: 'jest-environment-jsdom',
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
+    '^uncrypto$': '<rootDir>/node_modules/uncrypto/dist/crypto.node.cjs',
   },
   modulePathIgnorePatterns: ['<rootDir>/.next/'],
   transformIgnorePatterns: [
