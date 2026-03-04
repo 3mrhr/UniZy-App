@@ -8,7 +8,7 @@ This repository contains the source code for the Minimum Viable Product (MVP), s
 
 ## 🚀 Features by Modules
 
-The application has been built across 7 iterative phases, establishing the "Demand Side" (Students/Admins) and the "Supply Side" (Providers).
+The application has been built across 8 iterative phases and is **Beta-Ready**. All primary screens are fully wired to the SQLite Prisma database.
 
 ### 1. Core Student App (The "Demand Side")
 *   **Premium Landing Page:** A high-conversion public entry point with animated service blocks.
@@ -102,8 +102,8 @@ To get the UniZy MVP running on your local machine, follow these steps:
     # Push the schema to create dev.db
     npx prisma db push
     
-    # (Optional) Seed the database with mock users and listings
-    npm run prisma:seed
+    # Seed the database with comprehensive mock users, merchants, and orders
+    npm run seed
     ```
 
 4.  **Start the Development Server:**
@@ -115,20 +115,20 @@ To get the UniZy MVP running on your local machine, follow these steps:
     Open your browser and navigate to `http://localhost:3000`.
 
 ### Testing User Roles
-You can test the different portals by navigating to `/login` and using these mock usernames (passwords can be anything for testing purposes right now):
-*   **superadmin** -> Admin Panel
-*   **driver** -> Driver Hub
-*   **landlord** -> Housing Provider Console
-*   **merchant** -> Merchant Dashboard
-*   **[Any other name]** -> Student Hub
+The application is strictly protected by role-based authorization. After seeding the database, log in at `/login` using the password `unizy2026` and any of these accounts:
+*   **Admin**: `admin@unizy.com` -> Admin Panel
+*   **Driver**: `driver1@unizy.com` -> Driver Hub
+*   **Provider**: `provider1@unizy.com` -> Housing Provider Console
+*   **Merchant**: `merchant_pizza@unizy.com` -> Merchant Dashboard
+*   **Student**: `student1@unizy.com` -> Student Hub
 
 ---
 
 ## 📅 Roadmap (Next Phases)
 
-*   **Phase 8: Backend API Wiring** - Connecting the Prisma SQLite queries directly to the React Server Components replacing all mock state variables.
-*   **Phase 9: Real-Time Services** - Websockets or polling for live driver tracking and immediate order updates.
+*   **Phase 9: Real-Time Services** - Websockets or polling optimizations for live driver tracking and immediate order updates.
 *   **Phase 10: Production Deployment** - Migrating the SQLite database to PostgreSQL on Vercel or Railway.
+*   **Phase 11: Production Payments** - Integrate Paymob or Stripe for live checkout instead of MVP stubs.
 
 ---
 
