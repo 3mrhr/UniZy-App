@@ -35,9 +35,21 @@ export async function updateNotificationPrefs(newPrefs) {
         const user = await getCurrentUser();
         if (!user) return { success: false, error: 'Not authenticated' };
 
+        // Input Validation
+        if (!newPrefs || typeof newPrefs !== 'object') {
+            return { success: false, error: 'Invalid preferences payload' };
+        }
+
+        const validPrefs = {
+            orders: Boolean(newPrefs.orders),
+            promos: Boolean(newPrefs.promos),
+            system: Boolean(newPrefs.system),
+            marketing: Boolean(newPrefs.marketing)
+        };
+
         await prisma.user.update({
             where: { id: user.id },
-            data: { notificationPrefs: newPrefs }
+            data: { notificationPrefs: validPrefs }
         });
 
         revalidatePath('/account/notifications');
