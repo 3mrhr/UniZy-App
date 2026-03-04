@@ -6,6 +6,7 @@ import Image from "next/image";
 import { useLanguage } from '@/i18n/LanguageProvider';
 import { useRouter } from 'next/navigation';
 import { getRideEstimate } from '@/app/actions/orders';
+import SOSButton from '@/components/SOSButton';
 
 export default function TransportPage() {
     const { dict } = useLanguage();
@@ -77,7 +78,13 @@ export default function TransportPage() {
                 <h1 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight leading-none">{t.title || "Transport"}</h1>
             </header>
 
-            <main className="flex-1 px-6 max-w-xl mx-auto w-full flex flex-col gap-8 pb-24">
+            <main className="flex-1 px-6 max-w-xl mx-auto w-full flex flex-col gap-8 pb-24 relative">
+
+                <SOSButton contextData={{
+                    location: 'Transport Browsing Page',
+                    pickup,
+                    destination
+                }} />
 
                 {/* Booking Form */}
                 <div className="flex flex-col gap-6 animate-fade-in-up">
