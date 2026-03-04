@@ -55,6 +55,7 @@ export async function loginUser(username, password) {
             role: user.role,
             name: user.name,
             email: user.email,
+            isVerified: user.isVerified || false,
             scopes: Array.isArray(parsedScopes) ? parsedScopes : [],
         };
         await session.save();
@@ -148,6 +149,7 @@ export async function registerUser(data) {
             role: newUser.role,
             name: newUser.name,
             email: newUser.email,
+            isVerified: newUser.isVerified || false,
         };
         await session.save();
 
@@ -174,12 +176,18 @@ export async function getCurrentUser() {
     try {
         const user = await prisma.user.findUnique({
             where: { id: session.user.id },
-            select: { status: true }
+            select: { status: true, isVerified: true }
         });
 
         if (!user || user.status !== 'ACTIVE') {
             session.destroy();
             return null;
+        }
+
+        // Sync isVerified in case it changed since login
+        if (session.user.isVerified !== user.isVerified) {
+            session.user.isVerified = user.isVerified;
+            await session.save();
         }
     } catch (e) {
         console.error("Session revalidation failed:", e);
