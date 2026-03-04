@@ -44,7 +44,28 @@ export async function createOrder(service, details, clientTotal, promoCodeStr = 
                     where: { id: { in: mealIds } },
                     include: { variantGroups: { include: { options: true } }, addonGroups: { include: { options: true } } }
                 });
-                const mealsMap = new Map(meals.map(m => [m.id, m]));
+                const mealsMap = new Map();
+                for (const m of meals) {
+                    const vGroupMap = new Map();
+                    for (const vg of m.variantGroups) {
+                        const optMap = new Map();
+                        for (const o of vg.options) {
+                            optMap.set(o.id, o);
+                        }
+                        vGroupMap.set(vg.id, { group: vg, options: optMap });
+                    }
+
+                    const aGroupMap = new Map();
+                    for (const ag of m.addonGroups) {
+                        const optMap = new Map();
+                        for (const o of ag.options) {
+                            optMap.set(o.id, o);
+                        }
+                        aGroupMap.set(ag.id, { group: ag, options: optMap });
+                    }
+
+                    mealsMap.set(m.id, { ...m, _vGroupMap: vGroupMap, _aGroupMap: aGroupMap });
+                }
 
                 for (const item of lineItems) {
                     const meal = mealsMap.get(item.mealId);
@@ -81,15 +102,18 @@ export async function createOrder(service, details, clientTotal, promoCodeStr = 
                     // Compute Variants
                     if (item.variants && item.variants.length > 0) {
                         for (const v of item.variants) {
-                            const group = meal.variantGroups.find(g => g.id === v.groupId);
-                            const opt = group?.options.find(o => o.id === v.optionId);
-                            if (opt && opt.isAvailable) {
-                                variantsTotal += opt.priceDelta;
-                                itemVariantSelections.push({
-                                    groupNameSnapshot: group.name,
-                                    optionNameSnapshot: opt.name,
-                                    priceDeltaSnapshot: opt.priceDelta
-                                });
+                            const groupData = meal._vGroupMap.get(v.groupId);
+                            if (groupData) {
+                                const group = groupData.group;
+                                const opt = groupData.options.get(v.optionId);
+                                if (opt && opt.isAvailable) {
+                                    variantsTotal += opt.priceDelta;
+                                    itemVariantSelections.push({
+                                        groupNameSnapshot: group.name,
+                                        optionNameSnapshot: opt.name,
+                                        priceDeltaSnapshot: opt.priceDelta
+                                    });
+                                }
                             }
                         }
                     }
@@ -97,15 +121,18 @@ export async function createOrder(service, details, clientTotal, promoCodeStr = 
                     // Compute Addons
                     if (item.addons && item.addons.length > 0) {
                         for (const a of item.addons) {
-                            const group = meal.addonGroups.find(g => g.id === a.groupId);
-                            const opt = group?.options.find(o => o.id === a.optionId);
-                            if (opt && opt.isAvailable) {
-                                addonsTotal += opt.priceDelta;
-                                itemAddonSelections.push({
-                                    groupNameSnapshot: group.name,
-                                    optionNameSnapshot: opt.name,
-                                    priceDeltaSnapshot: opt.priceDelta
-                                });
+                            const groupData = meal._aGroupMap.get(a.groupId);
+                            if (groupData) {
+                                const group = groupData.group;
+                                const opt = groupData.options.get(a.optionId);
+                                if (opt && opt.isAvailable) {
+                                    addonsTotal += opt.priceDelta;
+                                    itemAddonSelections.push({
+                                        groupNameSnapshot: group.name,
+                                        optionNameSnapshot: opt.name,
+                                        priceDeltaSnapshot: opt.priceDelta
+                                    });
+                                }
                             }
                         }
                     }
