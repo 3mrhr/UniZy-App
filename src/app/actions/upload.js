@@ -44,23 +44,6 @@ export async function uploadImage(dataUri, options = {}) {
 }
 
 /**
- * Delete an image from Cloudinary by public ID.
- */
-export async function deleteImage(publicId) {
-    try {
-        if (!publicId || !process.env.CLOUDINARY_API_KEY || process.env.CLOUDINARY_API_KEY === 'your_api_key') {
-            return { success: true };
-        }
-
-        await cloudinary.uploader.destroy(publicId);
-        return { success: true };
-    } catch (error) {
-        console.error('Delete image error:', error);
-        return { error: 'Failed to delete image.' };
-    }
-}
-
-/**
  * Upload a profile picture — optimized sizing for avatars.
  */
 export async function uploadProfilePicture(dataUri) {
