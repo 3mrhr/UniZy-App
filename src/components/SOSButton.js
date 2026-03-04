@@ -3,9 +3,32 @@
 import { useState } from 'react';
 import { Phone, Shield, MapPin, X, AlertTriangle } from 'lucide-react';
 
-export default function SOSButton() {
+import { createTransportSOS } from '@/app/actions/sos';
+
+export default function SOSButton({ transportOrderId, contextData }) {
     const [isOpen, setIsOpen] = useState(false);
     const [isCalling, setIsCalling] = useState(false);
+
+    const handleSOS = async () => {
+        setIsCalling(true);
+        try {
+            const result = await createTransportSOS({
+                transportOrderId,
+                message: 'Emergency SOS triggered',
+                contextData
+            });
+            if (result.success) {
+                alert('SOS Alert sent successfully. Help is on the way.');
+            } else {
+                alert('Failed to send SOS. Call emergency services immediately: 122');
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Failed to send SOS. Call emergency services immediately: 122');
+        } finally {
+            setIsCalling(false);
+        }
+    };
 
     const contacts = [
         { label: 'University Security', phone: '088-2412345', icon: Shield, color: 'bg-red-500' },
@@ -67,8 +90,11 @@ export default function SOSButton() {
 
                 {/* Share Location */}
                 <div className="px-4 pb-4">
-                    <button className="w-full bg-red-600 hover:bg-red-700 text-white font-black py-4 rounded-2xl shadow-lg shadow-red-500/30 transition-all active:scale-95 flex items-center justify-center gap-2">
-                        <MapPin size={18} /> Share Live Location
+                    <button
+                        onClick={handleSOS}
+                        disabled={isCalling}
+                        className={`w-full bg-red-600 hover:bg-red-700 text-white font-black py-4 rounded-2xl shadow-lg shadow-red-500/30 transition-all active:scale-95 flex items-center justify-center gap-2 ${isCalling ? 'opacity-70 cursor-not-allowed' : ''}`}>
+                        <MapPin size={18} /> {isCalling ? 'Sending Alert...' : 'Share Live Location & Send SOS'}
                     </button>
                 </div>
             </div>
