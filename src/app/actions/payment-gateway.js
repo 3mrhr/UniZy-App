@@ -62,8 +62,6 @@ export async function createPaymentIntent(transactionId, method = 'CARD', gatewa
         });
 
         // TODO: In production, call gateway API here and get gatewayRef
-        // const gatewayResult = await callGatewayAPI(payment, transaction);
-        // await prisma.payment.update({ where: { id: payment.id }, data: { gatewayRef: gatewayResult.ref } });
 
         return { success: true, payment };
     } catch (error) {
