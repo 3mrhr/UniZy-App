@@ -69,9 +69,7 @@ function MerchantDetailContent() {
                 notes: ''
             }));
 
-            // We still pass details for legacy compatibility, but lineItems is what the backend uses now for math
             const result = await createOrder('DELIVERY', {
-                vendor: merchant.name,
                 vendorId: merchant.id
             }, cartTotal, promoCode, lineItems);
 
