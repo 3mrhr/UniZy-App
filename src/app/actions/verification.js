@@ -1,5 +1,6 @@
 "use server";
 
+import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "./auth";
@@ -19,7 +20,7 @@ export async function requestOTP(identifier) {
         });
 
         // Generate random 6-digit code
-        const code = Math.floor(100000 + Math.random() * 900000).toString();
+        const code = crypto.randomInt(100000, 1000000).toString();
         const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
         await prisma.oTP.create({
