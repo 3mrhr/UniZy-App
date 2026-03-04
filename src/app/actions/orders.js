@@ -46,6 +46,38 @@ export async function createOrder(service, details, clientTotal, promoCodeStr = 
                 });
                 const mealsMap = new Map(meals.map(m => [m.id, m]));
 
+                const mealOptionMaps = new Map();
+
+                for (const meal of meals) {
+                    const variantGroupsMap = new Map();
+                    if (meal.variantGroups) {
+                        for (const group of meal.variantGroups) {
+                            const optMap = new Map();
+                            if (group.options) {
+                                for (const opt of group.options) {
+                                    optMap.set(opt.id, opt);
+                                }
+                            }
+                            variantGroupsMap.set(group.id, { group, optMap });
+                        }
+                    }
+
+                    const addonGroupsMap = new Map();
+                    if (meal.addonGroups) {
+                        for (const group of meal.addonGroups) {
+                            const optMap = new Map();
+                            if (group.options) {
+                                for (const opt of group.options) {
+                                    optMap.set(opt.id, opt);
+                                }
+                            }
+                            addonGroupsMap.set(group.id, { group, optMap });
+                        }
+                    }
+
+                    mealOptionMaps.set(meal.id, { variantGroupsMap, addonGroupsMap });
+                }
+
                 for (const item of lineItems) {
                     const meal = mealsMap.get(item.mealId);
 
@@ -78,15 +110,17 @@ export async function createOrder(service, details, clientTotal, promoCodeStr = 
                     let variantsTotal = 0;
                     let addonsTotal = 0;
 
+                    const optionMaps = mealOptionMaps.get(meal.id);
+
                     // Compute Variants
                     if (item.variants && item.variants.length > 0) {
                         for (const v of item.variants) {
-                            const group = meal.variantGroups.find(g => g.id === v.groupId);
-                            const opt = group?.options.find(o => o.id === v.optionId);
+                            const groupData = optionMaps.variantGroupsMap.get(v.groupId);
+                            const opt = groupData?.optMap.get(v.optionId);
                             if (opt && opt.isAvailable) {
                                 variantsTotal += opt.priceDelta;
                                 itemVariantSelections.push({
-                                    groupNameSnapshot: group.name,
+                                    groupNameSnapshot: groupData.group.name,
                                     optionNameSnapshot: opt.name,
                                     priceDeltaSnapshot: opt.priceDelta
                                 });
@@ -97,12 +131,12 @@ export async function createOrder(service, details, clientTotal, promoCodeStr = 
                     // Compute Addons
                     if (item.addons && item.addons.length > 0) {
                         for (const a of item.addons) {
-                            const group = meal.addonGroups.find(g => g.id === a.groupId);
-                            const opt = group?.options.find(o => o.id === a.optionId);
+                            const groupData = optionMaps.addonGroupsMap.get(a.groupId);
+                            const opt = groupData?.optMap.get(a.optionId);
                             if (opt && opt.isAvailable) {
                                 addonsTotal += opt.priceDelta;
                                 itemAddonSelections.push({
-                                    groupNameSnapshot: group.name,
+                                    groupNameSnapshot: groupData.group.name,
                                     optionNameSnapshot: opt.name,
                                     priceDeltaSnapshot: opt.priceDelta
                                 });
