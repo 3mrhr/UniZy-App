@@ -13,7 +13,7 @@ import { logAdminAction } from './audit';
 export async function checkSLABreaches() {
     try {
         const activeRules = await prisma.sLARule.findMany({
-            where: { isActive: true },
+            where: { active: true },
         });
 
         let breachesCreated = 0;
@@ -54,33 +54,43 @@ export async function checkSLABreaches() {
                 });
             }
 
-            for (const target of breachableTargets) {
-                // Check if breach already exists for this rule+target
-                const existing = await prisma.sLABreach.findFirst({
-                    where: { ruleId: rule.id, targetId: target.id },
+            if (breachableTargets.length === 0) continue;
+
+            const targetIds = breachableTargets.map(t => t.id);
+
+            // Bulk check for existing breaches
+            const existingBreaches = await prisma.sLABreach.findMany({
+                where: {
+                    ruleId: rule.id,
+                    targetId: { in: targetIds },
+                },
+                select: { targetId: true },
+            });
+
+            const existingTargetIds = new Set(existingBreaches.map(b => b.targetId));
+            const newTargets = targetIds.filter(id => !existingTargetIds.has(id));
+
+            if (newTargets.length > 0) {
+                // Bulk create breaches
+                await prisma.sLABreach.createMany({
+                    data: newTargets.map(targetId => ({
+                        ruleId: rule.id,
+                        targetId,
+                        status: 'OPEN',
+                    })),
                 });
 
-                if (!existing) {
-                    await prisma.sLABreach.create({
-                        data: {
-                            ruleId: rule.id,
-                            targetId: target.id,
-                            status: 'OPEN',
-                        },
-                    });
+                // Bulk create notifications
+                await prisma.notification.createMany({
+                    data: newTargets.map(targetId => ({
+                        type: 'SLA_BREACH',
+                        title: `SLA Breach: ${rule.name || rule.metric}`,
+                        message: `${rule.metric} threshold (${thresholdMinutes} min) exceeded for ${targetId}`,
+                        userId: 'SYSTEM',
+                    })),
+                });
 
-                    // Create admin notification
-                    await prisma.notification.create({
-                        data: {
-                            type: 'SLA_BREACH',
-                            title: `SLA Breach: ${rule.name}`,
-                            message: `${rule.metric} threshold (${thresholdMinutes} min) exceeded for ${target.id}`,
-                            userId: 'SYSTEM', // System notification — should go to admin
-                        },
-                    });
-
-                    breachesCreated++;
-                }
+                breachesCreated += newTargets.length;
             }
         }
 
