@@ -161,6 +161,11 @@ export async function createHousingListing(formData) {
 
 export async function getPendingListings() {
     try {
+        const user = await getCurrentUser();
+        if (!user || (user.role !== 'ADMIN_SUPER' && user.role !== 'ADMIN_HOUSING')) {
+            return [];
+        }
+
         const listings = await prisma.housingListing.findMany({
             where: { status: 'PENDING' },
             include: {
@@ -179,22 +184,27 @@ export async function getPendingListings() {
 
 export async function approveListing(id, adminId) {
     try {
+        const user = await getCurrentUser();
+        if (!user || (!user.role?.startsWith('ADMIN_') && user.role !== 'ADMIN_SUPER')) {
+            return { success: false, error: 'Unauthorized.' };
+        }
+
+        const actionAdminId = user.id;
+
         const listing = await prisma.housingListing.update({
             where: { id },
             data: { status: 'ACTIVE' }
         });
 
-        if (adminId) {
-            await prisma.auditLog.create({
-                data: {
-                    action: "APPROVE_LISTING",
-                    module: "HOUSING",
-                    targetId: listing.id,
-                    details: JSON.stringify({ action: "APPROVED" }),
-                    adminId,
-                }
-            });
-        }
+        await prisma.auditLog.create({
+            data: {
+                action: "APPROVE_LISTING",
+                module: "HOUSING",
+                targetId: listing.id,
+                details: JSON.stringify({ action: "APPROVED" }),
+                adminId: actionAdminId,
+            }
+        });
 
         revalidatePath('/admin/listings-moderation');
         revalidatePath('/housing');
@@ -207,22 +217,27 @@ export async function approveListing(id, adminId) {
 
 export async function rejectListing(id, adminId, reason = "Violates guidelines") {
     try {
+        const user = await getCurrentUser();
+        if (!user || (!user.role?.startsWith('ADMIN_') && user.role !== 'ADMIN_SUPER')) {
+            return { success: false, error: 'Unauthorized.' };
+        }
+
+        const actionAdminId = user.id;
+
         const listing = await prisma.housingListing.update({
             where: { id },
             data: { status: 'REJECTED' }
         });
 
-        if (adminId) {
-            await prisma.auditLog.create({
-                data: {
-                    action: "REJECT_LISTING",
-                    module: "HOUSING",
-                    targetId: listing.id,
-                    details: JSON.stringify({ reason }),
-                    adminId,
-                }
-            });
-        }
+        await prisma.auditLog.create({
+            data: {
+                action: "REJECT_LISTING",
+                module: "HOUSING",
+                targetId: listing.id,
+                details: JSON.stringify({ reason }),
+                adminId: actionAdminId,
+            }
+        });
 
         revalidatePath('/admin/listings-moderation');
         return { success: true };

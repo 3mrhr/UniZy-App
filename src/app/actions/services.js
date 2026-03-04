@@ -230,6 +230,11 @@ export async function getAdminProviders() {
 
 export async function approveProvider(providerId) {
     try {
+        const user = await getCurrentUser();
+        if (!user || (!user.role?.includes('ADMIN') && user.role !== 'ADMIN_SUPER')) {
+            return { error: 'Not authorized' };
+        }
+
         const provider = await prisma.serviceProvider.update({
             where: { id: providerId },
             data: { verified: true },
@@ -250,7 +255,7 @@ export async function approveProvider(providerId) {
 export async function rejectProvider(providerId) {
     try {
         const user = await getCurrentUser();
-        if (!user || (!user.role?.includes('ADMIN') && user.role !== 'SUPER_ADMIN')) {
+        if (!user || (!user.role?.includes('ADMIN') && user.role !== 'ADMIN_SUPER')) {
             return { error: 'Not authorized' };
         }
 

@@ -84,8 +84,17 @@ export async function getMealById(id) {
 
 // Admin/Merchant: Create a new meal (basic scaffold for now, can be expanded)
 export async function createMeal(data) {
-    // Basic validation and user checks would go here
     try {
+        const currentUser = await getCurrentUser();
+        if (!currentUser || (!['MERCHANT', 'ADMIN_SUPER'].includes(currentUser.role))) {
+            return { success: false, error: 'Unauthorized. Only Merchants and Super Admins can create meals.' };
+        }
+
+        let merchantId = data.merchantId;
+        if (currentUser.role === 'MERCHANT') {
+            merchantId = currentUser.id;
+        }
+
         const newMeal = await prisma.meal.create({
             data: {
                 name: data.name,
@@ -97,7 +106,7 @@ export async function createMeal(data) {
                 calories: data.calories || null,
                 prepTime: data.prepTime || null,
                 tags: data.tags || 'daily',
-                merchantId: data.merchantId, // Requires a valid merchant ID
+                merchantId: merchantId,
             }
         });
 

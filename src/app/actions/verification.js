@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { getCurrentUser } from "./auth";
 
 /**
  * Request an OTP for a given phone or email.
@@ -119,6 +120,11 @@ export async function uploadVerificationDocument(userId, type, fileUrl) {
  */
 export async function getPendingVerifications(roleFilter = null) {
     try {
+        const user = await getCurrentUser();
+        if (!user || (user.role !== 'ADMIN_SUPER' && user.role !== 'ADMIN_SUPPORT')) {
+            return { success: false, error: "Unauthorized." };
+        }
+
         const where = { status: "PENDING" };
         if (roleFilter) {
             where.user = { role: roleFilter };
@@ -144,6 +150,13 @@ export async function getPendingVerifications(roleFilter = null) {
  */
 export async function approveVerification(documentId, adminId) {
     try {
+        const currentUser = await getCurrentUser();
+        if (!currentUser || (!currentUser.role?.startsWith('ADMIN_') && currentUser.role !== 'ADMIN_SUPER')) {
+            return { success: false, error: 'Unauthorized.' };
+        }
+
+        const actionAdminId = currentUser.id;
+
         const doc = await prisma.verificationDocument.update({
             where: { id: documentId },
             data: { status: "VERIFIED" },
@@ -158,17 +171,15 @@ export async function approveVerification(documentId, adminId) {
         });
 
         // Log the action
-        if (adminId) {
-            await prisma.auditLog.create({
-                data: {
-                    action: "APPROVE_VERIFICATION",
-                    module: "USERS",
-                    targetId: doc.userId,
-                    details: JSON.stringify({ documentId, type: doc.type }),
-                    adminId,
-                }
-            });
-        }
+        await prisma.auditLog.create({
+            data: {
+                action: "APPROVE_VERIFICATION",
+                module: "USERS",
+                targetId: doc.userId,
+                details: JSON.stringify({ documentId, type: doc.type }),
+                adminId: actionAdminId,
+            }
+        });
 
         revalidatePath("/admin/verifications");
         return { success: true, message: "Document approved." };
@@ -183,6 +194,13 @@ export async function approveVerification(documentId, adminId) {
  */
 export async function rejectVerification(documentId, adminId, reason = "Invalid document") {
     try {
+        const currentUser = await getCurrentUser();
+        if (!currentUser || (!currentUser.role?.startsWith('ADMIN_') && currentUser.role !== 'ADMIN_SUPER')) {
+            return { success: false, error: 'Unauthorized.' };
+        }
+
+        const actionAdminId = currentUser.id;
+
         const doc = await prisma.verificationDocument.update({
             where: { id: documentId },
             data: { status: "REJECTED", rejectionReason: reason },
@@ -202,17 +220,15 @@ export async function rejectVerification(documentId, adminId, reason = "Invalid 
         }
 
         // Log the action
-        if (adminId) {
-            await prisma.auditLog.create({
-                data: {
-                    action: "REJECT_VERIFICATION",
-                    module: "USERS",
-                    targetId: doc.userId,
-                    details: JSON.stringify({ documentId, type: doc.type, reason }),
-                    adminId,
-                }
-            });
-        }
+        await prisma.auditLog.create({
+            data: {
+                action: "REJECT_VERIFICATION",
+                module: "USERS",
+                targetId: doc.userId,
+                details: JSON.stringify({ documentId, type: doc.type, reason }),
+                adminId: actionAdminId,
+            }
+        });
 
         revalidatePath("/admin/verifications");
         return { success: true, message: "Document rejected." };
