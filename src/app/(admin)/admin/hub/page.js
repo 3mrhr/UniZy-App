@@ -2,28 +2,52 @@
 
 import React, { useState, useEffect } from 'react';
 import { Shield, Trash2, CheckCircle, AlertTriangle, MessageSquare, Flag, Eye } from 'lucide-react';
-
-// Mock data for initial render (will be replaced by real DB calls when admin is logged in)
-const MOCK_FLAGGED = [
-    { id: '1', content: 'Selling old textbooks — DM me for prices', category: 'marketplace', author: { name: 'Ahmed K.', email: 'ahmed@student.com' }, flagReason: 'Suspected spam', createdAt: '2026-02-28T10:30:00Z' },
-    { id: '2', content: 'This professor is terrible and unfair!!!', category: 'general', author: { name: 'Khaled M.', email: 'khaled@student.com' }, flagReason: 'Offensive content', createdAt: '2026-02-28T14:00:00Z' },
-    { id: '3', content: 'CHEAP HOUSING $50/mo — call 01234567890', category: 'housing', author: { name: 'Unknown', email: 'test@test.com' }, flagReason: 'Suspicious listing / scam', createdAt: '2026-03-01T09:00:00Z' },
-];
-
-const MOCK_STATS = { totalPosts: 142, activePosts: 135, flaggedPosts: 3, removedPosts: 4 };
+import { getModQueue, approvePost, deletePost } from '@/app/actions/hub';
 
 export default function AdminHubModeration() {
-    const [flaggedPosts, setFlaggedPosts] = useState(MOCK_FLAGGED);
-    const [stats, setStats] = useState(MOCK_STATS);
+    const [flaggedPosts, setFlaggedPosts] = useState([]);
+    const [stats, setStats] = useState({ totalPosts: 0, activePosts: 0, flaggedPosts: 0, removedPosts: 0 });
+    const [isLoading, setIsLoading] = useState(true);
 
-    const handleApprove = (id) => {
+    useEffect(() => {
+        const fetchQueue = async () => {
+            setIsLoading(true);
+            try {
+                const res = await getModQueue();
+                if (res.stats) setStats(res.stats);
+                if (res.flagged) setFlaggedPosts(res.flagged);
+            } catch (error) {
+                console.error(error);
+            }
+            setIsLoading(false);
+        };
+        fetchQueue();
+    }, []);
+
+    const handleApprove = async (id) => {
+        const prevPosts = [...flaggedPosts];
         setFlaggedPosts(prev => prev.filter(p => p.id !== id));
-        setStats(prev => ({ ...prev, flaggedPosts: prev.flaggedPosts - 1, activePosts: prev.activePosts + 1 }));
+        setStats(prev => ({ ...prev, flaggedPosts: Math.max(0, prev.flaggedPosts - 1), activePosts: prev.activePosts + 1 }));
+        try {
+            const res = await approvePost(id);
+            if (!res.success) {
+                setFlaggedPosts(prevPosts);
+                alert(res.error || 'Failed to approve post');
+            }
+        } catch { setFlaggedPosts(prevPosts); }
     };
 
-    const handleDelete = (id) => {
+    const handleDelete = async (id) => {
+        const prevPosts = [...flaggedPosts];
         setFlaggedPosts(prev => prev.filter(p => p.id !== id));
-        setStats(prev => ({ ...prev, flaggedPosts: prev.flaggedPosts - 1, removedPosts: prev.removedPosts + 1 }));
+        setStats(prev => ({ ...prev, flaggedPosts: Math.max(0, prev.flaggedPosts - 1), removedPosts: prev.removedPosts + 1 }));
+        try {
+            const res = await deletePost(id);
+            if (!res.success) {
+                setFlaggedPosts(prevPosts);
+                alert(res.error || 'Failed to delete post');
+            }
+        } catch { setFlaggedPosts(prevPosts); }
     };
 
     return (
@@ -57,7 +81,9 @@ export default function AdminHubModeration() {
                     <span className="ml-auto text-xs font-bold bg-orange-100 dark:bg-orange-900/20 text-orange-600 px-3 py-1 rounded-full">{flaggedPosts.length} pending</span>
                 </div>
 
-                {flaggedPosts.length === 0 ? (
+                {isLoading ? (
+                    <div className="p-12 text-center text-gray-500 font-bold">Loading flagged posts...</div>
+                ) : flaggedPosts.length === 0 ? (
                     <div className="p-12 text-center">
                         <CheckCircle className="mx-auto text-green-400 mb-3" size={40} />
                         <p className="font-bold text-gray-400">All clear! No flagged posts to review.</p>

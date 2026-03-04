@@ -1,14 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Sparkles, Calendar, CheckCircle, Clock, User, Package, AlertTriangle } from 'lucide-react';
-
-const MOCK_STATS = { totalBookings: 34, pendingBookings: 5, completedBookings: 29, activePackages: 4 };
-const MOCK_BOOKINGS = [
-    { id: '1', date: '2026-03-05', timeSlot: '8:00 AM - 11:00 AM', address: 'Bldg 5, Floor 3', status: 'PENDING', user: { name: 'Nour E.', email: 'nour@student.com' }, package: { name: 'Deep Clean', price: 400 } },
-    { id: '2', date: '2026-03-03', timeSlot: '2:00 PM - 5:00 PM', address: 'Bldg 2, Floor 1', status: 'COMPLETED', user: { name: 'Sarah M.', email: 'sarah@student.com' }, package: { name: 'Standard Clean', price: 200 } },
-    { id: '3', date: '2026-03-01', timeSlot: '11:00 AM - 2:00 PM', address: 'Gate 2, Apt 7', status: 'COMPLETED', user: { name: 'Ahmed K.', email: 'ahmed@student.com' }, package: { name: 'Move-in / Move-out', price: 500 } },
-];
+import { getAdminCleaningStats, updateCleaningBookingStatus } from '@/app/actions/cleaning';
 
 const STATUS_COLORS = {
     PENDING: 'bg-orange-100 dark:bg-orange-900/20 text-orange-600',
@@ -19,11 +13,37 @@ const STATUS_COLORS = {
 };
 
 export default function AdminCleaningPage() {
-    const [stats] = useState(MOCK_STATS);
-    const [bookings, setBookings] = useState(MOCK_BOOKINGS);
+    const [stats, setStats] = useState({ totalBookings: 0, pendingBookings: 0, completedBookings: 0, activePackages: 0 });
+    const [bookings, setBookings] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
 
-    const handleConfirm = (id) => {
-        setBookings(prev => prev.map(b => b.id === id ? { ...b, status: 'CONFIRMED' } : b));
+    useEffect(() => {
+        const fetchData = async () => {
+            setIsLoading(true);
+            try {
+                const res = await getAdminCleaningStats();
+                if (res.stats) setStats(res.stats);
+                if (res.recentBookings) setBookings(res.recentBookings);
+            } catch (error) {
+                console.error(error);
+            }
+            setIsLoading(false);
+        };
+        fetchData();
+    }, []);
+
+    const handleConfirm = async (id) => {
+        const prev = [...bookings];
+        setBookings(prev.map(b => b.id === id ? { ...b, status: 'CONFIRMED' } : b));
+        try {
+            const res = await updateCleaningBookingStatus(id, 'CONFIRMED');
+            if (!res.success) {
+                setBookings(prev);
+                alert(res.error || 'Failed to confirm booking');
+            } else {
+                setStats(s => ({ ...s, pendingBookings: Math.max(0, s.pendingBookings - 1) }));
+            }
+        } catch { setBookings(prev); }
     };
 
     return (
@@ -56,13 +76,17 @@ export default function AdminCleaningPage() {
                     <h3 className="text-lg font-black text-gray-900 dark:text-white">Recent Bookings</h3>
                 </div>
                 <div className="divide-y divide-gray-50 dark:divide-gray-800/50">
-                    {bookings.map(b => (
+                    {isLoading ? (
+                        <div className="p-8 text-center text-gray-500 font-bold">Loading bookings...</div>
+                    ) : bookings.length === 0 ? (
+                        <div className="p-8 text-center text-gray-500 font-bold">No recent bookings found.</div>
+                    ) : bookings.map(b => (
                         <div key={b.id} className="p-6 hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
                             <div className="flex items-start justify-between gap-4">
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2 mb-1">
                                         <h4 className="font-black text-gray-900 dark:text-white">{b.package.name}</h4>
-                                        <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-lg ${STATUS_COLORS[b.status]}`}>{b.status}</span>
+                                        <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-lg ${STATUS_COLORS[b.status] || STATUS_COLORS.PENDING}`}>{b.status}</span>
                                     </div>
                                     <div className="flex items-center gap-4 text-xs text-gray-400 font-bold mt-1">
                                         <span className="flex items-center gap-1"><User size={10} /> {b.user.name}</span>

@@ -1,33 +1,73 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Send, Plus, Clock, CheckCircle, Users, Filter, Megaphone } from 'lucide-react';
-
-const MOCK_CAMPAIGNS = [
-    { id: '1', title: 'Welcome Week Special', message: '50% off your first ride! Use code WELCOME50', targetRole: 'STUDENT', status: 'SENT', sentAt: '2026-02-20', recipientCount: 823 },
-    { id: '2', title: 'Ramadan Meal Deals', message: 'Exclusive meal plans starting at 150 EGP/week', targetRole: null, status: 'SCHEDULED', scheduledAt: '2026-03-10' },
-    { id: '3', title: 'Driver Bonus Week', message: 'Complete 20 rides this week for 500 bonus points', targetRole: 'DRIVER', status: 'DRAFT' },
-];
+import { getCampaigns, createCampaign, sendCampaign } from '@/app/actions/campaigns';
 
 export default function AdminCampaignsPage() {
-    const [campaigns, setCampaigns] = useState(MOCK_CAMPAIGNS);
+    const [campaigns, setCampaigns] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [showForm, setShowForm] = useState(false);
     const [form, setForm] = useState({ title: '', message: '', targetRole: '', targetUni: '' });
 
-    const handleCreate = () => {
-        const newCampaign = {
-            id: Date.now().toString(),
-            ...form,
-            targetRole: form.targetRole || null,
-            status: 'DRAFT',
+    useEffect(() => {
+        const fetchCampaigns = async () => {
+            setIsLoading(true);
+            try {
+                const res = await getCampaigns();
+                if (res.campaigns) setCampaigns(res.campaigns);
+            } catch (error) {
+                console.error(error);
+            }
+            setIsLoading(false);
         };
-        setCampaigns(prev => [newCampaign, ...prev]);
-        setForm({ title: '', message: '', targetRole: '', targetUni: '' });
-        setShowForm(false);
+        fetchCampaigns();
+    }, []);
+
+    const handleCreate = async () => {
+        if (isSubmitting || !form.title || !form.message) return;
+        setIsSubmitting(true);
+        try {
+            const res = await createCampaign({
+                ...form,
+                targetRole: form.targetRole || null,
+                targetUni: form.targetUni || null
+            });
+            if (res.success && res.campaign) {
+                setCampaigns(prev => [res.campaign, ...prev]);
+                setForm({ title: '', message: '', targetRole: '', targetUni: '' });
+                setShowForm(false);
+            } else {
+                alert(res.error || 'Failed to create campaign');
+            }
+        } catch (error) {
+            console.error(error);
+            alert('Failed to save campaign');
+        }
+        setIsSubmitting(false);
     };
 
-    const handleSend = (id) => {
-        setCampaigns(prev => prev.map(c => c.id === id ? { ...c, status: 'SENT', sentAt: new Date().toISOString().split('T')[0], recipientCount: Math.floor(Math.random() * 500) + 100 } : c));
+    const handleSend = async (id) => {
+        if (!confirm('Are you sure you want to send this campaign to the target audience?')) return;
+
+        const prev = [...campaigns];
+        // Optimistic
+        setCampaigns(prev.map(c => c.id === id ? { ...c, status: 'SENT', sentAt: new Date().toISOString() } : c));
+
+        try {
+            const res = await sendCampaign(id);
+            if (!res.success) {
+                setCampaigns(prev);
+                alert(res.error || 'Failed to send campaign');
+            } else {
+                // Update with actual recipient count 
+                setCampaigns(curr => curr.map(c => c.id === id ? { ...c, recipientCount: res.recipientCount } : c));
+                alert(`Campaign sent to ${res.recipientCount} users!`);
+            }
+        } catch {
+            setCampaigns(prev);
+        }
     };
 
     const statusColor = {
@@ -82,8 +122,10 @@ export default function AdminCampaignsPage() {
                         </div>
                     </div>
                     <div className="flex items-center gap-3 pt-2">
-                        <button onClick={handleCreate} className="px-6 py-3 bg-brand-600 text-white rounded-2xl font-bold hover:bg-brand-700 transition-all">Save as Draft</button>
-                        <button onClick={() => setShowForm(false)} className="px-6 py-3 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-2xl font-bold hover:bg-gray-200 transition-all">Cancel</button>
+                        <button onClick={handleCreate} disabled={isSubmitting} className="px-6 py-3 bg-brand-600 text-white rounded-2xl font-bold hover:bg-brand-700 transition-all disabled:opacity-50">
+                            {isSubmitting ? 'Saving...' : 'Save as Draft'}
+                        </button>
+                        <button onClick={() => setShowForm(false)} disabled={isSubmitting} className="px-6 py-3 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-2xl font-bold hover:bg-gray-200 transition-all">Cancel</button>
                     </div>
                 </div>
             )}
@@ -96,7 +138,11 @@ export default function AdminCampaignsPage() {
                     <span className="ml-auto text-xs font-bold text-gray-400">{campaigns.length} total</span>
                 </div>
                 <div className="divide-y divide-gray-50 dark:divide-gray-800/50">
-                    {campaigns.map((c) => (
+                    {isLoading ? (
+                        <div className="p-8 text-center text-gray-500 font-bold">Loading campaigns...</div>
+                    ) : campaigns.length === 0 ? (
+                        <div className="p-8 text-center text-gray-500 font-bold">No campaigns created yet.</div>
+                    ) : campaigns.map((c) => (
                         <div key={c.id} className="p-6 hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
                             <div className="flex items-start justify-between gap-4">
                                 <div className="flex-1 min-w-0">
@@ -107,9 +153,10 @@ export default function AdminCampaignsPage() {
                                     <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-1">{c.message}</p>
                                     <div className="flex items-center gap-4 mt-2 text-xs text-gray-400 font-bold">
                                         {c.targetRole && <span className="flex items-center gap-1"><Filter size={10} /> {c.targetRole}</span>}
-                                        {c.recipientCount && <span className="flex items-center gap-1"><Users size={10} /> {c.recipientCount} recipients</span>}
-                                        {c.sentAt && <span className="flex items-center gap-1"><CheckCircle size={10} /> Sent {c.sentAt}</span>}
-                                        {c.scheduledAt && <span className="flex items-center gap-1"><Clock size={10} /> Scheduled {c.scheduledAt}</span>}
+                                        {c.targetUni && <span className="flex items-center gap-1"><Filter size={10} /> {c.targetUni}</span>}
+                                        {c.recipientCount > 0 && <span className="flex items-center gap-1"><Users size={10} /> {c.recipientCount} recipients</span>}
+                                        {c.sentAt && <span className="flex items-center gap-1"><CheckCircle size={10} /> Sent {new Date(c.sentAt).toLocaleDateString()}</span>}
+                                        {c.scheduledAt && <span className="flex items-center gap-1"><Clock size={10} /> Scheduled {new Date(c.scheduledAt).toLocaleDateString()}</span>}
                                     </div>
                                 </div>
                                 {c.status === 'DRAFT' && (

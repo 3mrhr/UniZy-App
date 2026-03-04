@@ -5,33 +5,6 @@ import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/i18n/LanguageProvider';
 import { ArrowLeft, ArrowRight, Share2, Heart, Tag, MapPin, Star, Clock, Info, CheckCircle2, Copy } from 'lucide-react';
 
-const MOCK_DEAL = {
-    id: 'd1',
-    merchant: 'Burger Bros',
-    title: '50% Off Second Burger',
-    description: 'Enjoy a delicious 50% discount on any second burger of equal or lesser value. Valid for dine-in and takeout on our entire menu.',
-    image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&q=80',
-    distance: '1.2 km',
-    rating: 4.8,
-    reviews: 312,
-    type: 'discount',
-    value: '50%',
-    expiresIn: '2 days',
-    originalPrice: '150',
-    discountPrice: '112.5',
-    currency: 'EGP',
-    terms: [
-        'Valid for students with active UniZy ID.',
-        'Cannot be combined with other offers or promos.',
-        'One use per day per student account.'
-    ],
-    branches: [
-        { name: 'University Campus Branch', distance: '1.2 km' },
-        { name: 'Downtown Main Branch', distance: '4.5 km' }
-    ],
-    promoCode: 'UNIBROS50'
-};
-
 export default function DealDetailsPage({ params }) {
     const router = useRouter();
     const { language } = useLanguage();
@@ -283,7 +256,7 @@ export default function DealDetailsPage({ params }) {
                             Available Branches
                         </h3>
                         <div className="grid sm:grid-cols-2 gap-4">
-                            {MOCK_DEAL.branches.map((branch, index) => (
+                            {branches.map((branch, index) => (
                                 <div key={index} className="flex justify-between items-center p-5 bg-gray-50 dark:bg-unizy-navy rounded-2xl border border-gray-100 dark:border-gray-800 hover:border-brand-500/30 transition-colors">
                                     <span className="font-bold text-gray-900 dark:text-white">
                                         {branch.name}

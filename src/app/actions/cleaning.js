@@ -137,3 +137,22 @@ export async function getAdminCleaningStats() {
         return { stats: {}, recentBookings: [] };
     }
 }
+
+export async function updateCleaningBookingStatus(bookingId, status) {
+    try {
+        const user = await getCurrentUser();
+        if (!user || (!user.role?.includes('ADMIN') && user.role !== 'SUPER_ADMIN')) {
+            return { error: 'Not authorized' };
+        }
+
+        const booking = await prisma.cleaningBooking.update({
+            where: { id: bookingId },
+            data: { status }
+        });
+
+        return { success: true, booking };
+    } catch (e) {
+        console.error(e);
+        return { error: 'Failed to update booking status' };
+    }
+}
