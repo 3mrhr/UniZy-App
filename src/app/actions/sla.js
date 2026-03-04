@@ -132,6 +132,11 @@ export async function resolveSLABreach(id) {
     }
 }
 
+// In-memory cache for active SLA rules
+let cachedActiveRules = null;
+let lastRulesCacheTime = 0;
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
 /**
  * Engine function: Check transactions and evaluate against active rules.
  * This function handles detecting the breaches and writing them to the DB.
@@ -140,7 +145,13 @@ export async function checkSLABreaches() {
     try {
         // This is a simplified engine check. In production, this would be highly optimized per rule type.
         // It fetches all active rules and uncompleted transactions older than the threshold.
-        const rules = await prisma.sLARule.findMany({ where: { active: true } });
+        const now = Date.now();
+        if (!cachedActiveRules || now - lastRulesCacheTime > CACHE_TTL_MS) {
+            cachedActiveRules = await prisma.sLARule.findMany({ where: { active: true } });
+            lastRulesCacheTime = now;
+        }
+
+        const rules = cachedActiveRules;
 
         const newBreaches = [];
 

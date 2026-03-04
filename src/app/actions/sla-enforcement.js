@@ -6,15 +6,26 @@ import { logAdminAction } from './audit';
 
 // ===== SLA ENFORCEMENT AUTOMATION =====
 
+// In-memory cache for active SLA rules
+let cachedActiveRules = null;
+let lastRulesCacheTime = 0;
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
 /**
  * Check all active SLA rules against orders/transactions and auto-generate breaches.
  * Call this periodically (e.g., every 5 minutes via cron).
  */
 export async function checkSLABreaches() {
     try {
-        const activeRules = await prisma.sLARule.findMany({
-            where: { active: true },
-        });
+        const now = Date.now();
+        if (!cachedActiveRules || now - lastRulesCacheTime > CACHE_TTL_MS) {
+            cachedActiveRules = await prisma.sLARule.findMany({
+                where: { active: true },
+            });
+            lastRulesCacheTime = now;
+        }
+
+        const activeRules = cachedActiveRules;
 
         let breachesCreated = 0;
 
