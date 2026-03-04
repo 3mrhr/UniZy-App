@@ -58,6 +58,7 @@ export async function sendCampaign(campaignId) {
             const BATCH_SIZE = 5000;
             let lastId = undefined;
             let hasMore = true;
+            const notificationPromises = [];
 
             while (hasMore) {
                 const queryOptions = {
@@ -79,7 +80,7 @@ export async function sendCampaign(campaignId) {
                     break;
                 }
 
-                await prisma.notification.createMany({
+                const insertPromise = prisma.notification.createMany({
                     data: targetUsers.map(u => ({
                         title: campaign.title,
                         message: campaign.message,
@@ -88,8 +89,12 @@ export async function sendCampaign(campaignId) {
                     }))
                 });
 
+                notificationPromises.push(insertPromise);
+
                 lastId = targetUsers[targetUsers.length - 1].id;
             }
+
+            await Promise.all(notificationPromises);
         }
 
         // Mark campaign as sent
