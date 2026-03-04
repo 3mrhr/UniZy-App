@@ -121,6 +121,19 @@ export async function getRetentionCohorts(weeks = 4) {
         const admin = await getCurrentUser();
         if (!admin || !admin.role?.startsWith('ADMIN')) return { error: 'Unauthorized' };
 
+        // Determine the overall date range for the single query
+        const overallStart = new Date();
+        overallStart.setDate(overallStart.getDate() - weeks * 7);
+        const overallEnd = new Date();
+
+        // Fetch all orders in the range at once to avoid N+1 queries
+        const orders = await prisma.order.findMany({
+            where: {
+                createdAt: { gte: overallStart, lt: overallEnd },
+            },
+            select: { userId: true, createdAt: true },
+        });
+
         const cohorts = [];
         for (let i = 0; i < weeks; i++) {
             const weekStart = new Date();
@@ -128,19 +141,19 @@ export async function getRetentionCohorts(weeks = 4) {
             const weekEnd = new Date();
             weekEnd.setDate(weekEnd.getDate() - i * 7);
 
-            const activeUsers = await prisma.order.findMany({
-                where: {
-                    createdAt: { gte: weekStart, lt: weekEnd },
-                },
-                select: { userId: true },
-                distinct: ['userId'],
-            });
+            // Filter active users for this specific week in-memory
+            const activeUsersInWeek = new Set();
+            for (const order of orders) {
+                if (order.createdAt >= weekStart && order.createdAt < weekEnd) {
+                    activeUsersInWeek.add(order.userId);
+                }
+            }
 
             cohorts.push({
                 week: `Week -${i + 1}`,
                 startDate: weekStart.toISOString().split('T')[0],
                 endDate: weekEnd.toISOString().split('T')[0],
-                activeUsers: activeUsers.length,
+                activeUsers: activeUsersInWeek.size,
             });
         }
 
