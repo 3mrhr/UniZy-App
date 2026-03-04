@@ -84,14 +84,15 @@ export async function generateSettlements(periodStart, periodEnd) {
             existingSettlementMap.set(settlement.providerId, settlement);
         }
 
-        const transactions = [];
+        const updates = [];
+        const creates = [];
 
         for (const [providerId, data] of Object.entries(providerGroups)) {
             const existing = existingSettlementMap.get(providerId);
 
             if (existing) {
                 // Update existing settlement
-                transactions.push(prisma.settlement.update({
+                updates.push(prisma.settlement.update({
                     where: { id: existing.id },
                     data: {
                         grossAmount: Math.round(data.grossAmount * 100) / 100,
@@ -101,21 +102,27 @@ export async function generateSettlements(periodStart, periodEnd) {
                 }));
             } else {
                 // Create new settlement
-                transactions.push(prisma.settlement.create({
-                    data: {
-                        providerId,
-                        periodStart: start,
-                        periodEnd: end,
-                        grossAmount: Math.round(data.grossAmount * 100) / 100,
-                        commissionAmount: Math.round(data.commissionAmount * 100) / 100,
-                        netAmount: Math.round(data.netAmount * 100) / 100,
-                        status: 'PENDING',
-                    },
-                }));
+                creates.push({
+                    providerId,
+                    periodStart: start,
+                    periodEnd: end,
+                    grossAmount: Math.round(data.grossAmount * 100) / 100,
+                    commissionAmount: Math.round(data.commissionAmount * 100) / 100,
+                    netAmount: Math.round(data.netAmount * 100) / 100,
+                    status: 'PENDING',
+                });
             }
         }
 
-        const settlements = await prisma.$transaction(transactions);
+        const txs = [...updates];
+        if (creates.length > 0) {
+            txs.push(prisma.settlement.createManyAndReturn({ data: creates }));
+        }
+
+        const transactionResults = await prisma.$transaction(txs);
+
+        // Flatten results since createManyAndReturn returns an array of records
+        const settlements = transactionResults.flat();
 
         await logAdminAction('GENERATE_SETTLEMENTS', 'FINANCE', null, {
             periodStart: periodStart,
