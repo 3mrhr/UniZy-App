@@ -11,6 +11,8 @@ export default function ProviderClient({ settlements, dbListings = [], dbLeads =
     const { dict } = useLanguage();
     const [leads, setLeads] = useState(dbLeads);
     const [isUpdating, setIsUpdating] = useState(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [formData, setFormData] = useState({ title: '', description: '', price: '', type: 'Apartment', location: '', amenities: '' });
 
     const totalRevenue = settlements.reduce((sum, s) => sum + s.netAmount, 0);
 
@@ -26,6 +28,33 @@ export default function ProviderClient({ settlements, dbListings = [], dbLeads =
             }
         } catch (e) {
             console.error(e);
+        }
+        setIsUpdating(null);
+    };
+
+    const handleCreateListing = async (e) => {
+        e.preventDefault();
+        setIsUpdating('create');
+        try {
+            const { createHousingListing } = await import('@/app/actions/housing');
+
+            const payload = {
+                ...formData,
+                amenities: formData.amenities.split(',').map(a => a.trim()).filter(Boolean),
+                images: ['/placeholder.png'] // default for MVP
+            };
+
+            const res = await createHousingListing(payload);
+            if (res.success || res.ok) {
+                alert('Property listed successfully! (Pending approval)');
+                setIsModalOpen(false);
+                setFormData({ title: '', description: '', price: '', type: 'Apartment', location: '', amenities: '' });
+                // Note: It will require page refresh to see pending properties depending on server query
+            } else {
+                alert(res.error?.message || res.error || 'Failed to create listing');
+            }
+        } catch (error) {
+            console.error(error);
         }
         setIsUpdating(null);
     };
@@ -53,7 +82,7 @@ export default function ProviderClient({ settlements, dbListings = [], dbLeads =
 
                 {/* Left Column: Quick Actions & Stats */}
                 <div className="lg:col-span-1 flex flex-col gap-6 animate-fade-in-up">
-                    <button className="w-full bg-indigo-600 hover:bg-indigo-700 text-white p-6 rounded-[2rem] shadow-xl shadow-indigo-500/20 flex flex-col items-center gap-2 transition-all hover:scale-[1.02] active:scale-95 group">
+                    <button onClick={() => setIsModalOpen(true)} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white p-6 rounded-[2rem] shadow-xl shadow-indigo-500/20 flex flex-col items-center gap-2 transition-all hover:scale-[1.02] active:scale-95 group">
                         <span className="text-3xl group-hover:rotate-12 transition-transform">➕</span>
                         <span className="font-black text-sm uppercase tracking-wider">List New Property</span>
                     </button>
@@ -163,6 +192,38 @@ export default function ProviderClient({ settlements, dbListings = [], dbLeads =
                 </div>
 
             </main>
+
+            {/* Create Listing Modal */}
+            {isModalOpen && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-gray-900/60 backdrop-blur-sm animate-fade-in">
+                    <div className="bg-white dark:bg-unizy-dark w-full max-w-md p-8 rounded-[2.5rem] shadow-2xl relative">
+                        <button onClick={() => setIsModalOpen(false)} className="absolute top-6 right-6 w-8 h-8 rounded-full bg-gray-100 dark:bg-white/10 flex items-center justify-center font-bold text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">✕</button>
+                        <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-6">List New Property</h2>
+
+                        <form onSubmit={handleCreateListing} className="flex flex-col gap-4">
+                            <input required value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} placeholder="Property Title (e.g. Sunny Studio)" className="w-full bg-gray-50 dark:bg-unizy-navy/50 p-4 rounded-2xl border-none outline-none font-medium text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 transition-all text-sm" />
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <input required type="number" value={formData.price} onChange={e => setFormData({ ...formData, price: e.target.value })} placeholder="Price (EGP/mo)" className="w-full bg-gray-50 dark:bg-unizy-navy/50 p-4 rounded-2xl border-none outline-none font-medium text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 transition-all text-sm" />
+                                <select value={formData.type} onChange={e => setFormData({ ...formData, type: e.target.value })} className="w-full bg-gray-50 dark:bg-unizy-navy/50 p-4 rounded-2xl border-none outline-none font-bold text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 transition-all text-sm appearance-none">
+                                    <option value="Apartment">Apartment</option>
+                                    <option value="Studio">Studio</option>
+                                    <option value="Shared Room">Shared Room</option>
+                                    <option value="Single Room">Single Room</option>
+                                </select>
+                            </div>
+
+                            <input required value={formData.location} onChange={e => setFormData({ ...formData, location: e.target.value })} placeholder="Location (e.g. Next to Main Gate)" className="w-full bg-gray-50 dark:bg-unizy-navy/50 p-4 rounded-2xl border-none outline-none font-medium text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 transition-all text-sm" />
+                            <textarea value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} placeholder="Description (Optional)" className="w-full bg-gray-50 dark:bg-unizy-navy/50 p-4 rounded-2xl border-none outline-none font-medium text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 transition-all text-sm resize-none h-24" />
+                            <input value={formData.amenities} onChange={e => setFormData({ ...formData, amenities: e.target.value })} placeholder="Amenities (comma separated, e.g. WiFi, AC)" className="w-full bg-gray-50 dark:bg-unizy-navy/50 p-4 rounded-2xl border-none outline-none font-medium text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 transition-all text-sm" />
+
+                            <button disabled={isUpdating === 'create'} type="submit" className="w-full py-4 mt-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-black text-sm uppercase tracking-widest rounded-2xl shadow-xl shadow-indigo-500/20 active:scale-95 transition-all">
+                                {isUpdating === 'create' ? 'Submitting...' : 'Submit Listing'}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

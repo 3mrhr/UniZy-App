@@ -75,11 +75,11 @@ function MerchantDetailContent() {
                 vendorId: merchant.id
             }, cartTotal, promoCode, lineItems);
 
-            if (result.success) {
+            if (result.ok) {
                 useCartStore.getState().clearCart();
-                router.push(`/activity/tracking/${result.order.id}`);
+                router.push(`/activity/tracking/${result.data.order.id}`);
             } else {
-                toast.error(result.error || 'Failed to checkout');
+                toast.error(result.error?.message || 'Failed to checkout');
                 setIsSubmitting(false);
             }
         } catch (error) {

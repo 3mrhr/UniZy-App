@@ -53,10 +53,10 @@ export default function DriverClient({ settlements, dbOrders = [], driverName = 
         try {
             const { acceptOrder } = await import('@/app/actions/orders');
             const result = await acceptOrder(orderId);
-            if (result.success) {
+            if (result.ok) {
                 await refreshOrders();
             } else {
-                alert(result.error || 'Failed to accept order');
+                alert(result.error?.message || 'Failed to accept order');
             }
         } catch (e) {
             console.error('Accept failed:', e);
@@ -70,10 +70,10 @@ export default function DriverClient({ settlements, dbOrders = [], driverName = 
         try {
             const { updateOrderStatus } = await import('@/app/actions/orders');
             const result = await updateOrderStatus(orderId, 'DELIVERED');
-            if (result.success) {
+            if (result.ok) {
                 await refreshOrders();
             } else {
-                alert(result.error || 'Failed to mark as delivered');
+                alert(result.error?.message || 'Failed to mark as delivered');
             }
         } catch (e) {
             console.error('Deliver failed:', e);

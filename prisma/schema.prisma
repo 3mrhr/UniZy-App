@@ -783,3 +783,10 @@ model AnalyticsEvent {
   sessionId String?
   createdAt DateTime @default(now())
 }
+
+model SystemSettings {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+}

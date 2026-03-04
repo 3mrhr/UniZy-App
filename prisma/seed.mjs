@@ -161,6 +161,45 @@ async function main() {
     }
     console.log(`✅ ${merchants.length} Merchants + 30 Meals created`);
 
+    // ── Housing Providers (3) + Listings (15) ──
+    const providerNames = ['Emaar Res', 'Student Living', 'Campus Suites'];
+    const providers = [];
+    for (let i = 0; i < 3; i++) {
+        const p = await prisma.user.upsert({
+            where: { email: `provider${i + 1}@unizy.app` },
+            update: {},
+            create: {
+                name: providerNames[i],
+                email: `provider${i + 1}@unizy.app`,
+                password: DEFAULT_PASS,
+                phone: `+20400000${String(i + 1).padStart(4, '0')}`,
+                role: 'PROVIDER',
+                isVerified: true,
+                verificationStatus: 'VERIFIED',
+            },
+        });
+        providers.push(p);
+
+        // Create 5 listings per provider
+        for (let j = 0; j < 5; j++) {
+            await prisma.housingListing.create({
+                data: {
+                    title: `${p.name} - Suite ${j + 101}`,
+                    description: 'Modern student accommodation very close to campus with high-speed internet included.',
+                    price: 1500 + (j * 200),
+                    type: ['Studio', 'Shared Room', 'Single Room', 'Apartment', 'Studio'][j],
+                    location: 'Assiut Al-Gadeeda',
+                    images: JSON.stringify(['/placeholder.png']),
+                    amenities: JSON.stringify(['WiFi', 'AC', 'Kitchen', 'Laundry']),
+                    contact: p.phone,
+                    providerId: p.id,
+                    status: 'ACTIVE',
+                },
+            });
+        }
+    }
+    console.log(`✅ ${providers.length} Housing Providers + 15 Listings created`);
+
     // ── Drivers (5) ──
     const driverNames = ['Mohamed Fahmy', 'Ali Hassan', 'Mostafa Amr', 'Karim El-Said', 'Hamza Nabil'];
     const drivers = [];
@@ -227,7 +266,7 @@ async function main() {
         });
 
         // Create linked transaction
-        const txnCode = `TXN-SEED-${String(i + 1).padStart(4, '0')}`;
+        const txnCode = `TXN-SEED-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
         await prisma.transaction.create({
             data: {
                 txnCode,
@@ -252,6 +291,7 @@ async function main() {
     console.log('   Students:  student1@unizy.app ... student10@unizy.app');
     console.log('   Merchants: merchant1@unizy.app ... merchant5@unizy.app');
     console.log('   Drivers:   driver1@unizy.app ... driver5@unizy.app');
+    console.log('   Providers: provider1@unizy.app ... provider3@unizy.app');
 }
 
 main()

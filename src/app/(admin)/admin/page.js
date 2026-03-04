@@ -8,6 +8,7 @@ import {
     Search, Filter, Download, ChevronRight
 } from 'lucide-react';
 import { getDashboardAnalytics } from '@/app/actions/analytics';
+import { getSystemModules, toggleSystemModule } from '@/app/actions/settings';
 
 const RECENT_ALERTS = [
     { id: 1, type: 'MODERATION', title: 'New Listing Flagged', description: 'Listing "Modern Studio nr Campus" flagged for inaccurate pics.', time: '2 mins ago', severity: 'HIGH' },
@@ -17,13 +18,18 @@ const RECENT_ALERTS = [
 
 export default function SuperadminOverview() {
     const [statsData, setStatsData] = useState(null);
+    const [modules, setModules] = useState({ delivery: true, transport: true, housing: true, deals: true });
+    const [isToggling, setIsToggling] = useState(false);
 
     useEffect(() => {
         const fetchStats = async () => {
-            const res = await getDashboardAnalytics();
-            if (res.success) {
-                setStatsData(res.stats);
-            }
+            const [res, modRes] = await Promise.all([
+                getDashboardAnalytics(),
+                getSystemModules()
+            ]);
+
+            if (res.success) setStatsData(res.stats);
+            if (modRes.success) setModules(modRes.modules);
         };
         fetchStats();
     }, []);
@@ -39,6 +45,24 @@ export default function SuperadminOverview() {
         { label: 'Revenue (EGP)', value: '...', change: '', trend: 'up', icon: TrendingUp, color: 'green' },
         { label: 'Commission (EGP)', value: '...', change: '', trend: 'up', icon: TrendingUp, color: 'emerald' },
     ];
+
+    const handleToggleModule = async (moduleName) => {
+        if (isToggling) return;
+        setIsToggling(true);
+        const currentState = modules[moduleName];
+        const newState = !currentState;
+
+        // Optimistic update
+        setModules(prev => ({ ...prev, [moduleName]: newState }));
+
+        const res = await toggleSystemModule(moduleName, newState);
+        if (!res.success) {
+            alert(res.error || 'Failed to toggle module');
+            // Revert
+            setModules(prev => ({ ...prev, [moduleName]: currentState }));
+        }
+        setIsToggling(false);
+    };
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
@@ -125,21 +149,21 @@ export default function SuperadminOverview() {
                 <div className="bg-white dark:bg-[#1E293B] rounded-[2.5rem] shadow-sm border border-gray-100 dark:border-gray-800 p-8">
                     <h3 className="text-xl font-black text-gray-900 dark:text-white mb-6">Module Control</h3>
                     <div className="grid grid-cols-2 gap-4">
-                        <button className="aspect-square rounded-3xl bg-orange-50 dark:bg-orange-500/5 flex flex-col items-center justify-center gap-3 border border-orange-100 dark:border-orange-500/20 hover:scale-105 active:scale-95 transition-all group">
-                            <ShoppingBag className="w-8 h-8 text-orange-600" />
-                            <span className="font-black text-sm text-orange-900 dark:text-orange-100">Delivery</span>
+                        <button onClick={() => handleToggleModule('delivery')} disabled={isToggling} className={`aspect-square rounded-3xl flex flex-col items-center justify-center gap-3 border transition-all group ${modules.delivery ? 'bg-orange-50 dark:bg-orange-500/5 border-orange-100 dark:border-orange-500/20' : 'bg-gray-50 border-gray-200 grayscale opacity-60'}`}>
+                            <ShoppingBag className={`w-8 h-8 ${modules.delivery ? 'text-orange-600' : 'text-gray-400'}`} />
+                            <span className={`font-black text-sm ${modules.delivery ? 'text-orange-900 dark:text-orange-100' : 'text-gray-500'}`}>Delivery</span>
                         </button>
-                        <button className="aspect-square rounded-3xl bg-blue-50 dark:bg-blue-500/5 flex flex-col items-center justify-center gap-3 border border-blue-100 dark:border-blue-500/20 hover:scale-105 active:scale-95 transition-all group">
-                            <Truck className="w-8 h-8 text-blue-600" />
-                            <span className="font-black text-sm text-blue-900 dark:text-blue-100">Transport</span>
+                        <button onClick={() => handleToggleModule('transport')} disabled={isToggling} className={`aspect-square rounded-3xl flex flex-col items-center justify-center gap-3 border transition-all group ${modules.transport ? 'bg-blue-50 dark:bg-blue-500/5 border-blue-100 dark:border-blue-500/20' : 'bg-gray-50 border-gray-200 grayscale opacity-60'}`}>
+                            <Truck className={`w-8 h-8 ${modules.transport ? 'text-blue-600' : 'text-gray-400'}`} />
+                            <span className={`font-black text-sm ${modules.transport ? 'text-blue-900 dark:text-blue-100' : 'text-gray-500'}`}>Transport</span>
                         </button>
-                        <button className="aspect-square rounded-3xl bg-emerald-50 dark:bg-emerald-500/5 flex flex-col items-center justify-center gap-3 border border-emerald-100 dark:border-emerald-500/20 hover:scale-105 active:scale-95 transition-all group">
-                            <Home className="w-8 h-8 text-emerald-600" />
-                            <span className="font-black text-sm text-emerald-900 dark:text-emerald-100">Housing</span>
+                        <button onClick={() => handleToggleModule('housing')} disabled={isToggling} className={`aspect-square rounded-3xl flex flex-col items-center justify-center gap-3 border transition-all group ${modules.housing ? 'bg-emerald-50 dark:bg-emerald-500/5 border-emerald-100 dark:border-emerald-500/20' : 'bg-gray-50 border-gray-200 grayscale opacity-60'}`}>
+                            <Home className={`w-8 h-8 ${modules.housing ? 'text-emerald-600' : 'text-gray-400'}`} />
+                            <span className={`font-black text-sm ${modules.housing ? 'text-emerald-900 dark:text-emerald-100' : 'text-gray-500'}`}>Housing</span>
                         </button>
-                        <button className="aspect-square rounded-3xl bg-purple-50 dark:bg-purple-500/5 flex flex-col items-center justify-center gap-3 border border-purple-100 dark:border-purple-500/20 hover:scale-105 active:scale-95 transition-all group">
-                            <Tag className="w-8 h-8 text-purple-600" />
-                            <span className="font-black text-sm text-purple-900 dark:text-purple-100">Deals</span>
+                        <button onClick={() => handleToggleModule('deals')} disabled={isToggling} className={`aspect-square rounded-3xl flex flex-col items-center justify-center gap-3 border transition-all group ${modules.deals ? 'bg-purple-50 dark:bg-purple-500/5 border-purple-100 dark:border-purple-500/20' : 'bg-gray-50 border-gray-200 grayscale opacity-60'}`}>
+                            <Tag className={`w-8 h-8 ${modules.deals ? 'text-purple-600' : 'text-gray-400'}`} />
+                            <span className={`font-black text-sm ${modules.deals ? 'text-purple-900 dark:text-purple-100' : 'text-gray-500'}`}>Deals</span>
                         </button>
                     </div>
 

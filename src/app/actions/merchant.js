@@ -39,3 +39,32 @@ export async function createMeal(data) {
         return { error: 'Failed to create item in the database.' };
     }
 }
+
+export async function updateMerchantSettings(data) {
+    try {
+        const user = await getCurrentUser();
+        if (!user || user.role !== 'MERCHANT') {
+            return { error: 'Unauthorized: Only merchants can update settings.' };
+        }
+
+        const { storeName, storeAddress, storeDescription, storeOpen } = data;
+
+        const updatedUser = await prisma.user.update({
+            where: { id: user.id },
+            data: {
+                storeName: storeName !== undefined ? storeName : undefined,
+                storeAddress: storeAddress !== undefined ? storeAddress : undefined,
+                storeDescription: storeDescription !== undefined ? storeDescription : undefined,
+                storeOpen: storeOpen !== undefined ? Boolean(storeOpen) : undefined,
+            }
+        });
+
+        revalidatePath('/merchant');
+        revalidatePath('/delivery');
+
+        return { success: true, user: updatedUser };
+    } catch (error) {
+        console.error('Error updating merchant settings:', error);
+        return { error: 'Failed to update store settings.' };
+    }
+}

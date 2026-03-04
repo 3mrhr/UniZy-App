@@ -5,15 +5,16 @@ import { getCurrentUser } from '@/app/actions/auth';
 import { revalidatePath } from 'next/cache';
 import { completeReferralIfEligible } from './referrals';
 import { createNotification } from './notifications';
-import { computeCommissionSnapshot, computePricingSnapshot, generateTxnCode } from './financial';
+import { generateTxnCode, computeCommissionSnapshot, computePricingSnapshot } from './financial';
 import { logEvent } from './analytics';
 import { logAdminAction } from './audit';
+import { success, failure } from '@/lib/actionResult';
 
 export async function createOrder(service, details, clientTotal, promoCodeStr = null, lineItems = []) {
     try {
         const user = await getCurrentUser();
         if (!user || user.role !== 'STUDENT') {
-            return { error: 'Only students can create orders.' };
+            return failure('UNAUTHORIZED', 'Only students can create orders.');
         }
 
         // If lineItems are provided (e.g. DELIVERY / Meals), we calculate securely.
@@ -32,7 +33,7 @@ export async function createOrder(service, details, clientTotal, promoCodeStr = 
         });
 
         if (recentDuplicate) {
-            return { error: 'A similar order was just placed. Please wait a moment before trying again.' };
+            return failure('DUPLICATE', 'A similar order was just placed. Please wait a moment before trying again.');
         }
 
         const result = await prisma.$transaction(async (tx) => {
@@ -251,7 +252,7 @@ export async function createOrder(service, details, clientTotal, promoCodeStr = 
                 });
             }
 
-            return { success: true, order, transaction: txnRecord };
+            return success({ order, transaction: txnRecord });
         });
 
         // Log analytics outside transaction
@@ -265,7 +266,7 @@ export async function createOrder(service, details, clientTotal, promoCodeStr = 
         return result;
     } catch (error) {
         console.error('Failed to create order:', error);
-        return { error: error.message || 'Failed to create the order.' };
+        return failure('CREATE_FAILED', error.message || 'Failed to create the order.');
     }
 }
 
@@ -339,7 +340,7 @@ export async function acceptOrder(orderId) {
     try {
         const user = await getCurrentUser();
         if (!user || user.role !== 'DRIVER') {
-            return { error: 'Unauthorized. Only drivers can accept orders.' };
+            return failure('UNAUTHORIZED', 'Only drivers can accept orders.');
         }
 
         // Conditional update: only accept if status is READY and no driver assigned (prevents double-accept)
@@ -356,7 +357,7 @@ export async function acceptOrder(orderId) {
         });
 
         if (updated.count === 0) {
-            return { error: 'Order is no longer available. It may have been taken by another driver.' };
+            return failure('UNAVAILABLE', 'Order is no longer available. It may have been taken by another driver.');
         }
 
         const order = await prisma.order.findUnique({ where: { id: orderId } });
@@ -367,10 +368,10 @@ export async function acceptOrder(orderId) {
 
         revalidatePath('/driver');
         revalidatePath('/merchant');
-        return { success: true, order };
+        return success({ order });
     } catch (error) {
         console.error('Failed to accept order:', error);
-        return { error: 'Failed to accept order.' };
+        return failure('ACCEPT_FAILED', 'Failed to accept order.');
     }
 }
 
@@ -389,13 +390,13 @@ export async function updateOrderStatus(orderId, newStatus) {
         // Verify ownership: driver can only update their own orders
         const existingOrder = await prisma.order.findUnique({ where: { id: orderId } });
         if (!existingOrder || existingOrder.driverId !== user.id) {
-            return { error: 'Order not found or not assigned to you.' };
+            return failure('NOT_AUTHORIZED', 'Order not found or not assigned to you.');
         }
 
         // Enforce state machine
         const allowed = DRIVER_TRANSITIONS[existingOrder.status];
         if (!allowed || !allowed.includes(newStatus)) {
-            return { error: `Cannot transition from ${existingOrder.status} to ${newStatus}.` };
+            return failure('INVALID_STATE', `Cannot transition from ${existingOrder.status} to ${newStatus}.`);
         }
 
         const result = await prisma.$transaction(async (tx) => {
@@ -475,10 +476,10 @@ export async function updateOrderStatus(orderId, newStatus) {
         await createNotification(result.userId, 'Order Update', `Your order status changed to ${newStatus}.`, 'SYSTEM', `/activity/tracking/${result.id}`);
 
         revalidatePath('/driver');
-        return { success: true, order: result };
+        return success({ order: result });
     } catch (error) {
         console.error('Failed to update order status:', error);
-        return { error: 'Failed to update order status.' };
+        return failure('UPDATE_FAILED', 'Failed to update order status.');
     }
 }
 
@@ -537,7 +538,7 @@ export async function updateMerchantOrderStatus(orderId, newStatus) {
     try {
         const user = await getCurrentUser();
         if (!user || user.role !== 'MERCHANT') {
-            return { error: 'Unauthorized. Only merchants can update order status.' };
+            return failure('UNAUTHORIZED', 'Only merchants can update order status.');
         }
 
         // Ownership check: ensure order contains this merchant's meals
@@ -555,13 +556,13 @@ export async function updateMerchantOrderStatus(orderId, newStatus) {
         });
 
         if (!order) {
-            return { error: 'Order not found or does not belong to you.' };
+            return failure('NOT_FOUND', 'Order not found or does not belong to you.');
         }
 
         // Enforce state machine
         const allowed = MERCHANT_TRANSITIONS[order.status];
         if (!allowed || !allowed.includes(newStatus)) {
-            return { error: `Cannot transition from ${order.status} to ${newStatus}.` };
+            return failure('INVALID_STATE', `Cannot transition from ${order.status} to ${newStatus}.`);
         }
 
         const updated = await prisma.order.update({
@@ -575,10 +576,10 @@ export async function updateMerchantOrderStatus(orderId, newStatus) {
         } catch (_) { /* non-critical */ }
 
         revalidatePath('/merchant');
-        return { success: true, order: updated };
+        return success({ order: updated });
     } catch (error) {
         console.error('Failed to update merchant order status:', error);
-        return { error: 'Failed to update order status.' };
+        return failure('UPDATE_FAILED', 'Failed to update order status.');
     }
 }
 

@@ -2,30 +2,59 @@
 
 
 import Link from 'next/link';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Shield, CheckCircle, XCircle, Wrench, Star, Phone, MapPin, Users } from 'lucide-react';
-
-const MOCK_PROVIDERS = [
-    { id: '1', name: 'Hassan Ibrahim', phone: '01012345678', category: 'PLUMBER', description: 'Expert plumber', priceRange: '150-400 EGP', rating: 4.8, reviewCount: 32, available: true, verified: true, location: 'Assiut', _count: { bookings: 12 } },
-    { id: '2', name: 'Mohamed Sayed', phone: '01098765432', category: 'ELECTRICIAN', description: 'Certified electrician', priceRange: '200-500 EGP', rating: 4.6, reviewCount: 28, available: true, verified: true, location: 'Assiut', _count: { bookings: 8 } },
-    { id: '3', name: 'New Carpenter', phone: '01234567890', category: 'CARPENTER', description: 'Pending verification', priceRange: '300-800 EGP', rating: 0, reviewCount: 0, available: true, verified: false, location: 'Assiut', _count: { bookings: 0 } },
-];
+import { getAdminProviders, approveProvider, rejectProvider } from '@/app/actions/services';
 
 export default function AdminServicesPage() {
-    const [providers, setProviders] = useState(MOCK_PROVIDERS);
+    const [providers, setProviders] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [stats, setStats] = useState({ total: 0, verified: 0, pending: 0 });
 
-    const stats = {
-        total: providers.length,
-        verified: providers.filter(p => p.verified).length,
-        pending: providers.filter(p => !p.verified).length,
+    useEffect(() => {
+        const fetchData = async () => {
+            setIsLoading(true);
+            try {
+                const res = await getAdminProviders();
+                if (res.providers) {
+                    setProviders(res.providers);
+                    setStats(res.stats || { total: 0, verified: 0, pending: 0 });
+                }
+            } catch (e) {
+                console.error(e);
+            }
+            setIsLoading(false);
+        };
+        fetchData();
+    }, []);
+
+    const handleApprove = async (id) => {
+        const prev = [...providers];
+        setProviders(prev.map(p => p.id === id ? { ...p, verified: true } : p));
+        try {
+            const res = await approveProvider(id);
+            if (!res.success) {
+                setProviders(prev);
+                alert(res.error || 'Failed to approve');
+            } else {
+                setStats(s => ({ ...s, verified: s.verified + 1, pending: Math.max(0, s.pending - 1) }));
+            }
+        } catch { setProviders(prev); }
     };
 
-    const handleApprove = (id) => {
-        setProviders(prev => prev.map(p => p.id === id ? { ...p, verified: true } : p));
-    };
-
-    const handleReject = (id) => {
-        setProviders(prev => prev.filter(p => p.id !== id));
+    const handleReject = async (id) => {
+        if (!confirm('Are you sure you want to reject and delete this provider?')) return;
+        const prev = [...providers];
+        setProviders(prev.filter(p => p.id !== id));
+        try {
+            const res = await rejectProvider(id);
+            if (!res.success) {
+                setProviders(prev);
+                alert(res.error || 'Failed to reject');
+            } else {
+                setStats(s => ({ ...s, total: Math.max(0, s.total - 1), pending: Math.max(0, s.pending - 1) }));
+            }
+        } catch { setProviders(prev); }
     };
 
     return (
@@ -33,8 +62,8 @@ export default function AdminServicesPage() {
 
             {/* Sub-page Navigation */}
             <div className="flex flex-wrap gap-3 mb-8">
-                    <Link href="/admin/services/pricing" className="px-4 py-2 bg-white dark:bg-unizy-dark rounded-xl text-sm font-bold text-gray-600 dark:text-gray-300 hover:bg-brand-50 dark:hover:bg-brand-900/20 hover:text-brand-600 transition-all border border-gray-100 dark:border-white/5">Pricing</Link>
-                    <Link href="/admin/services/commissions" className="px-4 py-2 bg-white dark:bg-unizy-dark rounded-xl text-sm font-bold text-gray-600 dark:text-gray-300 hover:bg-brand-50 dark:hover:bg-brand-900/20 hover:text-brand-600 transition-all border border-gray-100 dark:border-white/5">Commissions</Link>
+                <Link href="/admin/services/pricing" className="px-4 py-2 bg-white dark:bg-unizy-dark rounded-xl text-sm font-bold text-gray-600 dark:text-gray-300 hover:bg-brand-50 dark:hover:bg-brand-900/20 hover:text-brand-600 transition-all border border-gray-100 dark:border-white/5">Pricing</Link>
+                <Link href="/admin/services/commissions" className="px-4 py-2 bg-white dark:bg-unizy-dark rounded-xl text-sm font-bold text-gray-600 dark:text-gray-300 hover:bg-brand-50 dark:hover:bg-brand-900/20 hover:text-brand-600 transition-all border border-gray-100 dark:border-white/5">Commissions</Link>
             </div>
 
             <div>
@@ -64,23 +93,28 @@ export default function AdminServicesPage() {
                     <h3 className="text-lg font-black text-gray-900 dark:text-white">All Providers</h3>
                 </div>
                 <div className="divide-y divide-gray-50 dark:divide-gray-800/50">
-                    {providers.map(p => (
+                    {isLoading ? (
+                        <div className="p-8 text-center text-gray-500 font-bold">Loading providers...</div>
+                    ) : providers.length === 0 ? (
+                        <div className="p-8 text-center text-gray-500 font-bold">No providers found.</div>
+                    ) : providers.map(p => (
                         <div key={p.id} className="p-6 hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
                             <div className="flex items-start justify-between gap-4">
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2 mb-1">
                                         <h4 className="font-black text-gray-900 dark:text-white">{p.name}</h4>
+                                        <span className="text-[10px] font-black bg-gray-100 dark:bg-gray-800 text-gray-600 px-2 py-0.5 rounded-lg uppercase">{p.category}</span>
                                         {p.verified ? (
                                             <span className="text-[10px] font-black bg-green-100 dark:bg-green-900/20 text-green-600 px-2 py-0.5 rounded-lg uppercase">Verified</span>
                                         ) : (
                                             <span className="text-[10px] font-black bg-orange-100 dark:bg-orange-900/20 text-orange-600 px-2 py-0.5 rounded-lg uppercase">Pending</span>
                                         )}
                                     </div>
-                                    <p className="text-sm text-gray-500 dark:text-gray-400">{p.description}</p>
-                                    <div className="flex items-center gap-4 mt-2 text-xs text-gray-400 font-bold">
+                                    <p className="text-sm text-gray-500 dark:text-gray-400">{p.description || 'No description provided.'}</p>
+                                    <div className="flex items-center gap-4 mt-2 text-xs text-gray-400 font-bold flex-wrap">
                                         <span className="flex items-center gap-1"><Phone size={10} /> {p.phone}</span>
-                                        <span className="flex items-center gap-1"><MapPin size={10} /> {p.location}</span>
-                                        <span className="flex items-center gap-1"><Star size={10} className="text-amber-500" /> {p.rating} ({p.reviewCount})</span>
+                                        <span className="flex items-center gap-1"><MapPin size={10} /> {p.location || 'Assiut'}</span>
+                                        <span className="flex items-center gap-1"><Star size={10} className="text-amber-500" /> {p.rating?.toFixed(1) || '0.0'} ({p.reviewCount || 0})</span>
                                         <span className="flex items-center gap-1"><Users size={10} /> {p._count?.bookings || 0} bookings</span>
                                     </div>
                                 </div>

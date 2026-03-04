@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useLanguage } from '@/i18n/LanguageProvider';
 import ThemeLangControls from '@/components/ThemeLangControls';
 
-export default function MerchantClient({ settlements, dbOrders = [], dbMeals = [], dbDeals = [], merchantName = 'Merchant Hub' }) {
+export default function MerchantClient({ settlements, dbOrders = [], dbMeals = [], dbDeals = [], merchantName = 'Merchant Hub', storeAddress = '', storeDescription = '', storeOpen = false }) {
     const { dict } = useLanguage();
 
     const totalRevenue = settlements.reduce((sum, s) => sum + s.netAmount, 0);
@@ -51,6 +51,13 @@ export default function MerchantClient({ settlements, dbOrders = [], dbMeals = [
     );
 
     const [isUpdating, setIsUpdating] = useState(null);
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [settingsForm, setSettingsForm] = useState({
+        storeName: merchantName,
+        storeAddress,
+        storeDescription,
+        storeOpen
+    });
 
     // DB-backed status update
     const updateStatus = async (id, newStatus) => {
@@ -58,10 +65,10 @@ export default function MerchantClient({ settlements, dbOrders = [], dbMeals = [
         try {
             const { updateMerchantOrderStatus } = await import('@/app/actions/orders');
             const result = await updateMerchantOrderStatus(id, newStatus);
-            if (result.success) {
+            if (result.ok) {
                 setOrders(prev => prev.map(o => o.id === id ? { ...o, status: newStatus } : o));
             } else {
-                alert(result.error || 'Failed to update order status');
+                alert(result.error?.message || 'Failed to update order status');
             }
         } catch (e) {
             console.error('Failed to update order status:', e);
@@ -71,6 +78,24 @@ export default function MerchantClient({ settlements, dbOrders = [], dbMeals = [
 
     const toggleAvailability = (id) => {
         setMenuItems(menuItems.map(m => m.id === id ? { ...m, available: !m.available } : m));
+    };
+
+    const handleUpdateSettings = async (e) => {
+        e.preventDefault();
+        setIsUpdating('settings');
+        try {
+            const { updateMerchantSettings } = await import('@/app/actions/merchant');
+            const res = await updateMerchantSettings(settingsForm);
+            if (res.success || res.ok) {
+                alert('Store settings updated successfully.');
+                setIsSettingsOpen(false);
+            } else {
+                alert(res.error?.message || res.error || 'Failed to update settings');
+            }
+        } catch (error) {
+            console.error(error);
+        }
+        setIsUpdating(null);
     };
 
     // Refresh orders every 15 seconds
@@ -119,7 +144,7 @@ export default function MerchantClient({ settlements, dbOrders = [], dbMeals = [
                     <div>
                         <h1 className="text-lg font-black text-gray-900 dark:text-white leading-none">Merchant Hub</h1>
                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">
-                            {merchantName} • Open
+                            {merchantName} • {storeOpen ? 'Open' : 'Closed'}
                         </p>
                     </div>
                 </div>
@@ -224,6 +249,9 @@ export default function MerchantClient({ settlements, dbOrders = [], dbMeals = [
                         <Link href="/merchant/menu" className="w-full mt-6 py-4 rounded-2xl bg-gray-100 dark:bg-white/5 font-bold text-xs text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10 transition-colors block text-center">
                             Manage Full Menu
                         </Link>
+                        <button onClick={() => setIsSettingsOpen(true)} className="w-full mt-2 py-4 rounded-2xl bg-gray-100 dark:bg-white/5 font-bold text-xs text-brand-600 dark:text-brand-400 hover:bg-gray-200 dark:hover:bg-white/10 transition-colors block text-center">
+                            Store Settings
+                        </button>
                     </div>
 
                     <div className="bg-white dark:bg-unizy-dark p-8 rounded-[2.5rem] shadow-sm border border-gray-100 dark:border-white/5 animate-fade-in delay-300">
@@ -256,6 +284,31 @@ export default function MerchantClient({ settlements, dbOrders = [], dbMeals = [
                 </div>
 
             </main>
+
+            {/* Store Settings Modal */}
+            {isSettingsOpen && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-gray-900/60 backdrop-blur-sm animate-fade-in">
+                    <div className="bg-white dark:bg-unizy-dark w-full max-w-md p-8 rounded-[2.5rem] shadow-2xl relative">
+                        <button onClick={() => setIsSettingsOpen(false)} className="absolute top-6 right-6 w-8 h-8 rounded-full bg-gray-100 dark:bg-white/10 flex items-center justify-center font-bold text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">✕</button>
+                        <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-6">Store Settings</h2>
+
+                        <form onSubmit={handleUpdateSettings} className="flex flex-col gap-4">
+                            <input required value={settingsForm.storeName} onChange={e => setSettingsForm({ ...settingsForm, storeName: e.target.value })} placeholder="Store Name" className="w-full bg-gray-50 dark:bg-unizy-navy/50 p-4 rounded-2xl border-none outline-none font-medium text-gray-900 dark:text-white focus:ring-2 focus:ring-rose-500 transition-all text-sm" />
+                            <input value={settingsForm.storeAddress} onChange={e => setSettingsForm({ ...settingsForm, storeAddress: e.target.value })} placeholder="Store Address" className="w-full bg-gray-50 dark:bg-unizy-navy/50 p-4 rounded-2xl border-none outline-none font-medium text-gray-900 dark:text-white focus:ring-2 focus:ring-rose-500 transition-all text-sm" />
+                            <textarea value={settingsForm.storeDescription} onChange={e => setSettingsForm({ ...settingsForm, storeDescription: e.target.value })} placeholder="Description / Bio" className="w-full bg-gray-50 dark:bg-unizy-navy/50 p-4 rounded-2xl border-none outline-none font-medium text-gray-900 dark:text-white focus:ring-2 focus:ring-rose-500 transition-all text-sm resize-none h-24" />
+
+                            <label className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-unizy-navy/50 rounded-2xl cursor-pointer">
+                                <input type="checkbox" checked={settingsForm.storeOpen} onChange={e => setSettingsForm({ ...settingsForm, storeOpen: e.target.checked })} className="w-5 h-5 rounded text-rose-500 focus:ring-rose-500" />
+                                <span className="font-bold text-sm text-gray-900 dark:text-white">Store is Open (Accepting Orders)</span>
+                            </label>
+
+                            <button disabled={isUpdating === 'settings'} type="submit" className="w-full py-4 mt-2 bg-rose-500 hover:bg-rose-600 disabled:opacity-50 text-white font-black text-sm uppercase tracking-widest rounded-2xl shadow-xl shadow-rose-500/20 active:scale-95 transition-all">
+                                {isUpdating === 'settings' ? 'Saving...' : 'Save Settings'}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

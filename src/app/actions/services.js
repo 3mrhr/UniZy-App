@@ -246,3 +246,29 @@ export async function approveProvider(providerId) {
         return { error: 'Failed to approve provider.' };
     }
 }
+
+export async function rejectProvider(providerId) {
+    try {
+        const user = await getCurrentUser();
+        if (!user || (!user.role?.includes('ADMIN') && user.role !== 'SUPER_ADMIN')) {
+            return { error: 'Not authorized' };
+        }
+
+        // Just delete the provider for now if rejected, or mark as rejected if we add a status field.
+        // Currently ServiceProvider only has verified boolean. We will delete it.
+        const provider = await prisma.serviceProvider.delete({
+            where: { id: providerId }
+        });
+
+        if (provider.userId) {
+            await createNotification(provider.userId, 'Provider Application Rejected', 'Your service provider application was declined.', 'SYSTEM');
+        }
+
+        await logAdminAction('REJECT_PROVIDER', 'SERVICES', providerId, { action: 'Admin rejected service provider' });
+
+        return { success: true };
+    } catch (error) {
+        console.error('rejectProvider error:', error);
+        return { error: 'Failed to reject provider.' };
+    }
+}
