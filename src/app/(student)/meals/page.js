@@ -57,7 +57,7 @@ export default function MealsPage() {
             if (res.success) {
                 toast.success(isRTL ? "تم الطلب بنجاح!" : "Order placed successfully!");
                 setSelectedMeal(null);
-                // Optionally route to activity tracking: router.push('/activity');
+                router.push(`/activity/tracking/${res.order.id}`);
             } else {
                 toast.error(res.error || (isRTL ? "حدث خطأ أثناء الطلب" : "Failed to place order"));
             }

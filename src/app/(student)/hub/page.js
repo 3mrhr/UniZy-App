@@ -6,6 +6,7 @@ import React, { useState, useEffect, useTransition } from 'react';
 import { useLanguage } from '@/i18n/LanguageProvider';
 import { Users, Megaphone, Edit3, MessageCircle, Heart, Share2, MoreHorizontal, Image as ImageIcon, Flag, Loader2 } from 'lucide-react';
 import { getPosts, createPost, flagPost } from '@/app/actions/hub';
+import { getCurrentUser } from '@/app/actions/auth';
 import ReportButton from '@/components/ReportButton';
 
 const HUB_TABS = [
@@ -46,6 +47,7 @@ export default function HubPage() {
     const [postText, setPostText] = useState('');
     const [postCategory, setPostCategory] = useState('general');
     const [posts, setPosts] = useState([]);
+    const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
     const [isPending, startTransition] = useTransition();
     const [reportedIds, setReportedIds] = useState(new Set());
@@ -79,6 +81,12 @@ export default function HubPage() {
             }
             setLoading(false);
         }
+
+        async function loadUser() {
+            const fetchedUser = await getCurrentUser();
+            setUser(fetchedUser);
+        }
+        loadUser();
         load();
     }, []);
 
@@ -103,7 +111,7 @@ export default function HubPage() {
                     category: postCategory,
                     likes: 0, comments: 0,
                     createdAt: new Date().toISOString(),
-                    author: { name: 'You', university: 'Assiut University' }
+                    author: { name: user?.name || 'You', university: 'Assiut University' }
                 }, ...prev]);
                 setPostText('');
                 setPostCategory('general');
@@ -155,7 +163,7 @@ export default function HubPage() {
                     <div className="bg-white dark:bg-[#1E293B] rounded-3xl p-5 border border-gray-100 dark:border-gray-800 shadow-sm mb-6">
                         <div className="flex gap-4 mb-4">
                             <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 border border-gray-200 dark:border-gray-700">
-                                <img src="https://ui-avatars.com/api/?name=Omar+Hassan&background=random&color=fff" alt="User" className="w-full h-full object-cover" />
+                                <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'Student')}&background=random&color=fff`} alt="User" className="w-full h-full object-cover" />
                             </div>
                             <textarea
                                 placeholder={isRTL ? 'بم تفكر؟ اطلب مساعدة أو شارك خبراً...' : 'What\'s on your mind? Ask for help or share news...'}

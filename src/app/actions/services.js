@@ -277,3 +277,57 @@ export async function rejectProvider(providerId) {
         return { error: 'Failed to reject provider.' };
     }
 }
+
+// ADMIN FUNCTION: Fetch all ServiceBookings for dashboard management
+export async function getAdminServiceBookings() {
+    try {
+        const admin = await getCurrentUser();
+        if (!admin || !admin.role.startsWith('ADMIN_')) return { error: 'Not authorized' };
+
+        const bookings = await prisma.serviceBooking.findMany({
+            orderBy: { createdAt: 'desc' },
+            include: {
+                user: { select: { name: true, phone: true } },
+                provider: { select: { name: true, phone: true, category: true } }
+            }
+        });
+
+        const stats = {
+            totalBookings: bookings.length,
+            pendingBookings: bookings.filter(b => b.status === 'PENDING').length,
+            completedBookings: bookings.filter(b => b.status === 'COMPLETED').length,
+            activeProviders: await prisma.serviceProvider.count({ where: { verified: true } }),
+        };
+
+        return { success: true, recentBookings: bookings, stats };
+    } catch (error) {
+        console.error('getAdminServiceBookings error:', error);
+        return { success: false, error: 'Failed to fetch bookings.' };
+    }
+}
+
+// ADMIN FUNCTION: Update ServiceBooking Status
+export async function updateServiceBookingStatus(bookingId, status) {
+    try {
+        const admin = await getCurrentUser();
+        if (!admin || !admin.role.startsWith('ADMIN_')) return { error: 'Not authorized' };
+
+        const updated = await prisma.serviceBooking.update({
+            where: { id: bookingId },
+            data: { status },
+            include: { user: { select: { id: true } } }
+        });
+
+        await logAdminAction('UPDATE_SERVICE_BOOKING', 'SERVICES', bookingId, { newStatus: status });
+
+        // Notify the student regarding the progression of their request
+        if (updated.user?.id) {
+            await createNotification(updated.user.id, 'Service Booking Update', `Your service booking is now ${status}.`, 'SYSTEM', `/activity`);
+        }
+
+        return { success: true, booking: updated };
+    } catch (error) {
+        console.error('updateServiceBookingStatus error:', error);
+        return { success: false, error: 'Failed to update booking status.' };
+    }
+}

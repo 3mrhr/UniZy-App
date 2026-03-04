@@ -62,6 +62,7 @@ export default function AdminServicesPage() {
 
             {/* Sub-page Navigation */}
             <div className="flex flex-wrap gap-3 mb-8">
+                <Link href="/admin/services/bookings" className="px-4 py-2 bg-brand-50 dark:bg-brand-900/20 rounded-xl text-sm font-black text-brand-600 dark:text-brand-400 hover:bg-brand-100 transition-all border border-brand-100 dark:border-brand-900/30">View Live Bookings</Link>
                 <Link href="/admin/services/pricing" className="px-4 py-2 bg-white dark:bg-unizy-dark rounded-xl text-sm font-bold text-gray-600 dark:text-gray-300 hover:bg-brand-50 dark:hover:bg-brand-900/20 hover:text-brand-600 transition-all border border-gray-100 dark:border-white/5">Pricing</Link>
                 <Link href="/admin/services/commissions" className="px-4 py-2 bg-white dark:bg-unizy-dark rounded-xl text-sm font-bold text-gray-600 dark:text-gray-300 hover:bg-brand-50 dark:hover:bg-brand-900/20 hover:text-brand-600 transition-all border border-gray-100 dark:border-white/5">Commissions</Link>
             </div>

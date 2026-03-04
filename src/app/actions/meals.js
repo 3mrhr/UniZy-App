@@ -3,6 +3,7 @@
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from './auth';
 import { computeCommissionSnapshot, computePricingSnapshot, generateTxnCode } from './financial';
+import { createOrder } from './orders';
 
 // Fetch active meals, optionally filtered by category (tags) or search text
 export async function getActiveMeals(category = null, searchQuery = '') {
@@ -120,65 +121,41 @@ export async function createMeal(data) {
 // Student: Order a Meal
 export async function orderMeal({ mealId, quantity = 1, notes = '' }) {
     try {
-        const user = await getCurrentUser(); // Assumes auth.js exists
+        const user = await getCurrentUser();
         if (!user || user.role !== 'STUDENT') {
             return { success: false, error: 'Only students can order meals.' };
         }
 
         const meal = await prisma.meal.findUnique({
-            where: { id: mealId }
+            where: { id: mealId },
+            include: { merchant: true }
         });
 
         if (!meal) return { success: false, error: 'Meal not found.' };
         if (meal.status !== 'ACTIVE') return { success: false, error: 'Meal is currently unavailable.' };
 
-        // Calculate total 
-        const totalAmount = meal.price * quantity;
+        // Construct standard order payload exactly as the delivery system expects
+        const orderDetails = {
+            vendorId: meal.merchantId,
+            vendor: meal.merchant?.name || 'Local Kitchen',
+            isMealPlan: true,
+            notes: notes
+        };
 
-        // Compute financial snapshots before transaction
-        const commSnap = await computeCommissionSnapshot('MEALS', 'MERCHANT', totalAmount);
-        const priceSnap = await computePricingSnapshot('MEALS');
+        const lineItems = [{
+            mealId: meal.id,
+            quantity: quantity,
+            notes: notes
+        }];
 
-        // Execute unified transaction logging with frozen snapshots
-        const result = await prisma.$transaction(async (tx) => {
-            const txnCode = generateTxnCode();
+        // Delegate to the unified unified order creation pipeline to generate Order, OrderItem, and Transaction accurately
+        const result = await createOrder('DELIVERY', orderDetails, 0, null, lineItems);
 
-            const transactionRecord = await tx.transaction.create({
-                data: {
-                    txnCode,
-                    type: 'MEALS',
-                    userId: user.id,
-                    providerId: meal.merchantId,
-                    mealId: meal.id,
-                    amount: totalAmount,
-                    currency: meal.currency,
-                    notes: `Qty: ${quantity}. ${notes}`.trim(),
-                    // Frozen pricing snapshot
-                    basePriceSnapshot: priceSnap.basePriceSnapshot,
-                    feeComponentsSnapshot: priceSnap.feeComponentsSnapshot,
-                    zoneSnapshot: priceSnap.zoneSnapshot,
-                    pricingRuleId: priceSnap.pricingRuleId,
-                    // Frozen commission snapshot
-                    commissionRuleId: commSnap.commissionRuleId,
-                    unizyCommissionAmount: commSnap.unizyCommissionAmount,
-                    providerNetAmount: commSnap.providerNetAmount,
-                    promoSubsidyAmount: commSnap.promoSubsidyAmount,
-                }
-            });
-
-            await tx.transactionHistory.create({
-                data: {
-                    transactionId: transactionRecord.id,
-                    newStatus: 'PENDING',
-                    actorId: user.id,
-                    reason: 'Student placed meal order',
-                }
-            });
-
-            return transactionRecord;
-        });
-
-        return { success: true, transaction: result };
+        if (result && result.success) {
+            return { success: true, transaction: result.transaction, order: result.order };
+        } else {
+            return { success: false, error: result?.error || 'Failed to place meal order.' };
+        }
     } catch (error) {
         console.error('Error ordering meal:', error);
         return { success: false, error: 'Failed to place meal order.' };

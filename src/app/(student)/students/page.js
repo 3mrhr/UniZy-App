@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { useLanguage } from '@/i18n/LanguageProvider';
 import { Home, Truck, ShoppingBag, Tag, UtensilsCrossed, Users, Search, Gift, Bell, MapPin, ArrowRight, Star, MessageCircle, Package, Calendar, Wrench, Sparkles } from 'lucide-react';
 import { getMyNotifications } from '@/app/actions/notifications';
+import { getCurrentUser } from '@/app/actions/auth';
 
 const SERVICES = [
   { id: 'housing', label: 'Housing', arLabel: 'سكن', icon: Home, color: 'from-blue-500 to-indigo-600', href: '/housing' },
@@ -29,6 +30,7 @@ export default function StudentHome() {
   const { locale, dict } = useLanguage();
   const isRTL = locale === 'ar';
   const [unreadCount, setUnreadCount] = useState(0);
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
     const fetchNotifs = async () => {
@@ -37,7 +39,12 @@ export default function StudentHome() {
         setUnreadCount(res.unreadCount || 0);
       }
     };
+    const fetchUser = async () => {
+      const fetchedUser = await getCurrentUser();
+      setUser(fetchedUser);
+    };
     fetchNotifs();
+    fetchUser();
   }, []);
 
   return (
@@ -51,7 +58,7 @@ export default function StudentHome() {
           <div className="flex items-center justify-between mb-6">
             <div>
               <p className="text-brand-200 text-sm font-bold">{isRTL ? 'مرحباً 👋' : 'Welcome back 👋'}</p>
-              <h1 className="text-3xl font-black text-white tracking-tight">Omar</h1>
+              <h1 className="text-3xl font-black text-white tracking-tight">{user?.name ? user.name.split(' ')[0] : 'Student'}</h1>
             </div>
             <div className="hidden sm:flex gap-3">
               <Link href="/notifications" className="w-11 h-11 bg-white/10 backdrop-blur-xl rounded-2xl flex items-center justify-center hover:bg-white/20 transition-all relative">
@@ -61,7 +68,7 @@ export default function StudentHome() {
                 )}
               </Link>
               <Link href="/account" className="w-11 h-11 bg-white/10 backdrop-blur-xl rounded-2xl flex items-center justify-center overflow-hidden hover:bg-white/20 transition-all">
-                <img src="https://ui-avatars.com/api/?name=Omar+Hassan&background=random&color=fff&size=44" alt="Avatar" className="w-full h-full object-cover" />
+                <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'Student')}&background=random&color=fff&size=44`} alt="Avatar" className="w-full h-full object-cover" />
               </Link>
             </div>
           </div>
