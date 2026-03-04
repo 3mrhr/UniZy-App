@@ -145,7 +145,11 @@ function CompareListingsContent() {
                         <div className="text-sm font-black text-gray-500 dark:text-gray-400 flex items-center">Amenities</div>
                         {selected.map((listing, index) => {
                             let parsedAmenities = [];
-                            try { parsedAmenities = JSON.parse(listing?.amenities || '[]'); } catch (e) { }
+                            try {
+                                parsedAmenities = JSON.parse(listing?.amenities || '[]');
+                            } catch (e) {
+                                console.error(`Failed to parse amenities for listing ${listing?.id}:`, e);
+                            }
 
                             return (
                                 <div key={`am-${index}`} className="flex flex-wrap gap-1 justify-center">
