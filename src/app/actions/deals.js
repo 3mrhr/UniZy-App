@@ -167,6 +167,7 @@ export async function checkIsDealSaved(dealId) {
         });
         return !!existingSave;
     } catch (error) {
+        console.error('Error checking if deal is saved:', error);
         return false;
     }
 }
