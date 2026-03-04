@@ -3,6 +3,7 @@
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/session';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import { logEvent } from './analytics';
 import { rateLimit } from '@/lib/rate-limit';
 import { headers } from 'next/headers';
@@ -202,7 +203,7 @@ export async function requestPasswordReset(email) {
         }
 
         // Generate a random token
-        const token = `${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 15)}`;
+        const token = crypto.randomBytes(32).toString('hex');
 
         // Create reset record (expires in 1 hour)
         await prisma.passwordReset.create({
