@@ -121,28 +121,47 @@ export async function getRetentionCohorts(weeks = 4) {
         const admin = await getCurrentUser();
         if (!admin || !admin.role?.startsWith('ADMIN')) return { error: 'Unauthorized' };
 
-        const cohorts = [];
+        const cohortsData = [];
         for (let i = 0; i < weeks; i++) {
             const weekStart = new Date();
             weekStart.setDate(weekStart.getDate() - (i + 1) * 7);
             const weekEnd = new Date();
             weekEnd.setDate(weekEnd.getDate() - i * 7);
-
-            const activeUsers = await prisma.order.findMany({
-                where: {
-                    createdAt: { gte: weekStart, lt: weekEnd },
-                },
-                select: { userId: true },
-                distinct: ['userId'],
-            });
-
-            cohorts.push({
+            cohortsData.push({
                 week: `Week -${i + 1}`,
-                startDate: weekStart.toISOString().split('T')[0],
-                endDate: weekEnd.toISOString().split('T')[0],
-                activeUsers: activeUsers.length,
+                startDate: weekStart,
+                endDate: weekEnd,
             });
         }
+
+        if (cohortsData.length === 0) {
+            return { success: true, cohorts: [] };
+        }
+
+        const overallStart = cohortsData[cohortsData.length - 1].startDate;
+        const overallEnd = cohortsData[0].endDate;
+
+        const allOrders = await prisma.order.findMany({
+            where: {
+                createdAt: { gte: overallStart, lt: overallEnd },
+            },
+            select: { userId: true, createdAt: true },
+        });
+
+        const cohorts = cohortsData.map((cohort) => {
+            const activeUsersForWeek = new Set();
+            for (const order of allOrders) {
+                if (order.createdAt >= cohort.startDate && order.createdAt < cohort.endDate) {
+                    activeUsersForWeek.add(order.userId);
+                }
+            }
+            return {
+                week: cohort.week,
+                startDate: cohort.startDate.toISOString().split('T')[0],
+                endDate: cohort.endDate.toISOString().split('T')[0],
+                activeUsers: activeUsersForWeek.size,
+            };
+        });
 
         return { success: true, cohorts };
     } catch (error) {
