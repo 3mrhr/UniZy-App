@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/app/actions/auth';
 import { revalidatePath } from 'next/cache';
 import { completeReferralIfEligible } from './referrals';
+import { requireUser, requireRole, requireOwnership } from '@/lib/authz';
 
 export async function getHousingListings(filters = {}) {
     try {
@@ -61,6 +62,73 @@ export async function getHousingListingById(id) {
     } catch (error) {
         console.error('Failed to fetch listing details:', error);
         return null;
+    }
+}
+
+// ========== Provider Specific Actions ==========
+
+export async function getProviderListings() {
+    try {
+        const user = await requireRole(['PROVIDER']);
+
+        const listings = await prisma.housingListing.findMany({
+            where: { providerId: user.id },
+            orderBy: { createdAt: 'desc' }
+        });
+        return { success: true, listings };
+    } catch (error) {
+        console.error('Failed to fetch provider listings:', error);
+        return { success: false, error: 'Failed to access database.' };
+    }
+}
+
+export async function getProviderLeads() {
+    try {
+        const user = await requireRole(['PROVIDER']);
+
+        // Fetch requests for listings owned by this provider
+        const requests = await prisma.housingRequest.findMany({
+            where: {
+                listing: {
+                    providerId: user.id
+                }
+            },
+            include: {
+                user: { select: { name: true, phone: true } },
+                listing: { select: { title: true } }
+            },
+            orderBy: { createdAt: 'desc' }
+        });
+        return { success: true, requests };
+    } catch (error) {
+        console.error('Failed to fetch provider leads:', error);
+        return { success: false, error: 'Failed to access database.' };
+    }
+}
+
+export async function updateHousingRequestStatus(requestId, newStatus) {
+    try {
+        const user = await requireRole(['PROVIDER']);
+
+        // Check ownership
+        const request = await prisma.housingRequest.findUnique({
+            where: { id: requestId },
+            include: { listing: { select: { providerId: true } } }
+        });
+        if (!request) return { success: false, error: 'Request not found.' };
+
+        requireOwnership(request.listing.providerId, user.id);
+
+        await prisma.housingRequest.update({
+            where: { id: requestId },
+            data: { status: newStatus }
+        });
+
+        revalidatePath('/provider');
+        return { success: true };
+    } catch (error) {
+        console.error('Failed to update request status:', error);
+        return { success: false, error: error.message || 'Server error' };
     }
 }
 

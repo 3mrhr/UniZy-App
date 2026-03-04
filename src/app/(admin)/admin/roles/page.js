@@ -4,16 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Users, ShieldCheck, UserPlus, Search, MoreVertical, ChevronDown, Truck, Home, ShoppingBag, UserCheck } from 'lucide-react';
 
-const MOCK_USERS = [
-    { id: 1, name: 'Omar Hassan', email: 'omar@unizy.com', role: 'ADMIN', status: 'Active', joined: '2026-01-10', university: 'Assiut University' },
-    { id: 2, name: 'Ahmed Kareem', email: 'ahmed@driver.com', role: 'DRIVER', status: 'Active', joined: '2026-01-15', university: null },
-    { id: 3, name: 'Sarah Mohamed', email: 'sarah@student.com', role: 'STUDENT', status: 'Active', joined: '2026-02-01', university: 'Assiut University' },
-    { id: 4, name: 'Nour El-Din', email: 'nour@provider.com', role: 'PROVIDER', status: 'Pending', joined: '2026-02-10', university: null },
-    { id: 5, name: 'Fatma Ali', email: 'fatma@merchant.com', role: 'MERCHANT', status: 'Active', joined: '2026-02-14', university: null },
-    { id: 6, name: 'Khaled Mahmoud', email: 'khaled@student.com', role: 'STUDENT', status: 'Suspended', joined: '2026-02-20', university: 'Sphinx University' },
-    { id: 7, name: 'Youssef Tarek', email: 'youssef@driver.com', role: 'DRIVER', status: 'Active', joined: '2026-02-22', university: null },
-    { id: 8, name: 'Mariam Saeed', email: 'mariam@student.com', role: 'STUDENT', status: 'Active', joined: '2026-02-25', university: 'Assiut University' },
-];
+import { getUsers } from '@/app/actions/admin';
 
 const ROLE_COLORS = {
     ADMIN: { bg: 'bg-red-100 dark:bg-red-900/20', text: 'text-red-600 dark:text-red-400' },
@@ -32,7 +23,26 @@ const STATUS_COLORS = {
 export default function AdminRolesPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [filterRole, setFilterRole] = useState('ALL');
-    const [users, setUsers] = useState(MOCK_USERS);
+    const [users, setUsers] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        getUsers().then(res => {
+            if (res.success) {
+                const formattedUsers = res.data.map(u => ({
+                    id: u.id,
+                    name: u.name,
+                    email: u.email,
+                    role: u.role,
+                    status: 'Active',
+                    joined: 'Recently',
+                    university: u.university || 'N/A'
+                }));
+                setUsers(formattedUsers);
+            }
+            setLoading(false);
+        });
+    }, []);
 
     const filteredUsers = users.filter((u) => {
         const matchesSearch = u.name.toLowerCase().includes(searchQuery.toLowerCase()) || u.email.toLowerCase().includes(searchQuery.toLowerCase());
@@ -53,8 +63,8 @@ export default function AdminRolesPage() {
 
             {/* Sub-page Navigation */}
             <div className="flex flex-wrap gap-3 mb-8">
-                    <Link href="/admin/roles-permissions" className="px-4 py-2 bg-white dark:bg-unizy-dark rounded-xl text-sm font-bold text-gray-600 dark:text-gray-300 hover:bg-brand-50 dark:hover:bg-brand-900/20 hover:text-brand-600 transition-all border border-gray-100 dark:border-white/5">Advanced Permissions</Link>
-                    <Link href="/admin/roles-permissions/scopes" className="px-4 py-2 bg-white dark:bg-unizy-dark rounded-xl text-sm font-bold text-gray-600 dark:text-gray-300 hover:bg-brand-50 dark:hover:bg-brand-900/20 hover:text-brand-600 transition-all border border-gray-100 dark:border-white/5">Permission Scopes</Link>
+                <Link href="/admin/roles-permissions" className="px-4 py-2 bg-white dark:bg-unizy-dark rounded-xl text-sm font-bold text-gray-600 dark:text-gray-300 hover:bg-brand-50 dark:hover:bg-brand-900/20 hover:text-brand-600 transition-all border border-gray-100 dark:border-white/5">Advanced Permissions</Link>
+                <Link href="/admin/roles-permissions/scopes" className="px-4 py-2 bg-white dark:bg-unizy-dark rounded-xl text-sm font-bold text-gray-600 dark:text-gray-300 hover:bg-brand-50 dark:hover:bg-brand-900/20 hover:text-brand-600 transition-all border border-gray-100 dark:border-white/5">Permission Scopes</Link>
             </div>
 
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -107,62 +117,65 @@ export default function AdminRolesPage() {
                 </select>
             </div>
 
-            {/* Users Table */}
-            <div className="bg-white dark:bg-[#1E293B] rounded-3xl border border-gray-100 dark:border-gray-800 overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="w-full">
-                        <thead>
-                            <tr className="border-b border-gray-100 dark:border-gray-800">
-                                <th className="text-left px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">User</th>
-                                <th className="text-left px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Role</th>
-                                <th className="text-left px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Status</th>
-                                <th className="text-left px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Joined</th>
-                                <th className="text-right px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filteredUsers.map((user) => {
-                                const roleColor = ROLE_COLORS[user.role] || ROLE_COLORS.STUDENT;
-                                return (
-                                    <tr key={user.id} className="border-b border-gray-50 dark:border-gray-800/50 hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-xl bg-brand-100 dark:bg-brand-900/20 flex items-center justify-center">
-                                                    <span className="font-black text-brand-600 text-sm">{user.name.split(' ').map(n => n[0]).join('')}</span>
+            {loading ? (
+                <div className="text-center py-12 text-gray-500 font-bold">Loading users...</div>
+            ) : (
+                <div className="bg-white dark:bg-[#1E293B] rounded-3xl border border-gray-100 dark:border-gray-800 overflow-hidden">
+                    <div className="overflow-x-auto">
+                        <table className="w-full">
+                            <thead>
+                                <tr className="border-b border-gray-100 dark:border-gray-800">
+                                    <th className="text-left px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">User</th>
+                                    <th className="text-left px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Role</th>
+                                    <th className="text-left px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Status</th>
+                                    <th className="text-left px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Joined</th>
+                                    <th className="text-right px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filteredUsers.map((user) => {
+                                    const roleColor = ROLE_COLORS[user.role] || ROLE_COLORS.STUDENT;
+                                    return (
+                                        <tr key={user.id} className="border-b border-gray-50 dark:border-gray-800/50 hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
+                                            <td className="px-6 py-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 rounded-xl bg-brand-100 dark:bg-brand-900/20 flex items-center justify-center">
+                                                        <span className="font-black text-brand-600 text-sm">{user.name.split(' ').map(n => n[0]).join('')}</span>
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-bold text-gray-900 dark:text-white text-sm">{user.name}</p>
+                                                        <p className="text-xs text-gray-400">{user.email}</p>
+                                                    </div>
                                                 </div>
-                                                <div>
-                                                    <p className="font-bold text-gray-900 dark:text-white text-sm">{user.name}</p>
-                                                    <p className="text-xs text-gray-400">{user.email}</p>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${roleColor.bg} ${roleColor.text}`}>
-                                                {user.role}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <span className={`text-sm font-bold ${STATUS_COLORS[user.status]}`}>● {user.status}</span>
-                                        </td>
-                                        <td className="px-6 py-4 text-sm font-medium text-gray-500">{user.joined}</td>
-                                        <td className="px-6 py-4 text-right">
-                                            <button className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 transition-all">
-                                                <MoreVertical size={16} />
-                                            </button>
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
-                </div>
-                {filteredUsers.length === 0 && (
-                    <div className="text-center py-12">
-                        <Users className="mx-auto text-gray-300 dark:text-gray-600 mb-3" size={40} />
-                        <p className="font-bold text-gray-400">No users match your criteria</p>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${roleColor.bg} ${roleColor.text}`}>
+                                                    {user.role}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <span className={`text-sm font-bold ${STATUS_COLORS[user.status]}`}>● {user.status}</span>
+                                            </td>
+                                            <td className="px-6 py-4 text-sm font-medium text-gray-500">{user.joined}</td>
+                                            <td className="px-6 py-4 text-right">
+                                                <button className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 transition-all">
+                                                    <MoreVertical size={16} />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
                     </div>
-                )}
-            </div>
+                    {filteredUsers.length === 0 && (
+                        <div className="text-center py-12">
+                            <Users className="mx-auto text-gray-300 dark:text-gray-600 mb-3" size={40} />
+                            <p className="font-bold text-gray-400">No users match your criteria</p>
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 }

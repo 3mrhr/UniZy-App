@@ -2,6 +2,7 @@ import ProviderClient from './ProviderClient';
 import { getCurrentUser } from '@/app/actions/auth';
 import { prisma } from '@/lib/prisma';
 import { redirect } from 'next/navigation';
+import { getProviderListings, getProviderLeads } from '@/app/actions/housing';
 
 export const metadata = {
     title: 'Provider Hub | UniZy',
@@ -20,5 +21,11 @@ export default async function ProviderPage() {
         take: 10
     });
 
-    return <ProviderClient settlements={settlements} />;
+    const listingsRes = await getProviderListings();
+    const leadsRes = await getProviderLeads();
+
+    const listings = listingsRes.success ? listingsRes.listings : [];
+    const leads = leadsRes.success ? leadsRes.requests : [];
+
+    return <ProviderClient settlements={settlements} dbListings={listings} dbLeads={leads} />;
 }

@@ -62,6 +62,12 @@ export default function ActivityPage() {
         if (txn.type === 'CLEANING' && txn.cleaningBooking?.package) return `Cleaning: ${txn.cleaningBooking.package.name}`;
         if (txn.type === 'DEALS' && txn.deal) return `Deal Redeemed: ${txn.deal.title}`;
         if (txn.type === 'MEALS' && txn.meal) return `Meal Order: ${txn.meal.name}`;
+        if (txn.type === 'DELIVERY' && txn.order) {
+            try {
+                const details = JSON.parse(txn.order.details || '{}');
+                return `Delivery from ${details.vendor || 'Restaurant'}`;
+            } catch { return 'Delivery Order'; }
+        }
         if (txn.type === 'HOUSING' && txn.housing) return `Housing: ${txn.housing.title}`;
         return `Transaction ${txn.txnCode}`;
     };
@@ -71,6 +77,10 @@ export default function ActivityPage() {
         if (txn.type === 'CLEANING' && txn.cleaningBooking) return `${txn.cleaningBooking.date} at ${txn.cleaningBooking.timeSlot}`;
         if (txn.type === 'DEALS' && txn.deal) return `From ${txn.deal.merchant.name}`;
         if (txn.type === 'MEALS' && txn.meal) return `From ${txn.meal.merchant.name}`;
+        if (txn.type === 'DELIVERY' && txn.order) {
+            const items = txn.order.orderItems?.map(i => `${i.nameSnapshot} x${i.qty}`).join(', ');
+            return items || 'Delivery Items';
+        }
         return new Date(txn.createdAt).toLocaleDateString('en-EG');
     };
 
@@ -125,36 +135,40 @@ export default function ActivityPage() {
                         </p>
                     </div>
                 ) : (
-                    transactions.map((txn) => (
-                        <Link
-                            href={`/activity/${txn.id}`}
-                            key={txn.id}
-                            className="block bg-white dark:bg-[#1E293B] p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 hover:border-brand-500 dark:hover:border-brand-500 transition-colors group"
-                        >
-                            <div className="flex items-center gap-4">
-                                <div className="w-12 h-12 rounded-xl bg-gray-50 dark:bg-gray-800/50 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
-                                    {getIconForType(txn.type)}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-center justify-between gap-2 mb-1">
-                                        <h3 className="text-sm font-bold text-gray-900 dark:text-white truncate">
-                                            {getTitleForTransaction(txn)}
-                                        </h3>
-                                        {getStatusBadge(txn.status)}
+                    transactions.map((txn) => {
+                        // For DELIVERY, the link goes to the live tracking page
+                        const linkHref = txn.type === 'DELIVERY' && txn.orderId ? `/activity/tracking/${txn.orderId}` : `/activity/${txn.id}`;
+                        return (
+                            <Link
+                                href={linkHref}
+                                key={txn.id}
+                                className="block bg-white dark:bg-[#1E293B] p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 hover:border-brand-500 dark:hover:border-brand-500 transition-colors group"
+                            >
+                                <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 rounded-xl bg-gray-50 dark:bg-gray-800/50 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+                                        {getIconForType(txn.type)}
                                     </div>
-                                    <div className="flex items-center justify-between">
-                                        <p className="text-xs text-gray-500 truncate">
-                                            {getSubtitleForTransaction(txn)}
-                                        </p>
-                                        <span className="text-xs font-bold text-gray-900 dark:text-white flex items-center">
-                                            {txn.amount > 0 ? `${txn.amount} ${txn.currency}` : 'Quote Request'}
-                                            <ChevronRight className="w-4 h-4 ml-1 text-gray-300 group-hover:text-brand-500 transition-colors" />
-                                        </span>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center justify-between gap-2 mb-1">
+                                            <h3 className="text-sm font-bold text-gray-900 dark:text-white truncate">
+                                                {getTitleForTransaction(txn)}
+                                            </h3>
+                                            {getStatusBadge(txn.order ? txn.order.status : txn.status)}
+                                        </div>
+                                        <div className="flex items-center justify-between">
+                                            <p className="text-xs text-gray-500 truncate">
+                                                {getSubtitleForTransaction(txn)}
+                                            </p>
+                                            <span className="text-xs font-bold text-gray-900 dark:text-white flex items-center">
+                                                {txn.amount > 0 ? `${txn.amount} ${txn.currency}` : 'Quote Request'}
+                                                <ChevronRight className="w-4 h-4 ml-1 text-gray-300 group-hover:text-brand-500 transition-colors" />
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        </Link>
-                    ))
+                            </Link>
+                        );
+                    })
                 )}
             </div>
         </div>

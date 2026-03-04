@@ -27,6 +27,7 @@ export async function getUserTransactions({ type = 'ALL', status = 'ALL', limit 
                 serviceBooking: { select: { date: true, timeSlot: true, provider: { select: { name: true, category: true } } } },
                 cleaningBooking: { select: { date: true, timeSlot: true, package: { select: { name: true } } } },
                 housing: { select: { title: true, type: true } },
+                order: { select: { status: true, total: true, details: true, orderItems: { select: { nameSnapshot: true, qty: true } }, driver: { select: { name: true, phone: true } } } },
                 history: { orderBy: { createdAt: 'asc' } } // Fetch timeline
             }
         });
@@ -54,6 +55,7 @@ export async function getTransactionDetails(transactionId) {
                 serviceBooking: { include: { provider: true } },
                 cleaningBooking: { include: { package: true } },
                 housing: { include: { provider: { select: { name: true, phone: true } } } },
+                order: { include: { orderItems: true, driver: { select: { name: true, phone: true } } } },
                 history: {
                     orderBy: { createdAt: 'desc' },
                     include: {
