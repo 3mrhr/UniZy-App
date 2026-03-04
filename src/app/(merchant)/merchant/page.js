@@ -37,14 +37,16 @@ export default async function MerchantPage() {
         orderBy: { createdAt: 'desc' },
     });
 
-    return <MerchantClient
-        settlements={settlements}
-        dbOrders={orders}
-        dbMeals={meals}
-        dbDeals={deals}
-        merchantName={user.storeName || user.name}
-        storeAddress={user.storeAddress || ''}
-        storeDescription={user.storeDescription || ''}
-        storeOpen={user.storeOpen}
-    />;
+    const merchantData = {
+        settlements,
+        dbOrders: orders,
+        dbMeals: meals,
+        dbDeals: deals,
+        merchantName: user.storeName || user.name,
+        storeAddress: user.storeAddress || '',
+        storeDescription: user.storeDescription || '',
+        storeOpen: user.storeOpen,
+    };
+
+    return <MerchantClient merchantData={merchantData} />;
 }

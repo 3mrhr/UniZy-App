@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { useLanguage } from '@/i18n/LanguageProvider';
 import ThemeLangControls from '@/components/ThemeLangControls';
 
-export default function MerchantClient({ settlements, dbOrders = [], dbMeals = [], dbDeals = [], merchantName = 'Merchant Hub', storeAddress = '', storeDescription = '', storeOpen = false }) {
+export default function MerchantClient({ merchantData }) {
+    const { settlements, dbOrders = [], dbMeals = [], dbDeals = [], merchantName = 'Merchant Hub', storeAddress = '', storeDescription = '', storeOpen = false } = merchantData;
     const { dict } = useLanguage();
 
     const totalRevenue = settlements.reduce((sum, s) => sum + s.netAmount, 0);
