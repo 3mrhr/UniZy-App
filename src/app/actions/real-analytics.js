@@ -15,25 +15,30 @@ export async function getRevenueByModule() {
 
         const modules = ['HOUSING', 'TRANSPORT', 'DELIVERY', 'DEALS', 'MEALS', 'SERVICES', 'CLEANING'];
 
-        const results = await Promise.all(
-            modules.map(async (mod) => {
-                const revenue = await prisma.transaction.aggregate({
-                    where: { type: mod, status: { not: 'REFUNDED' } },
-                    _sum: { amount: true },
-                    _count: true,
-                });
-                const commission = await prisma.transaction.aggregate({
-                    where: { type: mod, status: { not: 'REFUNDED' } },
-                    _sum: { unizyCommissionAmount: true },
-                });
-                return {
-                    module: mod,
-                    revenue: revenue._sum.amount || 0,
-                    commission: commission._sum.unizyCommissionAmount || 0,
-                    transactions: revenue._count || 0,
-                };
-            })
-        );
+        const groupResults = await prisma.transaction.groupBy({
+            by: ['type'],
+            where: {
+                type: { in: modules },
+                status: { not: 'REFUNDED' },
+            },
+            _sum: {
+                amount: true,
+                unizyCommissionAmount: true,
+            },
+            _count: {
+                _all: true,
+            },
+        });
+
+        const results = modules.map((mod) => {
+            const data = groupResults.find((g) => g.type === mod);
+            return {
+                module: mod,
+                revenue: data?._sum?.amount || 0,
+                commission: data?._sum?.unizyCommissionAmount || 0,
+                transactions: data?._count?._all || 0,
+            };
+        });
 
         return { success: true, data: results };
     } catch (error) {
