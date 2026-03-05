@@ -303,11 +303,11 @@ export async function createOrder(service, details, clientTotal, promoCodeStr = 
         });
 
         // Log analytics outside transaction
-        if (result?.success) {
+        if (result?.ok) {
             try {
-                await logEvent('ORDER_CREATED', result.order.id, { service, total: result.order.total });
-                await logEvent('PAYMENT_SUCCEEDED', result.order.id, { amount: result.order.total });
-                await createNotification(user.id, 'Order Placed', `Your ${service.toLowerCase()} order has been placed.`, 'SYSTEM', `/activity/tracking/${result.order.id}`);
+                await logEvent('ORDER_CREATED', result.data.order.id, { service, total: result.data.order.total });
+                await logEvent('PAYMENT_SUCCEEDED', result.data.order.id, { amount: result.data.order.total });
+                await createNotification(user.id, 'Order Placed', `Your ${service.toLowerCase()} order has been placed.`, 'SYSTEM', `/activity/tracking/${result.data.order.id}`);
             } catch (_) { /* non-critical */ }
         }
         return result;
