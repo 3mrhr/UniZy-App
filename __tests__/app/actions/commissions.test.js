@@ -18,6 +18,11 @@ jest.mock('../../../src/app/actions/audit', () => ({
     logAdminAction: jest.fn(),
 }));
 
+jest.mock('next/cache', () => ({
+    unstable_cache: jest.fn(
+        (cb) => async (...args) => await cb(...args)
+    ),
+}));
 
 describe('getCommissionRules', () => {
     beforeEach(() => {
