@@ -16,42 +16,70 @@ export async function checkSLABreaches() {
             where: { active: true },
         });
 
+        if (activeRules.length === 0) return { success: true, breachesCreated: 0 };
+
+        // Pre-calculate minimum thresholds for each metric to query all potential breaches at once
+        const minThresholds = {};
+        for (const rule of activeRules) {
+            const t = rule.thresholdMinutes || 30;
+            if (!minThresholds[rule.metric] || t < minThresholds[rule.metric]) {
+                minThresholds[rule.metric] = t;
+            }
+        }
+
+        const now = Date.now();
+        const potentialTargets = {
+            ORDER_ACCEPTANCE_TIME: [],
+            ORDER_DELIVERY_TIME: [],
+            TICKET_RESPONSE_TIME: []
+        };
+
+        // Pre-fetch all targets that could potentially breach ANY active rule
+        if (minThresholds['ORDER_ACCEPTANCE_TIME'] !== undefined) {
+            potentialTargets.ORDER_ACCEPTANCE_TIME = await prisma.order.findMany({
+                where: {
+                    status: 'PENDING',
+                    createdAt: { lte: new Date(now - minThresholds['ORDER_ACCEPTANCE_TIME'] * 60 * 1000) },
+                },
+                select: { id: true, createdAt: true },
+            });
+        }
+
+        if (minThresholds['ORDER_DELIVERY_TIME'] !== undefined) {
+            potentialTargets.ORDER_DELIVERY_TIME = await prisma.order.findMany({
+                where: {
+                    status: { in: ['ACCEPTED', 'PICKED_UP'] },
+                    createdAt: { lte: new Date(now - minThresholds['ORDER_DELIVERY_TIME'] * 60 * 1000) },
+                },
+                select: { id: true, createdAt: true },
+            });
+        }
+
+        if (minThresholds['TICKET_RESPONSE_TIME'] !== undefined) {
+            potentialTargets.TICKET_RESPONSE_TIME = await prisma.supportTicket.findMany({
+                where: {
+                    status: 'OPEN',
+                    createdAt: { lte: new Date(now - minThresholds['TICKET_RESPONSE_TIME'] * 60 * 1000) },
+                },
+                select: { id: true, createdAt: true },
+            });
+        }
+
         let breachesCreated = 0;
 
         for (const rule of activeRules) {
             const thresholdMinutes = rule.thresholdMinutes || 30;
-            const cutoff = new Date(Date.now() - thresholdMinutes * 60 * 1000);
+            const cutoff = new Date(now - thresholdMinutes * 60 * 1000);
 
-            // Find orders that exceed the threshold and haven't been breached yet
+            // Find targets that exceed the threshold and haven't been breached yet
             let breachableTargets = [];
 
             if (rule.metric === 'ORDER_ACCEPTANCE_TIME') {
-                // Orders still PENDING beyond threshold
-                breachableTargets = await prisma.order.findMany({
-                    where: {
-                        status: 'PENDING',
-                        createdAt: { lte: cutoff },
-                    },
-                    select: { id: true },
-                });
+                breachableTargets = potentialTargets.ORDER_ACCEPTANCE_TIME.filter(t => t.createdAt <= cutoff);
             } else if (rule.metric === 'ORDER_DELIVERY_TIME') {
-                // Orders ACCEPTED but not COMPLETED beyond threshold
-                breachableTargets = await prisma.order.findMany({
-                    where: {
-                        status: { in: ['ACCEPTED', 'PICKED_UP'] },
-                        createdAt: { lte: cutoff },
-                    },
-                    select: { id: true },
-                });
+                breachableTargets = potentialTargets.ORDER_DELIVERY_TIME.filter(t => t.createdAt <= cutoff);
             } else if (rule.metric === 'TICKET_RESPONSE_TIME') {
-                // Support tickets OPEN beyond threshold
-                breachableTargets = await prisma.supportTicket.findMany({
-                    where: {
-                        status: 'OPEN',
-                        createdAt: { lte: cutoff },
-                    },
-                    select: { id: true },
-                });
+                breachableTargets = potentialTargets.TICKET_RESPONSE_TIME.filter(t => t.createdAt <= cutoff);
             }
 
             if (breachableTargets.length === 0) continue;
