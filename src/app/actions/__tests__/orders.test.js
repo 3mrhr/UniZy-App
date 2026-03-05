@@ -1,6 +1,6 @@
 import { createOrder, triggerSOS, getMerchantOrders, updateMerchantOrderStatus, acceptOrder, getStudentOrders, getRideEstimate, getDriverOrders, updateOrderStatus } from '../orders';
 import { prisma } from '@/lib/prisma';
-import { requireRole } from '@/lib/authz';
+import { requireRole, requireOwnership } from '@/lib/authz';
 import { generateTxnCode, computeCommissionSnapshot, computePricingSnapshot } from '../financial';
 import { logEvent } from '../analytics';
 import { createNotification } from '../notifications';

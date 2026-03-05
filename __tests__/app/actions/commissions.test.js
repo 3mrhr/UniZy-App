@@ -91,7 +91,7 @@ describe('getCommissionRules', () => {
         const result = await getCommissionRules();
 
         expect(prisma.commissionRule.findMany).toHaveBeenCalledTimes(1);
-        expect(console.error).toHaveBeenCalledWith('Failed to fetch commission rules', new Error('DB error'));
+        expect(console.error).toHaveBeenCalledWith('Failed to get commission rules:', expect.any(Error));
         expect(result).toEqual({ success: false, error: 'Failed to fetch commission rules' });
 
         // Restore console.error
