@@ -22,6 +22,7 @@ jest.mock('next/cache', () => ({
     unstable_cache: jest.fn(
         (cb) => async (...args) => await cb(...args)
     ),
+    revalidateTag: jest.fn(),
 }));
 
 describe('getCommissionRules', () => {

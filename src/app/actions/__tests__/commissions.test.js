@@ -19,6 +19,10 @@ jest.mock('../audit', () => ({
     logAdminAction: jest.fn(),
 }));
 
+jest.mock('next/cache', () => ({
+    revalidateTag: jest.fn(),
+}));
+
 describe('toggleCommissionRule', () => {
     beforeEach(() => {
         jest.clearAllMocks();
