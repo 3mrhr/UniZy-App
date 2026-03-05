@@ -332,81 +332,88 @@ describe('getMerchantOrders', () => {
         expect(result).toEqual({ error: 'Failed to fetch orders.' });
     });
 });
-it('should update order status successfully for valid transitions', async () => {
-    const mockUser = { id: 'merchant-123' };
-    requireRole.mockResolvedValue(mockUser);
 
-    const mockOrder = { id: 'order-123', status: 'PENDING', userId: 'user-456' };
-    prisma.order.findFirst.mockResolvedValue(mockOrder);
+describe('updateMerchantOrderStatus', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
 
-    const updatedOrder = { ...mockOrder, status: 'ACCEPTED' };
-    prisma.order.update.mockResolvedValue(updatedOrder);
+    it('should update order status successfully for valid transitions', async () => {
+        const mockUser = { id: 'merchant-123' };
+        requireRole.mockResolvedValue(mockUser);
 
-    const result = await updateMerchantOrderStatus('order-123', 'ACCEPTED');
+        const mockOrder = { id: 'order-123', status: 'PENDING', userId: 'user-456' };
+        prisma.order.findFirst.mockResolvedValue(mockOrder);
 
-    expect(requireRole).toHaveBeenCalledWith(['MERCHANT']);
-    expect(prisma.order.findFirst).toHaveBeenCalledWith({
-        where: {
-            id: 'order-123',
-            orderItems: {
-                some: {
-                    meal: {
-                        merchantId: 'merchant-123'
+        const updatedOrder = { ...mockOrder, status: 'ACCEPTED' };
+        prisma.order.update.mockResolvedValue(updatedOrder);
+
+        const result = await updateMerchantOrderStatus('order-123', 'ACCEPTED');
+
+        expect(requireRole).toHaveBeenCalledWith(['MERCHANT']);
+        expect(prisma.order.findFirst).toHaveBeenCalledWith({
+            where: {
+                id: 'order-123',
+                orderItems: {
+                    some: {
+                        meal: {
+                            merchantId: 'merchant-123'
+                        }
                     }
                 }
             }
-        }
+        });
+        expect(prisma.order.update).toHaveBeenCalledWith({
+            where: { id: 'order-123' },
+            data: { status: 'ACCEPTED' }
+        });
+        expect(createNotification).toHaveBeenCalledWith('user-456', 'Order Update', 'Your order is now ACCEPTED.', 'SYSTEM', '/activity/tracking/order-123');
+        expect(logEvent).toHaveBeenCalledWith('ORDER_STATUS_TRANSITION', 'order-123', { newStatus: 'ACCEPTED', actor: 'MERCHANT' });
+        expect(revalidatePath).toHaveBeenCalledWith('/merchant');
+        expect(result).toEqual(success({ order: updatedOrder }));
     });
-    expect(prisma.order.update).toHaveBeenCalledWith({
-        where: { id: 'order-123' },
-        data: { status: 'ACCEPTED' }
+
+    it('should return failure if user is not a MERCHANT', async () => {
+        requireRole.mockRejectedValue(new Error('Forbidden'));
+
+        const result = await updateMerchantOrderStatus('order-123', 'ACCEPTED');
+
+        expect(result).toEqual(failure('UPDATE_FAILED', 'Failed to update order status.'));
     });
-    expect(createNotification).toHaveBeenCalledWith('user-456', 'Order Update', 'Your order is now ACCEPTED.', 'SYSTEM', '/activity/tracking/order-123');
-    expect(logEvent).toHaveBeenCalledWith('ORDER_STATUS_TRANSITION', 'order-123', { newStatus: 'ACCEPTED', actor: 'MERCHANT' });
-    expect(revalidatePath).toHaveBeenCalledWith('/merchant');
-    expect(result).toEqual(success({ order: updatedOrder }));
-});
 
-it('should return failure if user is not a MERCHANT', async () => {
-    requireRole.mockRejectedValue(new Error('Forbidden'));
+    it('should return failure if order does not exist or does not belong to merchant', async () => {
+        const mockUser = { id: 'merchant-123' };
+        requireRole.mockResolvedValue(mockUser);
 
-    const result = await updateMerchantOrderStatus('order-123', 'ACCEPTED');
+        prisma.order.findFirst.mockResolvedValue(null);
 
-    expect(result).toEqual(failure('UPDATE_FAILED', 'Failed to update order status.'));
-});
+        const result = await updateMerchantOrderStatus('order-123', 'ACCEPTED');
 
-it('should return failure if order does not exist or does not belong to merchant', async () => {
-    const mockUser = { id: 'merchant-123' };
-    requireRole.mockResolvedValue(mockUser);
+        expect(result).toEqual(failure('NOT_FOUND', 'Order not found or does not belong to you.'));
+        expect(prisma.order.update).not.toHaveBeenCalled();
+    });
 
-    prisma.order.findFirst.mockResolvedValue(null);
+    it('should return failure for invalid state transitions', async () => {
+        const mockUser = { id: 'merchant-123' };
+        requireRole.mockResolvedValue(mockUser);
 
-    const result = await updateMerchantOrderStatus('order-123', 'ACCEPTED');
+        const mockOrder = { id: 'order-123', status: 'PENDING', userId: 'user-456' };
+        prisma.order.findFirst.mockResolvedValue(mockOrder);
 
-    expect(result).toEqual(failure('NOT_FOUND', 'Order not found or does not belong to you.'));
-    expect(prisma.order.update).not.toHaveBeenCalled();
-});
+        const result = await updateMerchantOrderStatus('order-123', 'READY');
 
-it('should return failure for invalid state transitions', async () => {
-    const mockUser = { id: 'merchant-123' };
-    requireRole.mockResolvedValue(mockUser);
+        expect(result).toEqual(failure('INVALID_STATE', 'Cannot transition from PENDING to READY.'));
+        expect(prisma.order.update).not.toHaveBeenCalled();
+    });
 
-    const mockOrder = { id: 'order-123', status: 'PENDING', userId: 'user-456' };
-    prisma.order.findFirst.mockResolvedValue(mockOrder);
+    it('should return failure on database error', async () => {
+        const mockUser = { id: 'merchant-123' };
+        requireRole.mockResolvedValue(mockUser);
 
-    const result = await updateMerchantOrderStatus('order-123', 'READY');
+        prisma.order.findFirst.mockRejectedValue(new Error('Database error'));
 
-    expect(result).toEqual(failure('INVALID_STATE', 'Cannot transition from PENDING to READY.'));
-    expect(prisma.order.update).not.toHaveBeenCalled();
-});
+        const result = await updateMerchantOrderStatus('order-123', 'ACCEPTED');
 
-it('should return failure on database error', async () => {
-    const mockUser = { id: 'merchant-123' };
-    requireRole.mockResolvedValue(mockUser);
-
-    prisma.order.findFirst.mockRejectedValue(new Error('Database error'));
-
-    const result = await updateMerchantOrderStatus('order-123', 'ACCEPTED');
-
-    expect(result).toEqual(failure('UPDATE_FAILED', 'Failed to update order status.'));
+        expect(result).toEqual(failure('UPDATE_FAILED', 'Failed to update order status.'));
+    });
 });
