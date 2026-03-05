@@ -15,6 +15,7 @@ jest.mock('@/lib/prisma', () => ({
     order: {
       findMany: jest.fn(),
     },
+    $queryRaw: jest.fn(),
   },
 }));
 
@@ -77,7 +78,7 @@ describe('Advanced Analytics Server Actions', () => {
 
     it('should fail silently and return { success: false } if database creation fails', async () => {
       // Mock console.error to avoid test output noise
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => { });
       getCurrentUser.mockResolvedValue(null);
       prisma.analyticsEvent.create.mockRejectedValue(new Error('DB Error'));
 
@@ -142,7 +143,7 @@ describe('Advanced Analytics Server Actions', () => {
     });
 
     it('should catch errors and return a generic failure message', async () => {
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => { });
       getCurrentUser.mockResolvedValue({ role: 'ADMIN' });
       prisma.user.count.mockRejectedValue(new Error('DB Error'));
 
@@ -196,7 +197,7 @@ describe('Advanced Analytics Server Actions', () => {
     });
 
     it('should catch errors and return a generic failure message', async () => {
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => { });
       getCurrentUser.mockResolvedValue({ role: 'ADMIN' });
       prisma.transaction.count.mockRejectedValue(new Error('DB Error'));
 
@@ -236,16 +237,14 @@ describe('Advanced Analytics Server Actions', () => {
       const twoWeeksAgo = new Date(now);
       twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 10); // Week -2
 
-      prisma.order.findMany.mockResolvedValue([
-        { userId: 'u1', createdAt: oneWeekAgo },
-        { userId: 'u2', createdAt: oneWeekAgo },
-        { userId: 'u1', createdAt: twoWeeksAgo }, // Same user in week -2
-        { userId: 'u3', createdAt: twoWeeksAgo },
+      prisma.$queryRaw.mockResolvedValue([
+        { week_index: 0, activeUsers: 2 }, // Week -1
+        { week_index: 1, activeUsers: 2 }, // Week -2
       ]);
 
       const result = await getRetentionCohorts(4);
 
-      expect(prisma.order.findMany).toHaveBeenCalledTimes(1);
+      expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
       expect(result.success).toBe(true);
       expect(result.cohorts.length).toBe(4);
 
@@ -263,9 +262,9 @@ describe('Advanced Analytics Server Actions', () => {
     });
 
     it('should catch errors and return a generic failure message', async () => {
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => { });
       getCurrentUser.mockResolvedValue({ role: 'ADMIN' });
-      prisma.order.findMany.mockRejectedValue(new Error('DB Error'));
+      prisma.$queryRaw.mockRejectedValue(new Error('DB Error'));
 
       const result = await getRetentionCohorts();
 
