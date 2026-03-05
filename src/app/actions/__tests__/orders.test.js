@@ -1,5 +1,4 @@
-<<<<<<< HEAD
-import { createOrder, triggerSOS } from '../orders';
+import { createOrder, triggerSOS, getMerchantOrders } from '../orders';
 import { prisma } from '@/lib/prisma';
 import { requireRole } from '@/lib/authz';
 import { generateTxnCode, computeCommissionSnapshot, computePricingSnapshot } from '../financial';
@@ -10,6 +9,7 @@ jest.mock('@/lib/prisma', () => ({
     prisma: {
         order: {
             findFirst: jest.fn(),
+            findMany: jest.fn(),
             create: jest.fn(),
         },
         $transaction: jest.fn(),
@@ -17,26 +17,12 @@ jest.mock('@/lib/prisma', () => ({
             create: jest.fn(),
         },
     }
-=======
-import { getMerchantOrders } from '../orders';
-import { prisma } from '@/lib/prisma';
-import { requireRole } from '@/lib/authz';
-
-// Mock the dependencies
-jest.mock('@/lib/prisma', () => ({
-    prisma: {
-        order: {
-            findMany: jest.fn(),
-        },
-    },
->>>>>>> origin/add-get-merchant-orders-tests-14435469592818301008
 }));
 
 jest.mock('@/lib/authz', () => ({
     requireRole: jest.fn(),
 }));
 
-<<<<<<< HEAD
 jest.mock('../financial', () => ({
     generateTxnCode: jest.fn(),
     computeCommissionSnapshot: jest.fn(),
@@ -241,13 +227,14 @@ describe('triggerSOS', () => {
 
         // Verify error return value
         expect(result).toEqual({ error: 'Failed to trigger SOS.' });
-=======
+    });
+});
 describe('getMerchantOrders', () => {
     beforeEach(() => {
         jest.clearAllMocks();
 
         // Suppress console.error in tests
-        jest.spyOn(console, 'error').mockImplementation(() => {});
+        jest.spyOn(console, 'error').mockImplementation(() => { });
     });
 
     afterEach(() => {
@@ -328,6 +315,5 @@ describe('getMerchantOrders', () => {
         expect(prisma.order.findMany).toHaveBeenCalled();
         expect(console.error).toHaveBeenCalledWith('Failed to fetch merchant orders:', error);
         expect(result).toEqual({ error: 'Failed to fetch orders.' });
->>>>>>> origin/add-get-merchant-orders-tests-14435469592818301008
     });
 });
