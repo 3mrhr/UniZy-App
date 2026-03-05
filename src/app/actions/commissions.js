@@ -1,6 +1,7 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
+import { unstable_cache, revalidateTag } from 'next/cache';
 import { getCurrentUser } from './auth';
 import { logAdminAction } from './audit';
 
@@ -35,12 +36,12 @@ async function enforceCommissionScope(moduleName) {
 }
 
 
-export async function getCommissionRules(moduleFilter = null) {
-    try {
+const getCachedCommissionRules = unstable_cache(
+    async (moduleFilter = null) => {
         const whereClause = {};
         if (moduleFilter) whereClause.module = moduleFilter;
 
-        const rules = await prisma.commissionRule.findMany({
+        return prisma.commissionRule.findMany({
             where: whereClause,
             include: { zone: true },
             orderBy: [
@@ -49,6 +50,14 @@ export async function getCommissionRules(moduleFilter = null) {
                 { isActive: 'desc' }
             ]
         });
+    },
+    ['commissions'],
+    { tags: ['commissions'] }
+);
+
+export async function getCommissionRules(moduleFilter = null) {
+    try {
+        const rules = await getCachedCommissionRules(moduleFilter);
 
         return { success: true, data: rules };
     } catch (error) {
@@ -93,6 +102,7 @@ export async function createCommissionRule(data) {
             zoneId: data.zoneId
         });
 
+        revalidateTag('commissions');
         return { success: true, data: newRule };
     } catch (error) {
         console.error('Failed to create commission rule:', error);
@@ -110,6 +120,7 @@ export async function toggleCommissionRule(ruleId, isActive, moduleName) {
         });
 
         await logAdminAction('TOGGLE_COMMISSION_RULE', moduleName, ruleId, { isActive });
+        revalidateTag('commissions');
         return { success: true, data: updated };
     } catch (error) {
         return { success: false, error: error.message || 'Failed to toggle rule' };
