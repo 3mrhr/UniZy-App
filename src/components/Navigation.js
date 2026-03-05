@@ -6,6 +6,8 @@ import { usePathname } from 'next/navigation';
 import { useLanguage } from '@/i18n/LanguageProvider';
 import { STUDENT_TABS } from '@/config/navigation';
 import { Menu, X } from 'lucide-react';
+import { useOrdersStore } from '@/store/ordersStore';
+import { getStudentOrders } from '@/app/actions/orders';
 
 export default function Navigation() {
     const pathname = usePathname();
@@ -19,8 +21,27 @@ export default function Navigation() {
         setIsExpanded(false);
     }, [pathname]);
 
-    // TODO: wire from orders state
-    const pendingCount = 0; // Set to actual count when global state is implemented
+    const { pendingCount, setPendingCount } = useOrdersStore();
+
+    useEffect(() => {
+        const fetchOrders = async () => {
+            try {
+                const orders = await getStudentOrders();
+                if (orders && Array.isArray(orders)) {
+                    // Count orders that are active/pending
+                    const activeCount = orders.filter(o =>
+                        ['PENDING', 'ACCEPTED', 'READY', 'PICKED_UP'].includes(o.status)
+                    ).length;
+                    setPendingCount(activeCount);
+                }
+            } catch (e) {
+                console.error("Failed to fetch active orders count", e);
+            }
+        };
+
+        // Fetch on mount and when pathname changes
+        fetchOrders();
+    }, [pathname, setPendingCount]);
 
     return (
         <nav className="fixed bottom-0 left-0 right-0 sm:hidden z-[9999] bg-white dark:bg-unizy-navy border-t border-gray-200 dark:border-unizy-dark pb-2">
