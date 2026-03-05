@@ -1,48 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useLanguage } from '@/i18n/LanguageProvider';
 import { STUDENT_TABS } from '@/config/navigation';
-import { Menu, X } from 'lucide-react';
-import { useOrdersStore } from '@/store/ordersStore';
-import { getStudentOrders } from '@/app/actions/orders';
+// Clean UI navigation
 
 export default function Navigation() {
     const pathname = usePathname();
     const { dict } = useLanguage();
     const t = dict?.nav || {};
 
-    const [isExpanded, setIsExpanded] = useState(false);
-
-    // Auto-close nav when route changes
-    useEffect(() => {
-        setIsExpanded(false);
-    }, [pathname]);
-
-    const { pendingCount, setPendingCount } = useOrdersStore();
-
-    useEffect(() => {
-        const fetchOrders = async () => {
-            try {
-                const orders = await getStudentOrders();
-                if (orders && Array.isArray(orders)) {
-                    // Count orders that are active/pending
-                    const activeCount = orders.filter(o =>
-                        ['PENDING', 'ACCEPTED', 'READY', 'PICKED_UP'].includes(o.status)
-                    ).length;
-                    setPendingCount(activeCount);
-                }
-            } catch (e) {
-                console.error("Failed to fetch active orders count", e);
-            }
-        };
-
-        // Fetch on mount and when pathname changes
-        fetchOrders();
-    }, [pathname, setPendingCount]);
-
+    // Render logic aligned natively
     return (
         <nav className="fixed bottom-0 left-0 right-0 sm:hidden z-[9999] bg-white dark:bg-unizy-navy border-t border-gray-200 dark:border-unizy-dark pb-2">
             <div className="flex justify-around items-center h-16 px-2">
@@ -64,13 +33,6 @@ export default function Navigation() {
                                 <span className={`text-xl transition-transform duration-300 ${isActive ? 'scale-110' : 'scale-100'}`} aria-hidden="true">
                                     {tab.icon}
                                 </span>
-
-                                {/* Optional Badge Scaffold */}
-                                {tab.showBadge && pendingCount > 0 && (
-                                    <span className="absolute -top-1.5 -right-2 bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full border-2 border-white dark:border-unizy-navy shadow-sm">
-                                        {pendingCount > 99 ? '99+' : pendingCount}
-                                    </span>
-                                )}
                             </div>
                             <span className={`text-[10px] font-bold tracking-tight mt-0.5 ${isActive ? 'scale-105' : ''}`}>
                                 {label}
