@@ -222,10 +222,13 @@ export async function requestPasswordReset(email) {
             }
         });
 
-        // In production, send email with reset link
-        // For now, return the token directly so the user can use it
+        // In production, send email with reset link.
+        // For security, never return the token directly to the client.
+        if (process.env.NODE_ENV === 'development') {
+            console.log(`[DEV] Password reset token for ${email}: ${token}`);
+        }
 
-        return { success: true, token, message: 'Reset token generated. Check server console in dev mode.' };
+        return { success: true, message: 'If that email exists, a reset link has been generated.' };
     } catch (error) {
         console.error('Password reset request error:', error);
         return { error: 'Failed to process reset request.' };
