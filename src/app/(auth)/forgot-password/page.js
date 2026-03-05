@@ -14,7 +14,6 @@ export default function ForgotPasswordPage() {
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState('');
     const [error, setError] = useState('');
-    const [devToken, setDevToken] = useState('');
 
     const handleRequestReset = async (e) => {
         e.preventDefault();
@@ -25,7 +24,6 @@ export default function ForgotPasswordPage() {
 
         if (result.success) {
             setMessage(result.message);
-            if (result.token) setDevToken(result.token); // Dev mode: show token
             setStep('token');
         } else {
             setError(result.error);
@@ -101,14 +99,7 @@ export default function ForgotPasswordPage() {
                                 <Key size={24} className="text-amber-600" />
                             </div>
                             <h1 className="text-2xl font-black text-center text-gray-900 dark:text-white mb-2">Reset Password</h1>
-                            <p className="text-sm text-gray-500 text-center mb-4">{message}</p>
-
-                            {devToken && (
-                                <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-xl p-3 mb-6">
-                                    <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest mb-1">Dev Mode — Your Token:</p>
-                                    <p className="text-sm font-mono font-bold text-amber-800 dark:text-amber-300 break-all">{devToken}</p>
-                                </div>
-                            )}
+                            <p className="text-sm text-gray-500 text-center mb-8">{message}</p>
 
                             <form onSubmit={handleResetPassword} className="space-y-4">
                                 <div>
