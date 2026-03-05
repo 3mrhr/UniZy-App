@@ -44,7 +44,19 @@ export async function createOrder(service, details, clientTotal, promoCodeStr = 
                     where: { id: { in: mealIds } },
                     include: { variantGroups: { include: { options: true } }, addonGroups: { include: { options: true } } }
                 });
-                const mealsMap = new Map(meals.map(m => [m.id, m]));
+                const mealsMap = new Map(meals.map(m => {
+                    // Pre-index variants and addons for O(1) lookup
+                    const variantGroupsMap = new Map(m.variantGroups.map(g => [
+                        g.id,
+                        { ...g, optionsMap: new Map(g.options.map(o => [o.id, o])) }
+                    ]));
+                    const addonGroupsMap = new Map(m.addonGroups.map(g => [
+                        g.id,
+                        { ...g, optionsMap: new Map(g.options.map(o => [o.id, o])) }
+                    ]));
+
+                    return [m.id, { ...m, variantGroupsMap, addonGroupsMap }];
+                }));
 
                 for (const item of lineItems) {
                     const meal = mealsMap.get(item.mealId);
@@ -81,8 +93,8 @@ export async function createOrder(service, details, clientTotal, promoCodeStr = 
                     // Compute Variants
                     if (item.variants && item.variants.length > 0) {
                         for (const v of item.variants) {
-                            const group = meal.variantGroups.find(g => g.id === v.groupId);
-                            const opt = group?.options.find(o => o.id === v.optionId);
+                            const group = meal.variantGroupsMap.get(v.groupId);
+                            const opt = group?.optionsMap.get(v.optionId);
                             if (opt && opt.isAvailable) {
                                 variantsTotal += opt.priceDelta;
                                 itemVariantSelections.push({
@@ -97,8 +109,8 @@ export async function createOrder(service, details, clientTotal, promoCodeStr = 
                     // Compute Addons
                     if (item.addons && item.addons.length > 0) {
                         for (const a of item.addons) {
-                            const group = meal.addonGroups.find(g => g.id === a.groupId);
-                            const opt = group?.options.find(o => o.id === a.optionId);
+                            const group = meal.addonGroupsMap.get(a.groupId);
+                            const opt = group?.optionsMap.get(a.optionId);
                             if (opt && opt.isAvailable) {
                                 addonsTotal += opt.priceDelta;
                                 itemAddonSelections.push({
