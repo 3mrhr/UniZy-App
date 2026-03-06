@@ -5,6 +5,7 @@ import { getCurrentUser } from './auth';
 import { earnRewardPoints } from './rewards-engine';
 import { logAdminAction } from './audit';
 import { v4 as uuidv4 } from 'uuid';
+import crypto from 'crypto';
 
 // ===== CONSTANTS =====
 const PAYMENT_EXPIRY_MINUTES = 30; // Auto-cancel pending payments after 30 mins
@@ -81,9 +82,30 @@ export async function createPaymentIntent(transactionId, method = 'CARD', gatewa
  * @param {string} gatewayRef - External reference from gateway
  * @param {boolean} success - Whether the payment succeeded
  * @param {string|null} failureReason
+ * @param {string|null} signature - Webhook HMAC signature
  */
-export async function confirmPayment(paymentId, gatewayRef, success, failureReason = null) {
+export async function confirmPayment(paymentId, gatewayRef, success, failureReason = null, signature = null) {
     try {
+        const secret = process.env.PAYMENT_WEBHOOK_SECRET;
+        if (!secret) {
+            console.error('PAYMENT_WEBHOOK_SECRET is not set');
+            return { error: 'Webhook configuration error' };
+        }
+
+        if (!signature) {
+            return { error: 'Missing webhook signature' };
+        }
+
+        const payload = `${paymentId}:${gatewayRef}:${success}:${failureReason || ''}`;
+        const expectedSignature = crypto.createHmac('sha256', secret).update(payload).digest('hex');
+
+        const signatureBuffer = Buffer.from(signature);
+        const expectedBuffer = Buffer.from(expectedSignature);
+
+        if (signatureBuffer.length !== expectedBuffer.length || !crypto.timingSafeEqual(signatureBuffer, expectedBuffer)) {
+            return { error: 'Invalid webhook signature' };
+        }
+
         const payment = await prisma.payment.findUnique({
             where: { id: paymentId },
             include: { transaction: true },
