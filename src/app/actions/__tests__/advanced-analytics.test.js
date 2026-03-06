@@ -24,9 +24,9 @@ jest.mock('../auth', () => ({
   getCurrentUser: jest.fn(),
 }));
 
-const { prisma } = require('@/lib/prisma');
-import { requireRole } from '../authz';
-import * as auth from '../actions/auth';
+import { requireRole, requireScope, requireOwnership, requireUser } from '@/lib/authz';
+import * as auth from '@/app/actions/auth';
+import { getSession } from '../session';
 const {
   trackEvent,
   getFunnelAnalytics,

@@ -1,5 +1,5 @@
-import { requireRole, requireScope, requireOwnership, requireUser } from '../authz';
-import * as auth from '../actions/auth';
+import { requireRole, requireScope, requireOwnership, requireUser } from '@/lib/authz';
+import * as auth from '@/app/actions/auth';
 import { getSession } from '../session';
 
 jest.mock('../session', () => ({
