@@ -1,14 +1,13 @@
+import { getSession } from './session';
 import { getCurrentUser } from '@/app/actions/auth';
 
 /**
  * Ensures the user is logged in.
  */
 export async function requireUser() {
-    const user = await getCurrentUser();
-    if (!user) {
-        throw new Error('Unauthorized: You must be logged in.');
-    }
-    return user;
+  const session = await getSession();
+  if (!session) throw new Error("Unauthorized");
+  return session;
 }
 
 /**
