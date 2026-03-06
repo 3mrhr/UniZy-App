@@ -9,16 +9,16 @@ export default function ListingsModerationPage() {
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(null);
 
-    useEffect(() => {
-        fetchListings();
-    }, []);
-
     const fetchListings = async () => {
         setLoading(true);
         const res = await getPendingListings();
         setPendingListings(res || []);
         setLoading(false);
     };
+
+    useEffect(() => {
+        fetchListings();
+    }, []);
 
     const handleApprove = async (id) => {
         setActionLoading(id);

@@ -214,7 +214,7 @@ export default function AdminReferralsPage() {
                                     <ShieldAlert size={28} className="text-indigo-200" /> Fraud Prevention Active
                                 </h3>
                                 <p className="text-indigo-100 font-medium">
-                                    UniZy is now awarding points only after the referred student completes their first order. This prevents bot registration and "farming" without real platform usage.
+                                    UniZy is now awarding points only after the referred student completes their first order. This prevents bot registration and &quot;farming&quot; without real platform usage.
                                 </p>
                             </div>
                             <div className="shrink-0 bg-white/10 backdrop-blur-md rounded-3xl p-6 border border-white/20">

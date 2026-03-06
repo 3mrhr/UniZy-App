@@ -41,10 +41,6 @@ export default function SupportDashboard() {
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
 
-    useEffect(() => {
-        fetchTickets();
-    }, []);
-
     const fetchTickets = async () => {
         setIsLoading(true);
         const res = await getStudentTickets();
@@ -55,6 +51,10 @@ export default function SupportDashboard() {
         }
         setIsLoading(false);
     };
+
+    useEffect(() => {
+        fetchTickets();
+    }, []);
 
     const getStatusIcon = (status) => {
         switch (status) {

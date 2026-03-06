@@ -33,10 +33,6 @@ export default function PricingManager({ moduleName, title, description, colorCl
 
     const availableServiceTypes = serviceTypesMap[moduleName] || ['BASE_FEE', 'COMMISSION'];
 
-    useEffect(() => {
-        fetchData();
-    }, [moduleName]);
-
     const fetchData = async () => {
         setIsLoading(true);
         const [rulesRes, zonesRes] = await Promise.all([
@@ -49,6 +45,10 @@ export default function PricingManager({ moduleName, title, description, colorCl
 
         setIsLoading(false);
     };
+
+    useEffect(() => {
+        fetchData();
+    }, [moduleName]);
 
     const handleCreateRule = async (e) => {
         e.preventDefault();
@@ -242,8 +242,8 @@ export default function PricingManager({ moduleName, title, description, colorCl
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <span className={`px-2 py-0.5 text-[10px] font-black uppercase rounded-full tracking-wider ${rule.isActive
-                                                    ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30'
-                                                    : 'bg-red-50 text-red-600 dark:bg-red-900/30'
+                                                ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30'
+                                                : 'bg-red-50 text-red-600 dark:bg-red-900/30'
                                                 }`}>
                                                 {rule.isActive ? 'Active' : 'Disabled'}
                                             </span>
@@ -252,8 +252,8 @@ export default function PricingManager({ moduleName, title, description, colorCl
                                             <button
                                                 onClick={() => handleToggleRule(rule.id, rule.isActive)}
                                                 className={`p-1.5 rounded-lg transition-colors inline-block ${rule.isActive
-                                                        ? 'bg-red-50 hover:bg-red-100 text-red-500 dark:bg-red-900/10 dark:hover:bg-red-900/30'
-                                                        : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-500 dark:bg-emerald-900/10 dark:hover:bg-emerald-900/30'
+                                                    ? 'bg-red-50 hover:bg-red-100 text-red-500 dark:bg-red-900/10 dark:hover:bg-red-900/30'
+                                                    : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-500 dark:bg-emerald-900/10 dark:hover:bg-emerald-900/30'
                                                     }`}
                                                 title={rule.isActive ? 'Disable Rule' : 'Enable Rule'}
                                             >
