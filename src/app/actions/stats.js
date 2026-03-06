@@ -14,100 +14,100 @@ export async function getAdminDashboardStats() {
             return { error: 'Unauthorized' };
         }
 
-        // Run all count queries in parallel for performance
+        // Run all queries in parallel for performance, utilizing groupBy and aggregate
+        // to minimize database roundtrips.
         const [
             totalUsers,
-            totalStudents,
-            totalDrivers,
-            totalMerchants,
-            totalProviders,
+            usersByRole,
             totalOrders,
-            pendingOrders,
-            completedOrders,
-            cancelledOrders,
-            totalTransactions,
-            totalRevenue,
-            totalCommission,
+            ordersByStatus,
+            transactionAgg,
             totalRefunds,
-            pendingRefunds,
+            refundsByStatus,
             totalTickets,
-            openTickets,
+            ticketsByStatus,
             totalHousingListings,
-            activeHousingListings,
-            totalDeals,
-            totalMeals,
+            housingListingsByStatus,
+            totalDeals, // Active
+            totalMeals, // Active
             totalDispatches,
-            pendingDispatches,
+            dispatchesByStatus,
             totalSLABreaches,
-            openSLABreaches,
+            slaBreachesByStatus,
             totalVerifications,
-            pendingVerifications,
+            verificationsByStatus,
         ] = await Promise.all([
             prisma.user.count(),
-            prisma.user.count({ where: { role: 'STUDENT' } }),
-            prisma.user.count({ where: { role: 'DRIVER' } }),
-            prisma.user.count({ where: { role: 'MERCHANT' } }),
-            prisma.user.count({ where: { role: 'PROVIDER' } }),
+            prisma.user.groupBy({ by: ['role'], _count: { _all: true } }),
+
             prisma.order.count(),
-            prisma.order.count({ where: { status: 'PENDING' } }),
-            prisma.order.count({ where: { status: 'COMPLETED' } }),
-            prisma.order.count({ where: { status: 'CANCELLED' } }),
-            prisma.transaction.count(),
-            prisma.transaction.aggregate({ _sum: { amount: true } }),
-            prisma.transaction.aggregate({ _sum: { unizyCommissionAmount: true } }),
+            prisma.order.groupBy({ by: ['status'], _count: { _all: true } }),
+
+            prisma.transaction.aggregate({ _count: { _all: true }, _sum: { amount: true, unizyCommissionAmount: true } }),
+
             prisma.refund.count(),
-            prisma.refund.count({ where: { status: 'REQUESTED' } }),
+            prisma.refund.groupBy({ by: ['status'], _count: { _all: true } }),
+
             prisma.supportTicket.count(),
-            prisma.supportTicket.count({ where: { status: { in: ['OPEN', 'IN_PROGRESS'] } } }),
+            prisma.supportTicket.groupBy({ by: ['status'], _count: { _all: true } }),
+
             prisma.housingListing.count(),
-            prisma.housingListing.count({ where: { status: 'ACTIVE' } }),
+            prisma.housingListing.groupBy({ by: ['status'], _count: { _all: true } }),
+
             prisma.deal.count({ where: { status: 'ACTIVE' } }),
             prisma.meal.count({ where: { status: 'ACTIVE' } }),
+
             prisma.dispatch.count(),
-            prisma.dispatch.count({ where: { status: 'PENDING' } }),
+            prisma.dispatch.groupBy({ by: ['status'], _count: { _all: true } }),
+
             prisma.sLABreach.count(),
-            prisma.sLABreach.count({ where: { status: 'OPEN' } }),
+            prisma.sLABreach.groupBy({ by: ['status'], _count: { _all: true } }),
+
             prisma.verificationDocument.count(),
-            prisma.verificationDocument.count({ where: { status: 'PENDING' } }),
+            prisma.verificationDocument.groupBy({ by: ['status'], _count: { _all: true } }),
         ]);
+
+        const getCountByRole = (role) => usersByRole.find(r => r.role === role)?._count._all || 0;
+        const getCountByStatus = (arr, status) => arr.find(s => s.status === status)?._count._all || 0;
+        const getCountByStatuses = (arr, statuses) => arr.filter(s => statuses.includes(s.status)).reduce((acc, curr) => acc + curr._count._all, 0);
 
         return {
             success: true,
             stats: {
                 // Users
                 totalUsers,
-                totalStudents,
-                totalDrivers,
-                totalMerchants,
-                totalProviders,
+                totalStudents: getCountByRole('STUDENT'),
+                totalDrivers: getCountByRole('DRIVER'),
+                totalMerchants: getCountByRole('MERCHANT'),
+                totalProviders: getCountByRole('PROVIDER'),
                 // Orders & Transactions
                 totalOrders,
-                pendingOrders,
-                completedOrders,
-                cancelledOrders,
-                totalTransactions,
+                pendingOrders: getCountByStatus(ordersByStatus, 'PENDING'),
+                completedOrders: getCountByStatus(ordersByStatus, 'COMPLETED'),
+                cancelledOrders: getCountByStatus(ordersByStatus, 'CANCELLED'),
+                totalTransactions: transactionAgg._count._all || 0,
                 // Revenue (from real data)
-                totalRevenue: totalRevenue._sum.amount || 0,
-                totalCommission: totalCommission._sum.unizyCommissionAmount || 0,
+                totalRevenue: transactionAgg._sum.amount || 0,
+                totalCommission: transactionAgg._sum.unizyCommissionAmount || 0,
                 // Refunds
                 totalRefunds,
-                pendingRefunds,
+                pendingRefunds: getCountByStatus(refundsByStatus, 'REQUESTED'),
                 // Support
                 totalTickets,
-                openTickets,
+                openTickets: getCountByStatuses(ticketsByStatus, ['OPEN', 'IN_PROGRESS']),
                 // Marketplace
                 totalHousingListings,
-                activeHousingListings,
+                activeHousingListings: getCountByStatus(housingListingsByStatus, 'ACTIVE'),
                 totalDeals,
                 totalMeals,
                 // Operations
                 totalDispatches,
-                pendingDispatches,
+                pendingDispatches: getCountByStatus(dispatchesByStatus, 'PENDING'),
                 totalSLABreaches,
-                openSLABreaches,
+                openSLABreaches: getCountByStatus(slaBreachesByStatus, 'OPEN'),
                 // Verification
                 totalVerifications,
-                pendingVerifications,
+                pendingVerifications: getCountByStatus(verificationsByStatus, 'PENDING'),
             },
         };
     } catch (error) {
@@ -129,27 +129,23 @@ export async function getModuleStats(module) {
 
         // Module-specific transaction stats
         const [
-            totalModuleTransactions,
-            moduleRevenue,
-            moduleCommission,
-            completedModuleTransactions,
-            pendingModuleTransactions,
+            moduleAgg,
+            moduleByStatus
         ] = await Promise.all([
-            prisma.transaction.count({ where: { type: module } }),
-            prisma.transaction.aggregate({ where: { type: module }, _sum: { amount: true } }),
-            prisma.transaction.aggregate({ where: { type: module }, _sum: { unizyCommissionAmount: true } }),
-            prisma.transaction.count({ where: { type: module, status: 'COMPLETED' } }),
-            prisma.transaction.count({ where: { type: module, status: 'PENDING' } }),
+            prisma.transaction.aggregate({ where: { type: module }, _count: { _all: true }, _sum: { amount: true, unizyCommissionAmount: true } }),
+            prisma.transaction.groupBy({ by: ['status'], where: { type: module }, _count: { _all: true } }),
         ]);
+
+        const getStatusCount = (status) => moduleByStatus.find(s => s.status === status)?._count._all || 0;
 
         return {
             success: true,
             stats: {
-                totalTransactions: totalModuleTransactions,
-                totalRevenue: moduleRevenue._sum.amount || 0,
-                totalCommission: moduleCommission._sum.unizyCommissionAmount || 0,
-                completedTransactions: completedModuleTransactions,
-                pendingTransactions: pendingModuleTransactions,
+                totalTransactions: moduleAgg._count._all || 0,
+                totalRevenue: moduleAgg._sum.amount || 0,
+                totalCommission: moduleAgg._sum.unizyCommissionAmount || 0,
+                completedTransactions: getStatusCount('COMPLETED'),
+                pendingTransactions: getStatusCount('PENDING'),
             },
         };
     } catch (error) {
