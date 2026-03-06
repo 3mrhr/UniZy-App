@@ -3,7 +3,7 @@
 import React, { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { processPayout } from '@/app/actions/finance';
-import { Clock } from 'lucide-react';
+import { Clock, CreditCard } from 'lucide-react';
 
 export default function PayoutsClient({ initialSettlements, totalPages, currentPage }) {
     const router = useRouter();

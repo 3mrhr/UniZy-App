@@ -36,13 +36,13 @@ export default function TicketDetailPage() {
         return () => clearInterval(interval);
     }, [id]);
 
-    useEffect(() => {
-        scrollToBottom();
-    }, [ticket?.messages]);
-
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
+
+    useEffect(() => {
+        scrollToBottom();
+    }, [ticket?.messages]);
 
     const fetchDetails = async () => {
         const res = await getTicketDetails(id);
@@ -155,8 +155,8 @@ export default function TicketDetailPage() {
                                     )}
                                 </div>
                                 <div className={`max-w-[80%] rounded-3xl p-4 shadow-sm ${isSystem
-                                        ? 'bg-white dark:bg-unizy-dark border border-gray-100 dark:border-white/5 rounded-bl-none'
-                                        : 'bg-unizy-primary text-white rounded-br-none'
+                                    ? 'bg-white dark:bg-unizy-dark border border-gray-100 dark:border-white/5 rounded-bl-none'
+                                    : 'bg-unizy-primary text-white rounded-br-none'
                                     }`}>
                                     {isSystem && (
                                         <div className="flex items-center gap-1.5 mb-1 text-[10px] font-black uppercase tracking-widest text-indigo-500">

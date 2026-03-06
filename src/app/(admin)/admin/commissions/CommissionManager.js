@@ -35,10 +35,6 @@ export default function CommissionManager({ moduleName, title, description, colo
 
     const availableProviderTypes = providerTypesMap[moduleName] || ['PROVIDER'];
 
-    useEffect(() => {
-        fetchData();
-    }, [moduleName]);
-
     const fetchData = async () => {
         setIsLoading(true);
         const [rulesRes, zonesRes] = await Promise.all([
@@ -51,6 +47,10 @@ export default function CommissionManager({ moduleName, title, description, colo
 
         setIsLoading(false);
     };
+
+    useEffect(() => {
+        fetchData();
+    }, [moduleName]);
 
     // Auto-calculate remaining share
     const handleUnizyShareChange = (e) => {
@@ -263,8 +263,8 @@ export default function CommissionManager({ moduleName, title, description, colo
                                     <tr key={rule.id} className={`hover:bg-gray-50 dark:hover:bg-gray-800/50 ${!rule.isActive ? 'opacity-60' : ''}`}>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <span className={`px-2 py-0.5 text-[10px] font-black uppercase rounded-full tracking-wider ${rule.isActive
-                                                    ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30'
-                                                    : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
+                                                ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30'
+                                                : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
                                                 }`}>
                                                 {rule.isActive ? 'Active' : 'Archived'}
                                             </span>
@@ -303,8 +303,8 @@ export default function CommissionManager({ moduleName, title, description, colo
                                             <button
                                                 onClick={() => handleToggleRule(rule.id, rule.isActive)}
                                                 className={`p-1.5 rounded-lg transition-colors inline-block ${rule.isActive
-                                                        ? 'bg-gray-100 hover:bg-gray-200 text-gray-500 dark:bg-gray-800 dark:hover:bg-gray-700'
-                                                        : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-500 dark:bg-emerald-900/10 dark:hover:bg-emerald-900/30'
+                                                    ? 'bg-gray-100 hover:bg-gray-200 text-gray-500 dark:bg-gray-800 dark:hover:bg-gray-700'
+                                                    : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-500 dark:bg-emerald-900/10 dark:hover:bg-emerald-900/30'
                                                     }`}
                                                 title={rule.isActive ? 'Archive Rule' : 'Reactivate Rule'}
                                             >

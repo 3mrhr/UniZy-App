@@ -512,20 +512,18 @@ export async function updateOrderStatus(orderId, newStatus) {
         });
 
         // Analytics log
-        try {
-            if (newStatus === 'DELIVERED') {
-                await logEvent('PAYMENT_SUCCEEDED', result.id, { amount: result.total });
-                await logEvent('ORDER_STATUS_TRANSITION', result.id, { newStatus: 'DELIVERED' });
-            } else {
-                await logEvent('ORDER_STATUS_TRANSITION', result.id, { newStatus });
-            }
-            await logAdminAction(
-                `ORDER_STATUS_${newStatus}`,
-                'ORDERS',
-                result.id,
-                { driverId: user.id, orderId: result.id, previousStatus: existingOrder.status, newStatus }
-            );
-        } catch (_) { /* non-critical */ }
+        if (newStatus === 'DELIVERED') {
+            await logEvent('PAYMENT_SUCCEEDED', result.id, { amount: result.total });
+            await logEvent('ORDER_STATUS_TRANSITION', result.id, { newStatus: 'DELIVERED' });
+        } else {
+            await logEvent('ORDER_STATUS_TRANSITION', result.id, { newStatus });
+        }
+        await logAdminAction(
+            `ORDER_STATUS_${newStatus}`,
+            'ORDERS',
+            result.id,
+            { driverId: user.id, orderId: result.id, previousStatus: existingOrder.status, newStatus }
+        );
 
         await createNotification(result.userId, 'Order Update', `Your order status changed to ${newStatus}.`, 'SYSTEM', `/activity/tracking/${result.id}`);
 

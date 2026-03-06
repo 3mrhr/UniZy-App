@@ -4,6 +4,7 @@ import { requireRole, requireOwnership } from '@/lib/authz';
 import { generateTxnCode, computeCommissionSnapshot, computePricingSnapshot } from '../financial';
 import { logEvent } from '../analytics';
 import { createNotification } from '../notifications';
+import { logAdminAction } from '../audit';
 import { revalidatePath } from 'next/cache';
 import { failure, success } from '@/lib/actionResult';
 
@@ -68,6 +69,7 @@ jest.mock('../analytics', () => ({
 }));
 
 jest.mock('../audit', () => ({
+    __esModule: true,
     logAdminAction: jest.fn(),
 }));
 
@@ -75,10 +77,14 @@ jest.mock('../referrals', () => ({
     completeReferralIfEligible: jest.fn(),
 }));
 
+beforeEach(() => {
+    jest.resetAllMocks();
+    // Set default implementations for common mocks that should succeed by default
+    requireRole.mockResolvedValue({ id: 'user-1', role: 'STUDENT' });
+    requireOwnership.mockImplementation(() => true);
+});
+
 describe('createOrder', () => {
-    beforeEach(() => {
-        jest.clearAllMocks();
-    });
 
     it('should return failure if user does not have STUDENT role', async () => {
         requireRole.mockRejectedValue(new Error('Unauthorized'));

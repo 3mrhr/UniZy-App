@@ -22,10 +22,6 @@ export default function AdminPromotionsPage() {
         applicableType: 'ALL'
     });
 
-    useEffect(() => {
-        loadPromos();
-    }, []);
-
     const loadPromos = async () => {
         setIsLoading(true);
         const res = await getPromoCodes();
@@ -36,6 +32,10 @@ export default function AdminPromotionsPage() {
         }
         setIsLoading(false);
     };
+
+    useEffect(() => {
+        loadPromos();
+    }, []);
 
     const handleCreate = async (e) => {
         e.preventDefault();
