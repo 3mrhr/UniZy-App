@@ -11,6 +11,7 @@ jest.mock('@/lib/prisma', () => ({
     },
     transaction: {
       count: jest.fn(),
+      groupBy: jest.fn(),
     },
     order: {
       findMany: jest.fn(),
@@ -164,24 +165,40 @@ describe('Advanced Analytics Server Actions', () => {
     it('should return module conversions for admin user', async () => {
       getCurrentUser.mockResolvedValue({ role: 'ADMIN_SUPER' });
 
-      // There are 7 modules, each does 2 counts (started, completed)
-      // We will just mock resolved values alternating
-      // Let's just mock a simplified implementation to return consistent numbers
-      prisma.transaction.count.mockImplementation(({ where }) => {
-        if (where.status === 'COMPLETED') return Promise.resolve(5); // completed
-        return Promise.resolve(10); // started
-      });
+      // Mock a simplified implementation to return consistent numbers
+      prisma.transaction.groupBy.mockResolvedValue([
+        { type: 'TRANSPORT', status: 'PENDING', _count: 5 },
+        { type: 'TRANSPORT', status: 'COMPLETED', _count: 5 },
+        { type: 'DELIVERY', status: 'COMPLETED', _count: 5 },
+        { type: 'DELIVERY', status: 'PENDING', _count: 5 },
+        // ... assuming all 7 modules have the same counts for testing
+        { type: 'HOUSING', status: 'PENDING', _count: 5 },
+        { type: 'HOUSING', status: 'COMPLETED', _count: 5 },
+        { type: 'DEALS', status: 'PENDING', _count: 5 },
+        { type: 'DEALS', status: 'COMPLETED', _count: 5 },
+        { type: 'MEALS', status: 'PENDING', _count: 5 },
+        { type: 'MEALS', status: 'COMPLETED', _count: 5 },
+        { type: 'SERVICES', status: 'PENDING', _count: 5 },
+        { type: 'SERVICES', status: 'COMPLETED', _count: 5 },
+        { type: 'CLEANING', status: 'PENDING', _count: 5 },
+        { type: 'CLEANING', status: 'COMPLETED', _count: 5 },
+      ]);
 
       const result = await getModuleConversions();
 
-      expect(prisma.transaction.count).toHaveBeenCalledTimes(14); // 7 modules * 2 queries
+      expect(prisma.transaction.groupBy).toHaveBeenCalledTimes(1);
+      expect(prisma.transaction.groupBy).toHaveBeenCalledWith({
+        by: ['type', 'status'],
+        _count: true,
+        where: { type: { in: ['TRANSPORT', 'DELIVERY', 'HOUSING', 'DEALS', 'MEALS', 'SERVICES', 'CLEANING'] } },
+      });
       expect(result.success).toBe(true);
       expect(result.data.length).toBe(7);
 
       // Check first module
       expect(result.data[0]).toEqual({
         module: 'TRANSPORT',
-        started: 10,
+        started: 10, // 5 pending + 5 completed
         completed: 5,
         conversionRate: 50,
       });
@@ -189,17 +206,19 @@ describe('Advanced Analytics Server Actions', () => {
 
     it('should handle zero conversions correctly', async () => {
       getCurrentUser.mockResolvedValue({ role: 'ADMIN' });
-      prisma.transaction.count.mockResolvedValue(0);
+      prisma.transaction.groupBy.mockResolvedValue([]);
 
       const result = await getModuleConversions();
 
       expect(result.data[0].conversionRate).toBe(0);
+      expect(result.data[0].started).toBe(0);
+      expect(result.data[0].completed).toBe(0);
     });
 
     it('should catch errors and return a generic failure message', async () => {
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => { });
       getCurrentUser.mockResolvedValue({ role: 'ADMIN' });
-      prisma.transaction.count.mockRejectedValue(new Error('DB Error'));
+      prisma.transaction.groupBy.mockRejectedValue(new Error('DB Error'));
 
       const result = await getModuleConversions();
 
