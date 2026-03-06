@@ -93,6 +93,7 @@ describe('createOrder', () => {
 
         expect(result).toEqual({
             ok: false,
+            success: false,
             error: {
                 code: 'CREATE_FAILED',
                 message: 'Unauthorized',
@@ -108,6 +109,7 @@ describe('createOrder', () => {
 
         expect(result).toEqual({
             ok: false,
+            success: false,
             error: {
                 code: 'DUPLICATE',
                 message: 'A similar order was just placed. Please wait a moment before trying again.',
@@ -167,6 +169,7 @@ describe('createOrder', () => {
 
         expect(result).toEqual({
             ok: true,
+            success: true,
             data: {
                 order: mockOrder,
                 transaction: mockTxn,
@@ -188,6 +191,7 @@ describe('createOrder', () => {
 
         expect(result).toEqual({
             ok: false,
+            success: false,
             error: {
                 code: 'CREATE_FAILED',
                 message: 'Database error',

@@ -65,64 +65,82 @@ export async function checkSLABreaches() {
             });
         }
 
-        let breachesCreated = 0;
+        let allBreachableTargets = [];
 
         for (const rule of activeRules) {
             const thresholdMinutes = rule.thresholdMinutes || 30;
             const cutoff = new Date(now - thresholdMinutes * 60 * 1000);
 
-            // Find targets that exceed the threshold and haven't been breached yet
-            let breachableTargets = [];
+            let breachableTargetsForThisRule = [];
 
             if (rule.metric === 'ORDER_ACCEPTANCE_TIME') {
-                breachableTargets = potentialTargets.ORDER_ACCEPTANCE_TIME.filter(t => t.createdAt <= cutoff);
+                breachableTargetsForThisRule = potentialTargets.ORDER_ACCEPTANCE_TIME.filter(t => t.createdAt <= cutoff);
             } else if (rule.metric === 'ORDER_DELIVERY_TIME') {
-                breachableTargets = potentialTargets.ORDER_DELIVERY_TIME.filter(t => t.createdAt <= cutoff);
+                breachableTargetsForThisRule = potentialTargets.ORDER_DELIVERY_TIME.filter(t => t.createdAt <= cutoff);
             } else if (rule.metric === 'TICKET_RESPONSE_TIME') {
-                breachableTargets = potentialTargets.TICKET_RESPONSE_TIME.filter(t => t.createdAt <= cutoff);
+                breachableTargetsForThisRule = potentialTargets.TICKET_RESPONSE_TIME.filter(t => t.createdAt <= cutoff);
             }
 
-            if (breachableTargets.length === 0) continue;
-
-            const targetIds = breachableTargets.map(t => t.id);
-
-            // Bulk check for existing breaches
-            const existingBreaches = await prisma.sLABreach.findMany({
-                where: {
+            for (const target of breachableTargetsForThisRule) {
+                allBreachableTargets.push({
                     ruleId: rule.id,
-                    targetId: { in: targetIds },
-                },
-                select: { targetId: true },
-            });
-
-            const existingTargetIds = new Set(existingBreaches.map(b => b.targetId));
-            const newTargets = targetIds.filter(id => !existingTargetIds.has(id));
-
-            if (newTargets.length > 0) {
-                // Bulk create breaches
-                await prisma.sLABreach.createMany({
-                    data: newTargets.map(targetId => ({
-                        ruleId: rule.id,
-                        targetId,
-                        status: 'OPEN',
-                    })),
+                    targetId: target.id,
+                    ruleName: rule.name || rule.metric,
+                    metric: rule.metric,
+                    thresholdMinutes
                 });
-
-                // Bulk create notifications
-                await prisma.notification.createMany({
-                    data: newTargets.map(targetId => ({
-                        type: 'SLA_BREACH',
-                        title: `SLA Breach: ${rule.name || rule.metric}`,
-                        message: `${rule.metric} threshold (${thresholdMinutes} min) exceeded for ${targetId}`,
-                        userId: 'SYSTEM',
-                    })),
-                });
-
-                breachesCreated += newTargets.length;
             }
         }
 
-        return { success: true, breachesCreated };
+        if (allBreachableTargets.length === 0) return { success: true, breachesCreated: 0 };
+
+        // Bulk check for existing breaches for all rules and targets at once
+        const ruleIds = [...new Set(allBreachableTargets.map(t => t.ruleId))];
+        const targetIds = [...new Set(allBreachableTargets.map(t => t.targetId))];
+
+        const existingBreaches = await prisma.sLABreach.findMany({
+            where: {
+                ruleId: { in: ruleIds },
+                targetId: { in: targetIds },
+            },
+            select: { ruleId: true, targetId: true },
+        });
+
+        const existingMap = new Map();
+        for (const b of existingBreaches) {
+            if (!existingMap.has(b.ruleId)) {
+                existingMap.set(b.ruleId, new Set());
+            }
+            existingMap.get(b.ruleId).add(b.targetId);
+        }
+
+        const newBreachesToCreate = [];
+        const newNotificationsToCreate = [];
+
+        for (const item of allBreachableTargets) {
+            const alreadyExists = existingMap.get(item.ruleId)?.has(item.targetId);
+            if (!alreadyExists) {
+                newBreachesToCreate.push({
+                    ruleId: item.ruleId,
+                    targetId: item.targetId,
+                    status: 'OPEN',
+                });
+
+                newNotificationsToCreate.push({
+                    type: 'SLA_BREACH',
+                    title: `SLA Breach: ${item.ruleName}`,
+                    message: `${item.metric} threshold (${item.thresholdMinutes} min) exceeded for ${item.targetId}`,
+                    userId: 'SYSTEM',
+                });
+            }
+        }
+
+        if (newBreachesToCreate.length > 0) {
+            await prisma.sLABreach.createMany({ data: newBreachesToCreate });
+            await prisma.notification.createMany({ data: newNotificationsToCreate });
+        }
+
+        return { success: true, breachesCreated: newBreachesToCreate.length };
     } catch (error) {
         console.error('SLA check error:', error);
         return { error: 'Failed to check SLA breaches.' };
