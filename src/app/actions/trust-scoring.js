@@ -142,17 +142,75 @@ export async function getDriversRankedByTrust(zoneId) {
             select: { driverId: true },
         });
 
-        const rankedDrivers = [];
-        for (const dz of driverZones) {
-            const scoreResult = await computeDriverScore(dz.driverId);
-            if (scoreResult.success) {
-                rankedDrivers.push({
-                    driverId: dz.driverId,
-                    score: scoreResult.score,
-                    ...scoreResult.factors,
-                });
-            }
+        if (driverZones.length === 0) {
+            return { success: true, drivers: [] };
         }
+
+        const driverIds = driverZones.map(dz => dz.driverId);
+
+        // Fetch all order stats in a single query
+        const orderStatsRaw = await prisma.order.groupBy({
+            by: ['driverId', 'status'],
+            where: { driverId: { in: driverIds }, status: { not: 'PENDING' } },
+            _count: { id: true },
+        });
+
+        // Fetch all review stats in a single query
+        const reviewStatsRaw = await prisma.review.groupBy({
+            by: ['targetUserId'],
+            where: { targetUserId: { in: driverIds } },
+            _avg: { rating: true },
+        });
+
+        // Aggregate into maps for O(1) lookup
+        const orderStats = new Map();
+        const reviewStats = new Map();
+
+        driverIds.forEach(id => orderStats.set(id, { total: 0, completed: 0, cancelled: 0 }));
+
+        orderStatsRaw.forEach(stat => {
+            if (!stat.driverId) return;
+            const driverData = orderStats.get(stat.driverId) || { total: 0, completed: 0, cancelled: 0 };
+            driverData.total += stat._count.id;
+
+            if (stat.status === 'COMPLETED') {
+                driverData.completed += stat._count.id;
+            } else if (stat.status === 'CANCELLED') {
+                driverData.cancelled += stat._count.id;
+            }
+            orderStats.set(stat.driverId, driverData);
+        });
+
+        reviewStatsRaw.forEach(stat => {
+            if (stat.targetUserId) {
+                reviewStats.set(stat.targetUserId, stat._avg.rating || 3);
+            }
+        });
+
+        const rankedDrivers = driverIds.map(driverId => {
+            const orders = orderStats.get(driverId);
+            const avgRating = reviewStats.get(driverId) || 3;
+
+            const completionRate = orders.total > 0 ? (orders.completed / orders.total) * 100 : 50;
+            const cancellationPenalty = orders.total > 0 ? (orders.cancelled / orders.total) * 20 : 0;
+            const ratingScore = avgRating * 20;
+
+            const score = Math.min(100, Math.max(0,
+                (completionRate * 0.4) +
+                (ratingScore * 0.4) -
+                (cancellationPenalty * 0.2)
+            ));
+
+            return {
+                driverId,
+                score: Math.round(score),
+                totalOrders: orders.total,
+                completed: orders.completed,
+                cancelled: orders.cancelled,
+                completionRate: Math.round(completionRate),
+                avgRating: avgRating,
+            };
+        });
 
         // Sort by score descending
         rankedDrivers.sort((a, b) => b.score - a.score);
