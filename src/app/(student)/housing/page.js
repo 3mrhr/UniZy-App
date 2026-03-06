@@ -87,53 +87,65 @@ function HousingHomeContent() {
 
                 <h2 className="font-bold text-lg text-gray-900 dark:text-white">{h.featuredNearYou || "Featured Near You"}</h2>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     {isLoading ? (
                         <div className="col-span-full py-20 flex justify-center">
-                            <div className="w-8 h-8 rounded-full border-4 border-gray-200 border-t-brand-600 animate-spin"></div>
+                            <div className="w-12 h-12 rounded-full border-4 border-gray-200 border-t-brand-600 animate-spin"></div>
                         </div>
                     ) : listings.length > 0 ? (
-                        listings.map((listing) => (
-                            <Link href={`/housing/${listing.id}`} key={listing.id} className="block group">
-                                <div className="bg-white dark:bg-unizy-dark rounded-3xl overflow-hidden shadow-sm border border-gray-100 dark:border-white/5 transition-all duration-300 group-hover:shadow-xl group-hover:-translate-y-1">
-
-                                    <div className="relative h-48 w-full bg-gray-200 dark:bg-unizy-navy/30">
+                        listings.map((listing, index) => (
+                            <Link
+                                href={`/housing/${listing.id}`}
+                                key={listing.id}
+                                className="block group animate-slide-up"
+                                style={{ animationDelay: `${index * 100}ms` }}
+                            >
+                                <div className="bg-white/60 dark:bg-black/20 backdrop-blur-2xl rounded-[2.5rem] overflow-hidden shadow-2xl border border-white/20 dark:border-white/10 transition-all duration-500 group-hover:scale-[1.02] group-hover:shadow-brand-500/10">
+                                    <div className="relative h-60 w-full bg-gray-200 dark:bg-black/40">
                                         <Image
                                             src={listing.image}
                                             alt={listing.title}
                                             fill
-                                            className="object-cover transition-transform duration-500 group-hover:scale-105"
+                                            className="object-cover transition-transform duration-700 group-hover:scale-110"
                                             sizes="(max-width: 768px) 100vw, 33vw"
                                         />
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-60"></div>
 
                                         {listing.verified && (
-                                            <div className="absolute top-4 left-4 bg-white/90 dark:bg-unizy-dark/90 backdrop-blur-md px-3 py-1 rounded-full flex items-center gap-1 shadow-sm border border-white/50 dark:border-white/10">
-                                                <span className="text-green-500 text-sm">✓</span>
-                                                <span className="text-xs font-bold tracking-wide text-gray-800 dark:text-gray-200">{c.verified || "Verified"}</span>
+                                            <div className="absolute top-4 left-4 bg-white/20 backdrop-blur-md px-4 py-1.5 rounded-full flex items-center gap-2 border border-white/30 shadow-lg">
+                                                <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
+                                                <span className="text-[10px] font-black tracking-widest text-white uppercase">{c.verified || "Verified"}</span>
                                             </div>
                                         )}
 
-                                        <div className="absolute bottom-4 right-4 bg-white/90 dark:bg-unizy-dark/90 backdrop-blur-md px-3 py-1.5 rounded-2xl shadow-sm border border-white/50 dark:border-white/10">
-                                            <p className="font-bold text-gray-900 dark:text-white">{listing.price} <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">{h.perMonth || "EGP/mo"}</span></p>
+                                        <div className="absolute bottom-4 left-4 bg-brand-600/90 backdrop-blur-md px-4 py-2 rounded-2xl shadow-xl border border-brand-400/30">
+                                            <p className="font-black text-white text-lg leading-none">
+                                                {listing.price}
+                                                <span className="text-[10px] opacity-70 ml-1 uppercase tracking-tighter">{h.perMonth || "EGP/mo"}</span>
+                                            </p>
                                         </div>
                                     </div>
 
-                                    <div className="p-5">
-                                        <div className="flex justify-between items-start mb-2">
-                                            <h3 className="font-bold text-gray-900 dark:text-white leading-tight w-4/5 group-hover:text-brand-600 transition-colors">{listing.title}</h3>
-                                        </div>
+                                    <div className="p-6">
+                                        <h3 className="font-black text-gray-900 dark:text-white text-lg leading-tight mb-2 group-hover:text-brand-600 transition-colors uppercase tracking-tighter truncate">
+                                            {listing.title}
+                                        </h3>
 
-                                        <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-3">
-                                            <span className="flex-shrink-0">📍</span>
+                                        <div className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-widest mb-6">
+                                            <span>📍</span>
                                             <p className="truncate">{listing.area} • {listing.distance}</p>
                                         </div>
 
-                                        <div className="flex flex-wrap gap-2 text-xs font-medium">
-                                            <span className="bg-brand-50 dark:bg-brand-900/20 text-brand-700 dark:text-brand-400 px-2.5 py-1 rounded-lg border border-brand-100 dark:border-brand-900/30">{listing.type}</span>
-                                            <span className="bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 px-2.5 py-1 rounded-lg border border-purple-100 dark:border-purple-900/30">{listing.gender}</span>
+                                        <div className="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-white/5">
+                                            <div className="flex gap-2">
+                                                <span className="bg-brand-500/10 text-brand-600 dark:text-brand-400 px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-widest border border-brand-500/10">{listing.type}</span>
+                                                <span className="bg-purple-500/10 text-purple-600 dark:text-purple-400 px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-widest border border-purple-500/10">{listing.gender}</span>
+                                            </div>
+                                            <div className="w-10 h-10 rounded-full bg-gray-50 dark:bg-white/5 flex items-center justify-center group-hover:bg-brand-500 group-hover:text-white transition-all">
+                                                <span className="text-xl">→</span>
+                                            </div>
                                         </div>
                                     </div>
-
                                 </div>
                             </Link>
                         ))

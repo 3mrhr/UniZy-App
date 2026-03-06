@@ -22,6 +22,13 @@ export const STUDENT_TABS = [
         showBadge: true // Feature flag for the badge
     },
     {
+        key: 'wallet',
+        labelKey: 'wallet',
+        fallbackLabel: 'Wallet',
+        href: '/wallet',
+        icon: '💳'
+    },
+    {
         key: 'profile',
         labelKey: 'account',
         fallbackLabel: 'Profile',

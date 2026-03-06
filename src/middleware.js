@@ -21,6 +21,7 @@ export async function middleware(request) {
         pathname === '/' ||
         pathname === '/login' ||
         pathname === '/admin/login' ||
+        pathname === '/dashboard' ||
         pathname.startsWith('/register') ||
         pathname.startsWith('/forgot-password') ||
         pathname === '/terms' ||

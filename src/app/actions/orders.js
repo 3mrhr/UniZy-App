@@ -218,8 +218,12 @@ export async function createOrder(service, details, clientTotal, promoCodeStr = 
                 }
             }
 
-            // Assume delivery components
-            const deliveryFee = service === 'DELIVERY' ? 15 : 0; // Simple stub for testing
+            // 1. Fetch Dynamic Pricing & Commission Snapshots
+            const pricingSnapshot = await computePricingSnapshot(service);
+            const providerType = service === 'TRANSPORT' ? 'DRIVER' : 'MERCHANT';
+
+            // Assume delivery components from pricing engine
+            const deliveryFee = (service === 'DELIVERY' || service === 'MEALS') ? (pricingSnapshot.basePriceSnapshot || 0) : 0;
             const feesTotal = deliveryFee;
 
             // REDEEM rewards logic
@@ -243,9 +247,7 @@ export async function createOrder(service, details, clientTotal, promoCodeStr = 
             const grandTotal = Math.max(0, subtotal - discountTotal + feesTotal);
 
             // Compute financial snapshots BEFORE creating records
-            const providerType = service === 'TRANSPORT' ? 'DRIVER' : 'MERCHANT';
             const commissionSnapshot = await computeCommissionSnapshot(service, providerType, grandTotal, discountTotal);
-            const pricingSnapshot = await computePricingSnapshot(service);
 
             const order = await tx.order.create({
                 data: {

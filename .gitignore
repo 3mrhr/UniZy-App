@@ -42,3 +42,8 @@ next-env.d.ts
 
 /src/generated/prisma
 dev.db
+
+# Agent/Claude specific
+.git_corrupted/
+.agent/
+.claude/

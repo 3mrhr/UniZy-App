@@ -780,12 +780,18 @@ model Wallet {
 
 model WalletTransaction {
   id            String   @id @default(uuid())
-  type          String
+  type          String   // TOPUP, WITHDRAWAL, PAYMENT, REFUND
+  status        String   @default("COMPLETED") // PENDING, COMPLETED, REJECTED
   amount        Float
   description   String?
+  proofImage    String?
+  senderName    String?
+  senderPhone   String?
+  metadata      Json?
   walletId      String
   transactionId String?
   createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
   wallet        Wallet   @relation(fields: [walletId], references: [id])
 }
 
