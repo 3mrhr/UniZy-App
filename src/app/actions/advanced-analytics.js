@@ -91,20 +91,32 @@ export async function getModuleConversions() {
 
         const modules = ['TRANSPORT', 'DELIVERY', 'HOUSING', 'DEALS', 'MEALS', 'SERVICES', 'CLEANING'];
 
-        const results = await Promise.all(
-            modules.map(async (mod) => {
-                const [started, completed] = await Promise.all([
-                    prisma.transaction.count({ where: { type: mod } }),
-                    prisma.transaction.count({ where: { type: mod, status: 'COMPLETED' } }),
-                ]);
-                return {
-                    module: mod,
-                    started,
-                    completed,
-                    conversionRate: started > 0 ? Math.round((completed / started) * 100) : 0,
-                };
-            })
-        );
+        const groupedCounts = await prisma.transaction.groupBy({
+            by: ['type', 'status'],
+            _count: true,
+            where: { type: { in: modules } },
+        });
+
+        const results = modules.map((mod) => {
+            let started = 0;
+            let completed = 0;
+
+            for (const group of groupedCounts) {
+                if (group.type === mod) {
+                    started += group._count;
+                    if (group.status === 'COMPLETED') {
+                        completed += group._count;
+                    }
+                }
+            }
+
+            return {
+                module: mod,
+                started,
+                completed,
+                conversionRate: started > 0 ? Math.round((completed / started) * 100) : 0,
+            };
+        });
 
         return { success: true, data: results };
     } catch (error) {
