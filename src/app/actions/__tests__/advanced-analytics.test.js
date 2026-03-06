@@ -25,7 +25,8 @@ jest.mock('../auth', () => ({
 }));
 
 const { prisma } = require('@/lib/prisma');
-const { getCurrentUser } = require('../auth');
+import { requireRole } from '../authz';
+import * as auth from '../actions/auth';
 const {
   trackEvent,
   getFunnelAnalytics,
@@ -189,7 +190,9 @@ describe('Advanced Analytics Server Actions', () => {
       expect(prisma.transaction.groupBy).toHaveBeenCalledTimes(1);
       expect(prisma.transaction.groupBy).toHaveBeenCalledWith({
         by: ['type', 'status'],
-        _count: true,
+        _count: {
+          _all: true,
+        },
         where: { type: { in: ['TRANSPORT', 'DELIVERY', 'HOUSING', 'DEALS', 'MEALS', 'SERVICES', 'CLEANING'] } },
       });
       expect(result.success).toBe(true);
