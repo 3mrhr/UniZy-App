@@ -55,4 +55,26 @@ describe('getSession', () => {
     // Verify it returns the session object from getIronSession
     expect(result).toBe(mockSession);
   });
+
+  it('should propagate errors if cookies() fails', async () => {
+    const error = new Error('Cookies error');
+    cookies.mockImplementation(() => { throw error; });
+
+    await expect(getSession()).rejects.toThrow('Cookies error');
+    expect(cookies).toHaveBeenCalledTimes(1);
+    expect(getIronSession).not.toHaveBeenCalled();
+  });
+
+  it('should propagate errors if getIronSession() fails', async () => {
+    const mockCookieStore = { name: 'mockStore' };
+    const error = new Error('Session error');
+
+    // Support both sync and async returns for cookies() depending on Next.js version mocked
+    cookies.mockReturnValue(Promise.resolve(mockCookieStore));
+    getIronSession.mockRejectedValue(error);
+
+    await expect(getSession()).rejects.toThrow('Session error');
+    expect(cookies).toHaveBeenCalledTimes(1);
+    expect(getIronSession).toHaveBeenCalledTimes(1);
+  });
 });
