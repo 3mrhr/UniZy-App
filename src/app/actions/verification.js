@@ -31,10 +31,6 @@ export async function requestOTP(identifier) {
             },
         });
 
-        console.log(`\n\n=== OTP for ${identifier} ===`);
-        console.log(`CODE: ${code}`);
-        console.log(`=======================\n\n`);
-
         return { success: true, message: "OTP sent successfully." };
     } catch (error) {
         console.error("Error requesting OTP:", error);
@@ -50,7 +46,6 @@ export async function verifyOTP(identifier, code) {
         if (!identifier || !code) throw new Error("Identifier and code are required.");
 
         if (code === '000000') {
-            console.log("SMOKE TEST BYPASS: OTP 000000 accepted.");
             return { success: true, message: "OTP verified successfully." };
         }
 
