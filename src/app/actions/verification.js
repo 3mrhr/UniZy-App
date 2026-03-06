@@ -1,14 +1,18 @@
 "use server";
 
 import crypto from "node:crypto";
+import { Resend } from 'resend';
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "./auth";
 
 /**
  * Request an OTP for a given phone or email.
- * For MVP, we auto-generate and log it to the console.
+ * If it's an email, we use Resend to send the code.
+ * For MVP, phone OTP is logged to the console.
  */
+const resend = new Resend(process.env.RESEND_API_KEY);
+
 export async function requestOTP(identifier) {
     try {
         if (!identifier) throw new Error("Identifier (email/phone) is required.");
@@ -30,6 +34,39 @@ export async function requestOTP(identifier) {
                 expiresAt,
             },
         });
+
+        const isEmail = identifier.includes('@');
+
+        if (isEmail) {
+            try {
+                await resend.emails.send({
+                    from: 'UniZy <onboarding@resend.dev>', // Change to verified domain in production
+                    to: identifier,
+                    subject: 'UniZy Verification Code',
+                    html: `
+                        <div style="font-family: sans-serif; padding: 20px; color: #111827;">
+                            <h1 style="font-size: 24px; font-weight: 800; margin-bottom: 20px;">Welcome to UniZy!</h1>
+                            <p style="font-size: 16px; margin-bottom: 30px;">Use the following code to verify your email address:</p>
+                            <div style="background-color: #F3F4F6; padding: 20px; border-radius: 12px; font-size: 32px; font-weight: 900; letter-spacing: 4px; text-align: center;">
+                                ${code}
+                            </div>
+                            <p style="font-size: 14px; margin-top: 30px; color: #6B7280;">If you didn't request this code, you can safely ignore this email.</p>
+                        </div>
+                    `,
+                });
+                console.log(`Email OTP sent to ${identifier}`);
+            } catch (emailErr) {
+                console.error("Resend delivery failed:", emailErr);
+                // Fallback to console log for dev
+                console.log(`\n\n=== [FALLBACK] OTP for ${identifier} ===`);
+                console.log(`CODE: ${code}`);
+                console.log(`=======================\n\n`);
+            }
+        } else {
+            console.log(`\n\n=== OTP for ${identifier} ===`);
+            console.log(`CODE: ${code}`);
+            console.log(`=======================\n\n`);
+        }
 
         return { success: true, message: "OTP sent successfully." };
     } catch (error) {

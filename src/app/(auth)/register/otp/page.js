@@ -18,6 +18,9 @@ function OTPForm() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const phone = searchParams.get('phone') || '';
+    const email = searchParams.get('email') || '';
+    const identifier = email || phone;
+    const type = email ? 'email' : 'phone';
 
     const [otp, setOtp] = useState(['', '', '', '', '', '']);
     const [timer, setTimer] = useState(59);
@@ -44,10 +47,10 @@ function OTPForm() {
         setIsLoading(true);
         const code = otp.join('');
 
-        const res = await verifyOTP(phone, code);
+        const res = await verifyOTP(identifier, code);
 
         if (res?.success) {
-            toast.success("Phone verified successfully!");
+            toast.success(`${type === 'email' ? 'Email' : 'Phone'} verified successfully!`);
             router.push('/register/verify-id');
         } else {
             toast.error(res?.error || "Invalid OTP code.");
@@ -57,7 +60,7 @@ function OTPForm() {
 
     const handleResend = async () => {
         setIsLoading(true);
-        const res = await requestOTP(phone);
+        const res = await requestOTP(identifier);
         setIsLoading(false);
         if (res?.success) {
             toast.success("OTP sent again!");
@@ -67,16 +70,19 @@ function OTPForm() {
         }
     };
 
+    const handleSkip = () => {
+        toast.success("Verification skipped. You can verify later.");
+        router.push('/register/verify-id');
+    };
+
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-unizy-navy flex flex-col items-center justify-center p-6 relative overflow-hidden">
             <div className="max-w-md w-full relative z-10 text-center">
-                <div className="w-20 h-20 bg-brand-100 dark:bg-brand-900/30 rounded-full mx-auto flex items-center justify-center mb-6 text-brand-600 animate-bounce">
-                    <Smartphone size={40} />
-                </div>
-
-                <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tighter mb-2">Verify Phone</h1>
+                <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tighter mb-2">
+                    Verify {type === 'email' ? 'Email' : 'Phone'}
+                </h1>
                 <p className="text-gray-500 dark:text-gray-400 font-medium mb-8">
-                    We sent a 6-digit code to your phone. Please enter it below to continue.
+                    We sent a 6-digit code to {identifier}. Please enter it below to continue.
                 </p>
 
                 <form onSubmit={handleVerify} className="space-y-8">
@@ -116,6 +122,13 @@ function OTPForm() {
                                 </button>
                             )}
                         </p>
+                        <button
+                            type="button"
+                            onClick={handleSkip}
+                            className="text-xs font-black text-gray-400 hover:text-brand-600 uppercase tracking-widest transition-colors"
+                        >
+                            Skip for now (Optional)
+                        </button>
                     </div>
                 </form>
 

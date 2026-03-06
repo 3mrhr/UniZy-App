@@ -51,9 +51,10 @@ export default function Register() {
 
             // Phase 16 & 41: Redirect to OTP verification for new students
             if (result.role === 'STUDENT') {
-                // Trigger OTP request
-                await requestOTP(phone);
-                router.push(`/register/otp?phone=${encodeURIComponent(phone)}`);
+                // Trigger OTP request - prefer email if available, otherwise phone
+                const identifier = email || phone;
+                await requestOTP(identifier);
+                router.push(`/register/otp?${email ? `email=${encodeURIComponent(email)}` : `phone=${encodeURIComponent(phone)}`}`);
             } else {
                 // Other roles go to their hubs
                 const newRole = result.role;
