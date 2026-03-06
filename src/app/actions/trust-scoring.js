@@ -12,21 +12,22 @@ import { getCurrentUser } from './auth';
  */
 export async function computeDriverScore(driverId) {
     try {
-        const totalAssigned = await prisma.order.count({
-            where: { driverId, status: { not: 'PENDING' } },
-        });
-        const completed = await prisma.order.count({
-            where: { driverId, status: 'COMPLETED' },
-        });
-        const cancelled = await prisma.order.count({
-            where: { driverId, status: 'CANCELLED' },
-        });
-
-        // Get average rating
-        const avgRating = await prisma.review.aggregate({
-            where: { targetId: driverId },
-            _avg: { rating: true },
-        });
+        const [totalAssigned, completed, cancelled, avgRating] = await Promise.all([
+            prisma.order.count({
+                where: { driverId, status: { not: 'PENDING' } },
+            }),
+            prisma.order.count({
+                where: { driverId, status: 'COMPLETED' },
+            }),
+            prisma.order.count({
+                where: { driverId, status: 'CANCELLED' },
+            }),
+            // Get average rating
+            prisma.review.aggregate({
+                where: { targetId: driverId },
+                _avg: { rating: true },
+            })
+        ]);
 
         const completionRate = totalAssigned > 0 ? (completed / totalAssigned) * 100 : 50;
         const cancellationPenalty = totalAssigned > 0 ? (cancelled / totalAssigned) * 20 : 0;
@@ -62,15 +63,16 @@ export async function computeDriverScore(driverId) {
  */
 export async function computeMerchantScore(merchantId) {
     try {
-        const totalOrders = await prisma.order.count({ where: { merchantId } });
-        const refundedTransactions = await prisma.transaction.count({
-            where: { providerId: merchantId, status: 'REFUNDED' },
-        });
-
-        const avgRating = await prisma.review.aggregate({
-            where: { targetId: merchantId },
-            _avg: { rating: true },
-        });
+        const [totalOrders, refundedTransactions, avgRating] = await Promise.all([
+            prisma.order.count({ where: { merchantId } }),
+            prisma.transaction.count({
+                where: { providerId: merchantId, status: 'REFUNDED' },
+            }),
+            prisma.review.aggregate({
+                where: { targetId: merchantId },
+                _avg: { rating: true },
+            })
+        ]);
 
         const refundRate = totalOrders > 0 ? (refundedTransactions / totalOrders) * 100 : 0;
         const ratingScore = (avgRating._avg.rating || 3) * 20;
@@ -104,9 +106,11 @@ export async function computeMerchantScore(merchantId) {
  */
 export async function computeStudentScore(studentId) {
     try {
-        const totalOrders = await prisma.order.count({ where: { userId: studentId } });
-        const cancelled = await prisma.order.count({ where: { userId: studentId, status: 'CANCELLED' } });
-        const reportCount = await prisma.report.count({ where: { targetUserId: studentId } });
+        const [totalOrders, cancelled, reportCount] = await Promise.all([
+            prisma.order.count({ where: { userId: studentId } }),
+            prisma.order.count({ where: { userId: studentId, status: 'CANCELLED' } }),
+            prisma.report.count({ where: { targetUserId: studentId } })
+        ]);
 
         const cancelRate = totalOrders > 0 ? (cancelled / totalOrders) * 100 : 0;
         const reportPenalty = Math.min(30, reportCount * 10);
@@ -142,9 +146,15 @@ export async function getDriversRankedByTrust(zoneId) {
             select: { driverId: true },
         });
 
+        const scoreResults = await Promise.all(
+            driverZones.map(dz => computeDriverScore(dz.driverId))
+        );
+
         const rankedDrivers = [];
-        for (const dz of driverZones) {
-            const scoreResult = await computeDriverScore(dz.driverId);
+        for (let i = 0; i < driverZones.length; i++) {
+            const dz = driverZones[i];
+            const scoreResult = scoreResults[i];
+
             if (scoreResult.success) {
                 rankedDrivers.push({
                     driverId: dz.driverId,
