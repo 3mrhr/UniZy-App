@@ -1,7 +1,7 @@
 'use server';
 
+import crypto from 'node:crypto';
 import { prisma } from '@/lib/prisma';
-import crypto from 'crypto';
 
 /**
  * Compute commission for a transaction at creation time.
@@ -136,5 +136,5 @@ export async function computePricingSnapshot(module, zoneId = null) {
  * Generate a unique transaction code.
  */
 export async function generateTxnCode() {
-    return `TXN-${new Date().getFullYear()}-${crypto.randomUUID()}`;
+    return `TXN-${new Date().getFullYear()}-${crypto.randomInt(100000, 1000000)}`;
 }
