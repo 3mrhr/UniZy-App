@@ -42,10 +42,32 @@ describe('authz.js', () => {
       await expect(requireRole(['ADMIN', 'SUPER_ADMIN'])).rejects.toThrow('Forbidden: Requires one of roles: ADMIN, SUPER_ADMIN');
     });
 
+    it('should return user if they have an allowed role that is not the first element', async () => {
+      const mockUser = { id: 1, role: 'SUPER_ADMIN' };
+      auth.getCurrentUser.mockResolvedValue(mockUser);
+
+      const result = await requireRole(['ADMIN', 'SUPER_ADMIN']);
+      expect(result).toEqual(mockUser);
+    });
+
+    it('should throw Error if user has no role defined', async () => {
+      const mockUser = { id: 1 };
+      auth.getCurrentUser.mockResolvedValue(mockUser);
+
+      await expect(requireRole(['ADMIN'])).rejects.toThrow('Forbidden: Requires one of roles: ADMIN');
+    });
+
     it('should throw Error if no user is found', async () => {
       auth.getCurrentUser.mockResolvedValue(null);
 
       await expect(requireRole(['ADMIN'])).rejects.toThrow('Unauthorized: You must be logged in.');
+    });
+
+    it('should throw Error if allowedRoles array is empty', async () => {
+      const mockUser = { id: 1, role: 'ADMIN' };
+      auth.getCurrentUser.mockResolvedValue(mockUser);
+
+      await expect(requireRole([])).rejects.toThrow('Forbidden: Requires one of roles: ');
     });
   });
 
