@@ -126,22 +126,15 @@ export async function createOrder(service, details, clientTotal, promoCodeStr = 
 
                     // Compute Variants
                     if (item.variants && item.variants.length > 0) {
-                        const variantGroupsMap = new Map();
-                        for (const g of meal.variantGroups) {
-                            const optionsMap = new Map();
-                            for (const o of g.options) {
-                                optionsMap.set(o.id, o);
-                            }
-                            variantGroupsMap.set(g.id, { ...g, optionsMap });
-                        }
+                        const variantGroupsMap = optionMaps?.variantGroupsMap;
 
                         for (const v of item.variants) {
-                            const group = variantGroupsMap.get(v.groupId);
-                            const opt = group?.optionsMap.get(v.optionId);
+                            const groupObj = variantGroupsMap?.get(v.groupId);
+                            const opt = groupObj?.optMap.get(v.optionId);
                             if (opt && opt.isAvailable) {
                                 variantsTotal += opt.priceDelta;
                                 itemVariantSelections.push({
-                                    groupNameSnapshot: group.name,
+                                    groupNameSnapshot: groupObj.group.name,
                                     optionNameSnapshot: opt.name,
                                     priceDeltaSnapshot: opt.priceDelta
                                 });
@@ -151,22 +144,15 @@ export async function createOrder(service, details, clientTotal, promoCodeStr = 
 
                     // Compute Addons
                     if (item.addons && item.addons.length > 0) {
-                        const addonGroupsMap = new Map();
-                        for (const g of meal.addonGroups) {
-                            const optionsMap = new Map();
-                            for (const o of g.options) {
-                                optionsMap.set(o.id, o);
-                            }
-                            addonGroupsMap.set(g.id, { ...g, optionsMap });
-                        }
+                        const addonGroupsMap = optionMaps?.addonGroupsMap;
 
                         for (const a of item.addons) {
-                            const group = addonGroupsMap.get(a.groupId);
-                            const opt = group?.optionsMap.get(a.optionId);
+                            const groupObj = addonGroupsMap?.get(a.groupId);
+                            const opt = groupObj?.optMap.get(a.optionId);
                             if (opt && opt.isAvailable) {
                                 addonsTotal += opt.priceDelta;
                                 itemAddonSelections.push({
-                                    groupNameSnapshot: group.name,
+                                    groupNameSnapshot: groupObj.group.name,
                                     optionNameSnapshot: opt.name,
                                     priceDeltaSnapshot: opt.priceDelta
                                 });

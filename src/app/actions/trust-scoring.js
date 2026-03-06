@@ -12,21 +12,22 @@ import { getCurrentUser } from './auth';
  */
 export async function computeDriverScore(driverId) {
     try {
-        const totalAssigned = await prisma.order.count({
-            where: { driverId, status: { not: 'PENDING' } },
-        });
-        const completed = await prisma.order.count({
-            where: { driverId, status: 'COMPLETED' },
-        });
-        const cancelled = await prisma.order.count({
-            where: { driverId, status: 'CANCELLED' },
-        });
-
-        // Get average rating
-        const avgRating = await prisma.review.aggregate({
-            where: { targetId: driverId },
-            _avg: { rating: true },
-        });
+        const [totalAssigned, completed, cancelled, avgRating] = await Promise.all([
+            prisma.order.count({
+                where: { driverId, status: { not: 'PENDING' } },
+            }),
+            prisma.order.count({
+                where: { driverId, status: 'COMPLETED' },
+            }),
+            prisma.order.count({
+                where: { driverId, status: 'CANCELLED' },
+            }),
+            // Get average rating
+            prisma.review.aggregate({
+                where: { targetId: driverId },
+                _avg: { rating: true },
+            })
+        ]);
 
         const completionRate = totalAssigned > 0 ? (completed / totalAssigned) * 100 : 50;
         const cancellationPenalty = totalAssigned > 0 ? (cancelled / totalAssigned) * 20 : 0;
@@ -62,15 +63,16 @@ export async function computeDriverScore(driverId) {
  */
 export async function computeMerchantScore(merchantId) {
     try {
-        const totalOrders = await prisma.order.count({ where: { merchantId } });
-        const refundedTransactions = await prisma.transaction.count({
-            where: { providerId: merchantId, status: 'REFUNDED' },
-        });
-
-        const avgRating = await prisma.review.aggregate({
-            where: { targetId: merchantId },
-            _avg: { rating: true },
-        });
+        const [totalOrders, refundedTransactions, avgRating] = await Promise.all([
+            prisma.order.count({ where: { merchantId } }),
+            prisma.transaction.count({
+                where: { providerId: merchantId, status: 'REFUNDED' },
+            }),
+            prisma.review.aggregate({
+                where: { targetId: merchantId },
+                _avg: { rating: true },
+            })
+        ]);
 
         const refundRate = totalOrders > 0 ? (refundedTransactions / totalOrders) * 100 : 0;
         const ratingScore = (avgRating._avg.rating || 3) * 20;
@@ -104,9 +106,11 @@ export async function computeMerchantScore(merchantId) {
  */
 export async function computeStudentScore(studentId) {
     try {
-        const totalOrders = await prisma.order.count({ where: { userId: studentId } });
-        const cancelled = await prisma.order.count({ where: { userId: studentId, status: 'CANCELLED' } });
-        const reportCount = await prisma.report.count({ where: { targetUserId: studentId } });
+        const [totalOrders, cancelled, reportCount] = await Promise.all([
+            prisma.order.count({ where: { userId: studentId } }),
+            prisma.order.count({ where: { userId: studentId, status: 'CANCELLED' } }),
+            prisma.report.count({ where: { targetUserId: studentId } })
+        ]);
 
         const cancelRate = totalOrders > 0 ? (cancelled / totalOrders) * 100 : 0;
         const reportPenalty = Math.min(30, reportCount * 10);
@@ -134,6 +138,7 @@ export async function computeStudentScore(studentId) {
 /**
  * Get ranked drivers in a zone for dispatch priority.
  * Higher trust score = higher priority.
+ * Optimized with groupBy and Map for O(1) lookups.
  */
 export async function getDriversRankedByTrust(zoneId) {
     try {
@@ -142,17 +147,76 @@ export async function getDriversRankedByTrust(zoneId) {
             select: { driverId: true },
         });
 
-        const rankedDrivers = [];
-        for (const dz of driverZones) {
-            const scoreResult = await computeDriverScore(dz.driverId);
-            if (scoreResult.success) {
-                rankedDrivers.push({
-                    driverId: dz.driverId,
-                    score: scoreResult.score,
-                    ...scoreResult.factors,
-                });
-            }
+        if (driverZones.length === 0) {
+            return { success: true, drivers: [] };
         }
+
+        const driverIds = driverZones.map(dz => dz.driverId);
+
+        // Fetch all order stats in a single query (N+1 fix)
+        // Parallelize fetching of background stats
+        const [orderStatsRaw, reviewStatsRaw] = await Promise.all([
+            prisma.order.groupBy({
+                by: ['driverId', 'status'],
+                where: { driverId: { in: driverIds }, status: { not: 'PENDING' } },
+                _count: { id: true },
+            }),
+            prisma.review.groupBy({
+                by: ['targetUserId'],
+                where: { targetUserId: { in: driverIds } },
+                _avg: { rating: true },
+            })
+        ]);
+
+        // Aggregate into maps for O(1) lookup
+        const orderStats = new Map();
+        const reviewStats = new Map();
+
+        driverIds.forEach(id => orderStats.set(id, { total: 0, completed: 0, cancelled: 0 }));
+
+        orderStatsRaw.forEach(stat => {
+            if (!stat.driverId) return;
+            const driverData = orderStats.get(stat.driverId) || { total: 0, completed: 0, cancelled: 0 };
+            driverData.total += stat._count.id;
+
+            if (stat.status === 'COMPLETED') {
+                driverData.completed += stat._count.id;
+            } else if (stat.status === 'CANCELLED') {
+                driverData.cancelled += stat._count.id;
+            }
+            orderStats.set(stat.driverId, driverData);
+        });
+
+        reviewStatsRaw.forEach(stat => {
+            if (stat.targetUserId) {
+                reviewStats.set(stat.targetUserId, stat._avg.rating || 3);
+            }
+        });
+
+        const rankedDrivers = driverIds.map(driverId => {
+            const orders = orderStats.get(driverId);
+            const avgRating = reviewStats.get(driverId) || 3;
+
+            const completionRate = orders.total > 0 ? (orders.completed / orders.total) * 100 : 50;
+            const cancellationPenalty = orders.total > 0 ? (orders.cancelled / orders.total) * 20 : 0;
+            const ratingScore = avgRating * 20;
+
+            const score = Math.min(100, Math.max(0,
+                (completionRate * 0.4) +
+                (ratingScore * 0.4) -
+                (cancellationPenalty * 0.2)
+            ));
+
+            return {
+                driverId,
+                score: Math.round(score),
+                totalOrders: orders.total,
+                completed: orders.completed,
+                cancelled: orders.cancelled,
+                completionRate: Math.round(completionRate),
+                avgRating: avgRating,
+            };
+        });
 
         // Sort by score descending
         rankedDrivers.sort((a, b) => b.score - a.score);
