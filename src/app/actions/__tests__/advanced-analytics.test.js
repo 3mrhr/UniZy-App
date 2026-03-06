@@ -26,7 +26,9 @@ jest.mock('../auth', () => ({
 
 import { requireRole, requireScope, requireOwnership, requireUser } from '@/lib/authz';
 import * as auth from '@/app/actions/auth';
-import { getSession } from '../session';
+import { getSession } from '@/lib/session';
+const { prisma } = require('@/lib/prisma');
+
 const {
   trackEvent,
   getFunnelAnalytics,
@@ -41,12 +43,12 @@ describe('Advanced Analytics Server Actions', () => {
 
   describe('trackEvent', () => {
     it('should create an analytics event with the user ID if user is logged in', async () => {
-      getCurrentUser.mockResolvedValue({ id: 'user-123' });
+      auth.getCurrentUser.mockResolvedValue({ id: 'user-123' });
       prisma.analyticsEvent.create.mockResolvedValue({});
 
       const result = await trackEvent('TEST_EVENT', { module: 'TRANSPORT', sessionId: 'session-xyz' });
 
-      expect(getCurrentUser).toHaveBeenCalledTimes(1);
+      expect(auth.getCurrentUser).toHaveBeenCalledTimes(1);
       expect(prisma.analyticsEvent.create).toHaveBeenCalledTimes(1);
       expect(prisma.analyticsEvent.create).toHaveBeenCalledWith({
         data: {
@@ -61,7 +63,7 @@ describe('Advanced Analytics Server Actions', () => {
     });
 
     it('should create an analytics event with ANONYMOUS if user is not logged in', async () => {
-      getCurrentUser.mockResolvedValue(null);
+      auth.getCurrentUser.mockResolvedValue(null);
       prisma.analyticsEvent.create.mockResolvedValue({});
 
       const result = await trackEvent('TEST_EVENT', {});
@@ -81,7 +83,7 @@ describe('Advanced Analytics Server Actions', () => {
     it('should fail silently and return { success: false } if database creation fails', async () => {
       // Mock console.error to avoid test output noise
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => { });
-      getCurrentUser.mockResolvedValue(null);
+      auth.getCurrentUser.mockResolvedValue(null);
       prisma.analyticsEvent.create.mockRejectedValue(new Error('DB Error'));
 
       const result = await trackEvent('TEST_EVENT', {});
@@ -95,19 +97,19 @@ describe('Advanced Analytics Server Actions', () => {
 
   describe('getFunnelAnalytics', () => {
     it('should return error if user is not logged in', async () => {
-      getCurrentUser.mockResolvedValue(null);
+      auth.getCurrentUser.mockResolvedValue(null);
       const result = await getFunnelAnalytics();
       expect(result).toEqual({ error: 'Unauthorized' });
     });
 
     it('should return error if user is not an admin', async () => {
-      getCurrentUser.mockResolvedValue({ role: 'STUDENT' });
+      auth.getCurrentUser.mockResolvedValue({ role: 'STUDENT' });
       const result = await getFunnelAnalytics();
       expect(result).toEqual({ error: 'Unauthorized' });
     });
 
     it('should compute funnel analytics correctly for admin user', async () => {
-      getCurrentUser.mockResolvedValue({ role: 'ADMIN' });
+      auth.getCurrentUser.mockResolvedValue({ role: 'ADMIN' });
 
       // prisma.user.count is called 4 times via Promise.all
       prisma.user.count
@@ -133,7 +135,7 @@ describe('Advanced Analytics Server Actions', () => {
     });
 
     it('should handle zero divisions correctly', async () => {
-      getCurrentUser.mockResolvedValue({ role: 'ADMIN' });
+      auth.getCurrentUser.mockResolvedValue({ role: 'ADMIN' });
 
       // All zeroes
       prisma.user.count.mockResolvedValue(0);
@@ -146,7 +148,7 @@ describe('Advanced Analytics Server Actions', () => {
 
     it('should catch errors and return a generic failure message', async () => {
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => { });
-      getCurrentUser.mockResolvedValue({ role: 'ADMIN' });
+      auth.getCurrentUser.mockResolvedValue({ role: 'ADMIN' });
       prisma.user.count.mockRejectedValue(new Error('DB Error'));
 
       const result = await getFunnelAnalytics();
@@ -158,31 +160,31 @@ describe('Advanced Analytics Server Actions', () => {
 
   describe('getModuleConversions', () => {
     it('should return error if user is not an admin', async () => {
-      getCurrentUser.mockResolvedValue({ role: 'MERCHANT' });
+      auth.getCurrentUser.mockResolvedValue({ role: 'MERCHANT' });
       const result = await getModuleConversions();
       expect(result).toEqual({ error: 'Unauthorized' });
     });
 
     it('should return module conversions for admin user', async () => {
-      getCurrentUser.mockResolvedValue({ role: 'ADMIN_SUPER' });
+      auth.getCurrentUser.mockResolvedValue({ role: 'ADMIN_SUPER' });
 
       // Mock a simplified implementation to return consistent numbers
       prisma.transaction.groupBy.mockResolvedValue([
-        { type: 'TRANSPORT', status: 'PENDING', _count: 5 },
-        { type: 'TRANSPORT', status: 'COMPLETED', _count: 5 },
-        { type: 'DELIVERY', status: 'COMPLETED', _count: 5 },
-        { type: 'DELIVERY', status: 'PENDING', _count: 5 },
+        { type: 'TRANSPORT', status: 'PENDING', _count: { _all: 5 } },
+        { type: 'TRANSPORT', status: 'COMPLETED', _count: { _all: 5 } },
+        { type: 'DELIVERY', status: 'COMPLETED', _count: { _all: 5 } },
+        { type: 'DELIVERY', status: 'PENDING', _count: { _all: 5 } },
         // ... assuming all 7 modules have the same counts for testing
-        { type: 'HOUSING', status: 'PENDING', _count: 5 },
-        { type: 'HOUSING', status: 'COMPLETED', _count: 5 },
-        { type: 'DEALS', status: 'PENDING', _count: 5 },
-        { type: 'DEALS', status: 'COMPLETED', _count: 5 },
-        { type: 'MEALS', status: 'PENDING', _count: 5 },
-        { type: 'MEALS', status: 'COMPLETED', _count: 5 },
-        { type: 'SERVICES', status: 'PENDING', _count: 5 },
-        { type: 'SERVICES', status: 'COMPLETED', _count: 5 },
-        { type: 'CLEANING', status: 'PENDING', _count: 5 },
-        { type: 'CLEANING', status: 'COMPLETED', _count: 5 },
+        { type: 'HOUSING', status: 'PENDING', _count: { _all: 5 } },
+        { type: 'HOUSING', status: 'COMPLETED', _count: { _all: 5 } },
+        { type: 'DEALS', status: 'PENDING', _count: { _all: 5 } },
+        { type: 'DEALS', status: 'COMPLETED', _count: { _all: 5 } },
+        { type: 'MEALS', status: 'PENDING', _count: { _all: 5 } },
+        { type: 'MEALS', status: 'COMPLETED', _count: { _all: 5 } },
+        { type: 'SERVICES', status: 'PENDING', _count: { _all: 5 } },
+        { type: 'SERVICES', status: 'COMPLETED', _count: { _all: 5 } },
+        { type: 'CLEANING', status: 'PENDING', _count: { _all: 5 } },
+        { type: 'CLEANING', status: 'COMPLETED', _count: { _all: 5 } },
       ]);
 
       const result = await getModuleConversions();
@@ -208,7 +210,7 @@ describe('Advanced Analytics Server Actions', () => {
     });
 
     it('should handle zero conversions correctly', async () => {
-      getCurrentUser.mockResolvedValue({ role: 'ADMIN' });
+      auth.getCurrentUser.mockResolvedValue({ role: 'ADMIN' });
       prisma.transaction.groupBy.mockResolvedValue([]);
 
       const result = await getModuleConversions();
@@ -220,7 +222,7 @@ describe('Advanced Analytics Server Actions', () => {
 
     it('should catch errors and return a generic failure message', async () => {
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => { });
-      getCurrentUser.mockResolvedValue({ role: 'ADMIN' });
+      auth.getCurrentUser.mockResolvedValue({ role: 'ADMIN' });
       prisma.transaction.groupBy.mockRejectedValue(new Error('DB Error'));
 
       const result = await getModuleConversions();
@@ -242,13 +244,13 @@ describe('Advanced Analytics Server Actions', () => {
     });
 
     it('should return error if user is not an admin', async () => {
-      getCurrentUser.mockResolvedValue(null);
+      auth.getCurrentUser.mockResolvedValue(null);
       const result = await getRetentionCohorts();
       expect(result).toEqual({ error: 'Unauthorized' });
     });
 
     it('should compute retention cohorts for past 4 weeks', async () => {
-      getCurrentUser.mockResolvedValue({ role: 'ADMIN' });
+      auth.getCurrentUser.mockResolvedValue({ role: 'ADMIN' });
 
       // Let's create mock orders falling into different weeks
       const now = new Date('2023-10-31T12:00:00Z');
@@ -285,7 +287,7 @@ describe('Advanced Analytics Server Actions', () => {
 
     it('should catch errors and return a generic failure message', async () => {
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => { });
-      getCurrentUser.mockResolvedValue({ role: 'ADMIN' });
+      auth.getCurrentUser.mockResolvedValue({ role: 'ADMIN' });
       prisma.$queryRaw.mockRejectedValue(new Error('DB Error'));
 
       const result = await getRetentionCohorts();
