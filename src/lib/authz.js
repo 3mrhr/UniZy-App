@@ -15,7 +15,7 @@ export async function requireUser() {
  */
 export async function requireRole(allowedRoles) {
     const user = await requireUser();
-    if (!allowedRoles.includes(user.role)) {
+    if (!user.role || !allowedRoles.includes(user.role)) {
         throw new Error(`Forbidden: Requires one of roles: ${allowedRoles.join(', ')}`);
     }
     return user;
