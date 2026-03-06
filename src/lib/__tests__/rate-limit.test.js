@@ -80,3 +80,49 @@ describe('rateLimit', () => {
         jest.useRealTimers();
     });
 });
+
+describe('rateLimit cleanup interval', () => {
+    let rateLimitModule;
+    let deleteSpy;
+
+    beforeEach(async () => {
+        jest.useFakeTimers();
+        // Spy on Map delete before module load so we catch what it does
+        deleteSpy = jest.spyOn(Map.prototype, 'delete');
+        jest.resetModules();
+        rateLimitModule = await import('../rate-limit.js');
+    });
+
+    afterEach(() => {
+        if (rateLimitModule) {
+            rateLimitModule._resetTrackers();
+        }
+        deleteSpy.mockRestore();
+        jest.clearAllTimers();
+        jest.useRealTimers();
+    });
+
+    it('should clean up expired trackers', async () => {
+        const { rateLimit } = rateLimitModule;
+
+        await rateLimit('expire-key', 5, 1000);
+        await rateLimit('keep-key', 5, 100000);
+
+        // Advance time to expire 'expire-key' and trigger the 60s cleanup interval
+        jest.advanceTimersByTime(61000);
+
+        expect(deleteSpy).toHaveBeenCalledWith('expire-key');
+        expect(deleteSpy).not.toHaveBeenCalledWith('keep-key');
+    });
+
+    it('should call unref if present on the interval', async () => {
+        jest.resetModules();
+        const mockInterval = { unref: jest.fn() };
+        jest.spyOn(global, 'setInterval').mockReturnValue(mockInterval);
+
+        await import('../rate-limit.js');
+
+        expect(mockInterval.unref).toHaveBeenCalled();
+        jest.restoreAllMocks();
+    });
+});
