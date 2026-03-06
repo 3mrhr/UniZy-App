@@ -1,15 +1,14 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
-import { getCurrentUser } from './auth';
+import { requireUser, requireRole, requireOwnership } from '@/lib/authz';
 
 /**
  * Get or create a wallet for the current user.
  */
 export async function getOrCreateWallet() {
     try {
-        const user = await getCurrentUser();
-        if (!user) return { error: 'Not authenticated' };
+        const user = await requireUser();
 
         let wallet = await prisma.wallet.findUnique({
             where: { userId: user.id },
@@ -37,7 +36,7 @@ export async function getOrCreateWallet() {
         return { success: true, wallet };
     } catch (error) {
         console.error('Wallet error:', error);
-        return { error: 'Failed to fetch wallet.' };
+        return { error: error.message || 'Failed to fetch wallet.' };
     }
 }
 
@@ -50,6 +49,8 @@ export async function getOrCreateWallet() {
  */
 export async function creditWallet(userId, amount, description, transactionId = null) {
     try {
+        await requireRole(['ADMIN_SUPER', 'ADMIN_FINANCE', 'ADMIN_SUPPORT']);
+
         if (amount <= 0) return { error: 'Amount must be positive.' };
 
         // Get or create wallet
@@ -83,7 +84,7 @@ export async function creditWallet(userId, amount, description, transactionId = 
         return { success: true, newBalance: result.updatedWallet.balance };
     } catch (error) {
         console.error('Credit wallet error:', error);
-        return { error: 'Failed to credit wallet.' };
+        return { error: error.message || 'Failed to credit wallet.' };
     }
 }
 
@@ -96,6 +97,9 @@ export async function creditWallet(userId, amount, description, transactionId = 
  */
 export async function spendFromWallet(userId, amount, description, transactionId = null) {
     try {
+        const user = await requireUser();
+        requireOwnership(userId, user.id);
+
         if (amount <= 0) return { error: 'Amount must be positive.' };
 
         const wallet = await prisma.wallet.findUnique({ where: { userId } });
@@ -126,7 +130,7 @@ export async function spendFromWallet(userId, amount, description, transactionId
         return { success: true, newBalance: result.updatedWallet.balance };
     } catch (error) {
         console.error('Spend wallet error:', error);
-        return { error: 'Failed to spend from wallet.' };
+        return { error: error.message || 'Failed to spend from wallet.' };
     }
 }
 
@@ -135,6 +139,9 @@ export async function spendFromWallet(userId, amount, description, transactionId
  */
 export async function topUpWallet(userId, amount, description = 'Wallet top-up') {
     try {
+        const user = await requireUser();
+        requireOwnership(userId, user.id);
+
         if (amount <= 0) return { error: 'Amount must be positive.' };
 
         let wallet = await prisma.wallet.findUnique({ where: { userId } });
@@ -165,6 +172,6 @@ export async function topUpWallet(userId, amount, description = 'Wallet top-up')
         return { success: true, newBalance: result.updatedWallet.balance };
     } catch (error) {
         console.error('Top up wallet error:', error);
-        return { error: 'Failed to top up wallet.' };
+        return { error: error.message || 'Failed to top up wallet.' };
     }
 }
