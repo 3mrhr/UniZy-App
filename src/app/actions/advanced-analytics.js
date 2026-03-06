@@ -126,12 +126,17 @@ export async function getRetentionCohorts(weeks = 4) {
         overallStart.setDate(overallStart.getDate() - weeks * 7);
         const overallEnd = new Date(now);
 
-        const allOrders = await prisma.order.findMany({
-            where: {
-                createdAt: { gte: overallStart, lt: overallEnd },
-            },
-            select: { userId: true, createdAt: true },
-        });
+        // Group by exact 7-day intervals counting backward from `overallEnd`
+        // This simulates a custom "date truncation" aligned precisely to the rolling window.
+        const rawResults = await prisma.$queryRaw`
+            SELECT
+                FLOOR(EXTRACT(EPOCH FROM (${overallEnd}::timestamp - "createdAt")) / (7 * 24 * 60 * 60))::int as week_index,
+                COUNT(DISTINCT "userId")::int as "activeUsers"
+            FROM "Order"
+            WHERE "createdAt" >= ${overallStart} AND "createdAt" < ${overallEnd}
+            GROUP BY week_index
+            ORDER BY week_index ASC
+        `;
 
         const cohorts = [];
         for (let i = 0; i < weeks; i++) {
@@ -140,18 +145,13 @@ export async function getRetentionCohorts(weeks = 4) {
             const weekEnd = new Date(now);
             weekEnd.setDate(weekEnd.getDate() - i * 7);
 
-            const weekUsers = new Set();
-            for (const order of allOrders) {
-                if (order.createdAt >= weekStart && order.createdAt < weekEnd) {
-                    weekUsers.add(order.userId);
-                }
-            }
+            const row = rawResults.find(r => r.week_index === i);
 
             cohorts.push({
                 week: `Week -${i + 1}`,
                 startDate: weekStart.toISOString().split('T')[0],
                 endDate: weekEnd.toISOString().split('T')[0],
-                activeUsers: weekUsers.size,
+                activeUsers: row ? Number(row.activeUsers) : 0,
             });
         }
 

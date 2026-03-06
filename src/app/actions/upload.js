@@ -45,14 +45,14 @@ export async function uploadImage(dataUri, options = {}) {
 
 /**
  * Upload a profile picture — optimized sizing for avatars.
- * @todo Implement actual upload logic once frontend supports it
  */
-// eslint-disable-next-line no-unused-vars
 export async function uploadProfilePicture(dataUri) {
-    // Stub implementation to prevent unused export warnings
-    // and keep the interface ready for future integration.
-    console.warn('uploadProfilePicture is not implemented yet. Received:', !!dataUri);
-    return { error: 'Not implemented yet', fallback: true };
+    return uploadImage(dataUri, {
+        folder: 'unizy/avatars',
+        transformation: [
+            { width: 400, height: 400, crop: 'fill', gravity: 'face', quality: 'auto:good', fetch_format: 'auto' }
+        ],
+    });
 }
 
 /**

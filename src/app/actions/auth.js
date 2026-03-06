@@ -1,9 +1,9 @@
 'use server';
 
+import crypto from 'node:crypto';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/session';
 import bcrypt from 'bcryptjs';
-import crypto from 'crypto';
 import { logEvent } from './analytics';
 import { rateLimit } from '@/lib/rate-limit';
 import { headers } from 'next/headers';
@@ -211,7 +211,7 @@ export async function requestPasswordReset(email) {
         }
 
         // Generate a random token
-        const token = crypto.randomBytes(32).toString('hex');
+        const token = `${Date.now().toString(36)}-${crypto.randomBytes(16).toString('hex')}`;
 
         // Create reset record (expires in 1 hour)
         await prisma.passwordReset.create({
@@ -222,10 +222,13 @@ export async function requestPasswordReset(email) {
             }
         });
 
-        // In production, send email with reset link
-        // For now, return the token directly so the user can use it
+        // In production, send email with reset link.
+        // For security, never return the token directly to the client.
+        if (process.env.NODE_ENV === 'development') {
+            console.log(`[DEV] Password reset token for ${email}: ${token}`);
+        }
 
-        return { success: true, token, message: 'Reset token generated. Check server console in dev mode.' };
+        return { success: true, message: 'If that email exists, a reset link has been generated.' };
     } catch (error) {
         console.error('Password reset request error:', error);
         return { error: 'Failed to process reset request.' };

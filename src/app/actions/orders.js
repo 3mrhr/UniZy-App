@@ -44,7 +44,51 @@ export async function createOrder(service, details, clientTotal, promoCodeStr = 
                     where: { id: { in: mealIds } },
                     include: { variantGroups: { include: { options: true } }, addonGroups: { include: { options: true } } }
                 });
-                const mealsMap = new Map(meals.map(m => [m.id, m]));
+                const mealsMap = new Map(meals.map(m => {
+                    // Pre-index variants and addons for O(1) lookup
+                    const variantGroupsMap = new Map(m.variantGroups.map(g => [
+                        g.id,
+                        { ...g, optionsMap: new Map(g.options.map(o => [o.id, o])) }
+                    ]));
+                    const addonGroupsMap = new Map(m.addonGroups.map(g => [
+                        g.id,
+                        { ...g, optionsMap: new Map(g.options.map(o => [o.id, o])) }
+                    ]));
+
+                    return [m.id, { ...m, variantGroupsMap, addonGroupsMap }];
+                }));
+
+                const mealOptionMaps = new Map();
+
+                for (const meal of meals) {
+                    const variantGroupsMap = new Map();
+                    if (meal.variantGroups) {
+                        for (const group of meal.variantGroups) {
+                            const optMap = new Map();
+                            if (group.options) {
+                                for (const opt of group.options) {
+                                    optMap.set(opt.id, opt);
+                                }
+                            }
+                            variantGroupsMap.set(group.id, { group, optMap });
+                        }
+                    }
+
+                    const addonGroupsMap = new Map();
+                    if (meal.addonGroups) {
+                        for (const group of meal.addonGroups) {
+                            const optMap = new Map();
+                            if (group.options) {
+                                for (const opt of group.options) {
+                                    optMap.set(opt.id, opt);
+                                }
+                            }
+                            addonGroupsMap.set(group.id, { group, optMap });
+                        }
+                    }
+
+                    mealOptionMaps.set(meal.id, { variantGroupsMap, addonGroupsMap });
+                }
 
                 for (const item of lineItems) {
                     const meal = mealsMap.get(item.mealId);
@@ -78,11 +122,22 @@ export async function createOrder(service, details, clientTotal, promoCodeStr = 
                     let variantsTotal = 0;
                     let addonsTotal = 0;
 
+                    const optionMaps = mealOptionMaps.get(meal.id);
+
                     // Compute Variants
                     if (item.variants && item.variants.length > 0) {
+                        const variantGroupsMap = new Map();
+                        for (const g of meal.variantGroups) {
+                            const optionsMap = new Map();
+                            for (const o of g.options) {
+                                optionsMap.set(o.id, o);
+                            }
+                            variantGroupsMap.set(g.id, { ...g, optionsMap });
+                        }
+
                         for (const v of item.variants) {
-                            const group = meal.variantGroups.find(g => g.id === v.groupId);
-                            const opt = group?.options.find(o => o.id === v.optionId);
+                            const group = variantGroupsMap.get(v.groupId);
+                            const opt = group?.optionsMap.get(v.optionId);
                             if (opt && opt.isAvailable) {
                                 variantsTotal += opt.priceDelta;
                                 itemVariantSelections.push({
@@ -96,9 +151,18 @@ export async function createOrder(service, details, clientTotal, promoCodeStr = 
 
                     // Compute Addons
                     if (item.addons && item.addons.length > 0) {
+                        const addonGroupsMap = new Map();
+                        for (const g of meal.addonGroups) {
+                            const optionsMap = new Map();
+                            for (const o of g.options) {
+                                optionsMap.set(o.id, o);
+                            }
+                            addonGroupsMap.set(g.id, { ...g, optionsMap });
+                        }
+
                         for (const a of item.addons) {
-                            const group = meal.addonGroups.find(g => g.id === a.groupId);
-                            const opt = group?.options.find(o => o.id === a.optionId);
+                            const group = addonGroupsMap.get(a.groupId);
+                            const opt = group?.optionsMap.get(a.optionId);
                             if (opt && opt.isAvailable) {
                                 addonsTotal += opt.priceDelta;
                                 itemAddonSelections.push({
@@ -257,11 +321,11 @@ export async function createOrder(service, details, clientTotal, promoCodeStr = 
         });
 
         // Log analytics outside transaction
-        if (result?.success) {
+        if (result?.ok) {
             try {
-                await logEvent('ORDER_CREATED', result.order.id, { service, total: result.order.total });
-                await logEvent('PAYMENT_SUCCEEDED', result.order.id, { amount: result.order.total });
-                await createNotification(user.id, 'Order Placed', `Your ${service.toLowerCase()} order has been placed.`, 'SYSTEM', `/activity/tracking/${result.order.id}`);
+                await logEvent('ORDER_CREATED', result.data.order.id, { service, total: result.data.order.total });
+                await logEvent('PAYMENT_SUCCEEDED', result.data.order.id, { amount: result.data.order.total });
+                await createNotification(user.id, 'Order Placed', `Your ${service.toLowerCase()} order has been placed.`, 'SYSTEM', `/activity/tracking/${result.data.order.id}`);
             } catch (_) { /* non-critical */ }
         }
         return result;

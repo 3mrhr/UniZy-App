@@ -70,18 +70,18 @@ export async function detectReferralAbuse() {
         });
 
         // Prepare a batch lookup for referrers to prevent N+1 querying in the loop
-        const parentReferrerIdsToFetch = [];
+        const parentReferrerIdsToFetch = new Set();
         for (const user of selfReferrals) {
             const referredById = user.referralsUsed[0]?.referrerId;
             if (referredById && referredById !== user.id) {
-                parentReferrerIdsToFetch.push(referredById);
+                parentReferrerIdsToFetch.add(referredById);
             }
         }
 
         // Fetch referrers in a single query
         const parentReferrals = await prisma.user.findMany({
             where: {
-                id: { in: parentReferrerIdsToFetch },
+                id: { in: Array.from(parentReferrerIdsToFetch) },
                 referralsUsed: { some: {} },
             },
             select: {
