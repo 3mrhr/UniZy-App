@@ -10,9 +10,9 @@
  */
 export function success(data = null) {
     if (data !== null) {
-        return { ok: true, data };
+        return { ok: true, success: true, data };
     }
-    return { ok: true };
+    return { ok: true, success: true };
 }
 
 /**
@@ -24,6 +24,7 @@ export function success(data = null) {
 export function failure(code, message) {
     return {
         ok: false,
+        success: false,
         error: {
             code,
             message: message || 'An unexpected error occurred.'
