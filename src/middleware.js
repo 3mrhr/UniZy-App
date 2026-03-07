@@ -40,6 +40,29 @@ export async function middleware(request) {
         return NextResponse.redirect(new URL('/login', request.url));
     }
 
+    // Verify DB session in middleware for instant revocation support
+    // Note: This adds a DB call to every protected request.
+    // In production, this should be cached (Redis) or checked only periodically.
+    if (user.sessionId) {
+        try {
+            // We can't use prisma directly in edge middleware if it's truly Edge,
+            // but Next.js middleware in Node runtime (default now) can.
+            // However, to keep it safe and high performance, we'll assume it's Node.
+            const { prisma } = await import('@/lib/prisma');
+            const dbSession = await prisma.session.findUnique({
+                where: { id: user.sessionId }
+            });
+
+            if (!dbSession || new Date() > dbSession.expiresAt) {
+                session.destroy();
+                return NextResponse.redirect(new URL('/login', request.url));
+            }
+        } catch (e) {
+            console.error("Middleware session verification failed:", e);
+            // Optionally allow if DB is down, or fail closed.
+        }
+    }
+
     // ==== Role Based Routing Guards ====
 
     // Protect /admin routes

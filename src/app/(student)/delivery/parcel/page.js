@@ -22,27 +22,41 @@ export default function ParcelDeliveryPage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
 
+    const pricing = { small: 25, medium: 45, large: 65 };
+    const estimatedPrice = pricing[form.size] || 25;
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setIsSubmitting(true);
 
         try {
             const { createOrder } = await import('@/app/actions/orders');
-            // Mock a flat rate sum for the MVP, or this would query `PricingRule` based on size in the future
-            let estimatedPrice = 50.0;
-            if (form.size === 'medium') estimatedPrice = 80.0;
-            if (form.size === 'large') estimatedPrice = 120.0;
-
-            const result = await createOrder('DELIVERY', {
-                type: 'PARCEL',
-                pickup: form.pickupAddress,
-                dropoff: form.dropoffAddress,
-                details: form,
-                items: [`1x ${form.size} Parcel (${form.itemDescription})`]
-            }, estimatedPrice);
+            // Using createOrder with PARCEL type
+            const result = await createOrder({
+                service: 'PARCEL',
+                details: JSON.stringify({
+                    type: 'PARCEL', // Derived from original `{ ...form, type: 'PARCEL' }`
+                    pickup: form.pickupAddress,
+                    dropoff: form.dropoffAddress,
+                    notes: form.notes,
+                    size: form.size,
+                    senderName: form.senderName,
+                    senderPhone: form.senderPhone,
+                    receiverName: form.receiverName,
+                    receiverPhone: form.receiverPhone,
+                    itemDescription: form.itemDescription,
+                    isFragile: form.isFragile,
+                }),
+                pickupLat: form.pickupLat || null,
+                pickupLng: form.pickupLng || null,
+                dropoffLat: form.dropoffLat || null,
+                dropoffLng: form.dropoffLng || null,
+                total: estimatedPrice,
+                status: 'PENDING'
+            });
 
             if (result.success) {
-                router.push(`/activity/tracking/${result.order.id}`);
+                router.push(`/activity/tracking/${result.data.order.id}`);
             } else {
                 import('react-hot-toast').then(({ toast }) => toast.error(result.error || 'Failed to submit parcel'));
                 setIsSubmitting(false);

@@ -3,6 +3,7 @@
 import { prisma } from '@/lib/prisma';
 import { requireRole } from '@/lib/authz';
 import { revalidatePath } from 'next/cache';
+import { createNotification } from './notifications';
 
 export async function createMeal(data) {
     try {
@@ -50,6 +51,29 @@ export async function updateMerchantSettings(data) {
                 storeOpen: storeOpen !== undefined ? Boolean(storeOpen) : undefined,
             }
         });
+
+        // Notification: If merchant CLOSES store, check if there are pending orders
+        if (storeOpen === false) {
+            try {
+                const activeOrders = await prisma.order.findMany({
+                    where: {
+                        status: { in: ['PENDING', 'ACCEPTED', 'PREPARING'] },
+                        orderItems: { some: { meal: { merchantId: user.id } } }
+                    },
+                    select: { userId: true, id: true }
+                });
+
+                for (const order of activeOrders) {
+                    await createNotification(
+                        order.userId,
+                        'Store Closed',
+                        'The merchant just closed. Your order might be delayed or cancelled.',
+                        'SYSTEM',
+                        `/activity/tracking/${order.id}`
+                    );
+                }
+            } catch (_) { }
+        }
 
         revalidatePath('/merchant');
         revalidatePath('/delivery');

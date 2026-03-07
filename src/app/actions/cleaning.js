@@ -3,6 +3,7 @@
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from './auth';
 import { computeCommissionSnapshot, computePricingSnapshot, generateTxnCode } from './financial';
+import { createNotification } from './notifications';
 
 export async function listPackages() {
     try {
@@ -90,6 +91,15 @@ export async function bookCleaning({ packageId, date, timeSlot, address, notes }
             return booking;
         });
 
+        try {
+            await createNotification(
+                user.id,
+                'Cleaning Booked! 🧹',
+                `Your ${pkg.name} is scheduled for ${date} during the ${timeSlot} slot.`,
+                'SYSTEM'
+            );
+        } catch (_) { }
+
         return { success: true, booking: result };
     } catch (error) {
         console.error('Book cleaning error:', error);
@@ -149,6 +159,16 @@ export async function updateCleaningBookingStatus(bookingId, status) {
             where: { id: bookingId },
             data: { status }
         });
+
+        try {
+            let title = 'Cleaning Update';
+            let msg = `Your booking status is now ${status}.`;
+            if (status === 'COMPLETED') {
+                title = 'Place Sparkling! ✨';
+                msg = 'Your cleaning service is complete. We hope you love the results!';
+            }
+            await createNotification(booking.userId, title, msg, 'SYSTEM');
+        } catch (_) { }
 
         return { success: true, booking };
     } catch (e) {

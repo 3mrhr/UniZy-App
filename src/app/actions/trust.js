@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from './auth';
 import { logAdminAction } from './audit';
 import { revalidatePath } from 'next/cache';
+import { createNotification } from './notifications';
 
 /**
  * STUDENT ACTIONS
@@ -111,6 +112,24 @@ export async function resolveReport(reportId, { status, actionTaken }) {
                 updatedAt: new Date()
             }
         });
+
+        try {
+            await createNotification(
+                report.reporterId,
+                'Report Update',
+                `Your report regarding ${report.type} has been ${status}. Action: ${actionTaken || 'None'}`,
+                'SYSTEM'
+            );
+
+            if (status === 'RESOLVED' && actionTaken && report.targetUserId) {
+                await createNotification(
+                    report.targetUserId,
+                    'Account Warning',
+                    `Action was taken against your account regarding a ${report.type} report: ${actionTaken}`,
+                    'SYSTEM'
+                );
+            }
+        } catch (_) { }
 
         await logAdminAction('RESOLVE_REPORT', 'SAFETY', { reportId, status, actionTaken });
 

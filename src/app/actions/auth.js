@@ -7,10 +7,19 @@ import bcrypt from 'bcryptjs';
 import { logEvent } from './analytics';
 import { rateLimit } from '@/lib/rate-limit';
 import { headers } from 'next/headers';
+import { createNotification } from './notifications';
 
 async function getClientIp() {
     const headerList = await headers();
     return headerList.get('x-forwarded-for') || '127.0.0.1';
+}
+
+/**
+ * Validates password strength: 8+ chars, 1 uppercase, 1 lowercase, 1 number.
+ */
+function validatePassword(password) {
+    const schema = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d\W_]{8,}$/;
+    return schema.test(password);
 }
 
 export async function loginUser(username, password) {
@@ -50,7 +59,30 @@ export async function loginUser(username, password) {
             console.error('Failed to parse user scopes:', e);
         }
 
+        if (user.mfaEnabled) {
+            // If MFA is enabled, we don't create the session yet.
+            // We return a "MFA_REQUIRED" flag to the client.
+            return {
+                success: true,
+                mfaRequired: true,
+                userId: user.id
+            };
+        }
+
         const session = await getSession();
+        const expiresAt = new Date(Date.now() + 60 * 60 * 24 * 7 * 1000); // 1 week
+
+        // Create DB-backed session
+        const dbSession = await prisma.session.create({
+            data: {
+                userId: user.id,
+                token: crypto.randomBytes(32).toString('hex'),
+                userAgent: (await headers()).get('user-agent'),
+                ipAddress: ip,
+                expiresAt: expiresAt,
+            }
+        });
+
         session.user = {
             id: user.id,
             role: user.role,
@@ -58,6 +90,7 @@ export async function loginUser(username, password) {
             email: user.email,
             isVerified: user.isVerified || false,
             scopes: Array.isArray(parsedScopes) ? parsedScopes : [],
+            sessionId: dbSession.id, // Store sessionId to allow revocation
         };
         await session.save();
 
@@ -95,6 +128,11 @@ export async function registerUser(data) {
 
         if (existingUser) {
             return { error: 'Email already in use' };
+        }
+
+        // Validate password strength
+        if (!validatePassword(password)) {
+            return { error: 'Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, and one number.' };
         }
 
         // Hash password with bcrypt (10 salt rounds)
@@ -140,6 +178,16 @@ export async function registerUser(data) {
                         pointsAwarded: 50, // This is the reward for the referrer
                     }
                 });
+
+                // Notify referrer immediately that a friend joined
+                try {
+                    await createNotification(
+                        referrer.id,
+                        'Friend Joined! 👋',
+                        `${newUser.name} just joined UniZy using your code. You'll get 50 points after their first order!`,
+                        'REFERRAL'
+                    );
+                } catch (_) { }
             }
         }
 
@@ -166,6 +214,15 @@ export async function registerUser(data) {
 
 export async function logoutUser() {
     const session = await getSession();
+    if (session.user?.sessionId) {
+        try {
+            await prisma.session.delete({
+                where: { id: session.user.sessionId }
+            });
+        } catch (e) {
+            console.error("Failed to delete DB session on logout:", e);
+        }
+    }
     session.destroy();
     return { success: true };
 }
@@ -183,6 +240,17 @@ export async function getCurrentUser() {
         if (!user || user.status !== 'ACTIVE') {
             session.destroy();
             return null;
+        }
+
+        // Verify DB session
+        if (session.user.sessionId) {
+            const dbSession = await prisma.session.findUnique({
+                where: { id: session.user.sessionId }
+            });
+            if (!dbSession || new Date() > dbSession.expiresAt) {
+                session.destroy();
+                return null;
+            }
         }
 
         // Sync isVerified in case it changed since login
@@ -251,6 +319,11 @@ export async function resetPassword(token, newPassword) {
             return { error: 'This reset token has expired. Please request a new one.' };
         }
 
+        // Validate password strength
+        if (!validatePassword(newPassword)) {
+            return { error: 'Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, and one number.' };
+        }
+
         // Hash new password
         const hashedPassword = await bcrypt.hash(newPassword, 10);
 
@@ -270,5 +343,189 @@ export async function resetPassword(token, newPassword) {
     } catch (error) {
         console.error('Password reset error:', error);
         return { error: 'Failed to reset password.' };
+    }
+}
+
+/**
+ * MFA: Generate a new secret and QR code for setup.
+ */
+export async function generateMFASecret() {
+    try {
+        const user = await getCurrentUser();
+        if (!user) return { error: 'Unauthorized' };
+
+        const { authenticator } = await import('otplib');
+        const qrcode = await import('qrcode');
+
+        const secret = authenticator.generateSecret();
+        const otpauth = authenticator.keyuri(user.email, 'UniZy', secret);
+        const qrDataURL = await qrcode.toDataURL(otpauth);
+
+        return { success: true, secret, qrDataURL };
+    } catch (error) {
+        console.error('MFA Secret generation error:', error);
+        return { error: 'Failed to generate MFA secret.' };
+    }
+}
+
+/**
+ * MFA: Verify a token and enable MFA for the user.
+ */
+export async function verifyAndEnableMFA(secret, token) {
+    try {
+        const user = await getCurrentUser();
+        if (!user) return { error: 'Unauthorized' };
+
+        const { authenticator } = await import('otplib');
+        const isValid = authenticator.verify({ token, secret });
+
+        if (!isValid) {
+            return { error: 'Invalid verification token.' };
+        }
+
+        await prisma.user.update({
+            where: { id: user.id },
+            data: {
+                mfaEnabled: true,
+                mfaSecret: secret
+            }
+        });
+
+        return { success: true };
+    } catch (error) {
+        console.error('MFA Enable error:', error);
+        return { error: 'Failed to enable MFA.' };
+    }
+}
+
+/**
+ * MFA: Verify token during login.
+ */
+export async function verifyMFALogin(userId, token) {
+    try {
+        const user = await prisma.user.findUnique({
+            where: { id: userId }
+        });
+
+        if (!user || !user.mfaEnabled || !user.mfaSecret) {
+            return { error: 'MFA not enabled or user not found.' };
+        }
+
+        const { authenticator } = await import('otplib');
+        const isValid = authenticator.verify({ token, secret: user.mfaSecret });
+
+        if (!isValid) {
+            return { error: 'Invalid MFA token.' };
+        }
+
+        // Logic to create session (same as in loginUser)
+        const ip = await getClientIp();
+        const session = await getSession();
+        const expiresAt = new Date(Date.now() + 60 * 60 * 24 * 7 * 1000);
+
+        const dbSession = await prisma.session.create({
+            data: {
+                userId: user.id,
+                token: crypto.randomBytes(32).toString('hex'),
+                userAgent: (await headers()).get('user-agent'),
+                ipAddress: ip,
+                expiresAt: expiresAt,
+            }
+        });
+
+        let parsedScopes = Array.isArray(user.scopes) ? user.scopes : [];
+
+        session.user = {
+            id: user.id,
+            role: user.role,
+            name: user.name,
+            email: user.email,
+            isVerified: user.isVerified || false,
+            scopes: parsedScopes,
+            sessionId: dbSession.id,
+        };
+        await session.save();
+
+        return { success: true, role: user.role };
+    } catch (error) {
+        console.error('MFA Login Verification error:', error);
+        return { error: 'MFA verification failed.' };
+    }
+}
+
+/**
+ * Session Management: List all active sessions for the current user.
+ */
+export async function getActiveSessions() {
+    try {
+        const user = await getCurrentUser();
+        if (!user) return { error: 'Unauthorized' };
+
+        const sessions = await prisma.session.findMany({
+            where: { userId: user.id },
+            orderBy: { createdAt: 'desc' },
+            select: {
+                id: true,
+                userAgent: true,
+                ipAddress: true,
+                createdAt: true,
+                expiresAt: true
+            }
+        });
+
+        return { success: true, sessions };
+    } catch (error) {
+        console.error('Get sessions error:', error);
+        return { error: 'Failed to fetch active sessions.' };
+    }
+}
+
+/**
+ * Session Management: Revoke a specific session.
+ */
+export async function revokeSession(sessionId) {
+    try {
+        const user = await getCurrentUser();
+        if (!user) return { error: 'Unauthorized' };
+
+        // Ensure session belongs to user
+        const session = await prisma.session.findUnique({
+            where: { id: sessionId }
+        });
+
+        if (!session || session.userId !== user.id) {
+            return { error: 'Session not found or unauthorized.' };
+        }
+
+        await prisma.session.delete({
+            where: { id: sessionId }
+        });
+
+        return { success: true };
+    } catch (error) {
+        console.error('Revoke session error:', error);
+        return { error: 'Failed to revoke session.' };
+    }
+}
+
+/**
+ * Session Management: Revoke all OTHER sessions.
+ */
+export async function revokeOtherSessions() {
+    try {
+        const user = await getCurrentUser();
+        if (!user || !user.sessionId) return { error: 'Unauthorized' };
+
+        await prisma.session.deleteMany({
+            where: {
+                userId: user.id,
+                id: { not: user.sessionId }
+            }
+        });
+
+        return { success: true };
+    } catch (error) {
+        console.error('Revoke other sessions error:', error);
+        return { error: 'Failed to revoke other sessions.' };
     }
 }

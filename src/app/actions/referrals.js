@@ -3,6 +3,7 @@
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from './auth';
 import { revalidatePath } from 'next/cache';
+import { createNotification } from './notifications';
 
 /**
  * Checks if the user was referred and completes the referral if this is their first transaction.
@@ -57,24 +58,23 @@ export async function completeReferralIfEligible(userId) {
                 where: { id: userId },
                 data: { points: { increment: 25 } }
             }),
-            // Log reward notification
-            prisma.notification.create({
-                data: {
-                    userId: pendingReferral.referrerId,
-                    title: 'Referral Reward Earned! 🎁',
-                    message: `Your friend completed their first order. You've been awarded ${pendingReferral.pointsAwarded} points!`,
-                    type: 'REFERRAL'
-                }
-            }),
-            prisma.notification.create({
-                data: {
-                    userId: userId,
-                    title: 'Welcome Reward! 🌟',
-                    message: 'You\'ve earned 25 points for completing your first transaction via referral.',
-                    type: 'REFERRAL'
-                }
-            })
         ]);
+
+        // Use standardized createNotification outside transaction for better decoupling
+        try {
+            await createNotification(
+                pendingReferral.referrerId,
+                'Referral Reward Earned! 🎁',
+                `Your friend completed their first order. You've been awarded ${pendingReferral.pointsAwarded} points!`,
+                'REFERRAL'
+            );
+            await createNotification(
+                userId,
+                'Welcome Reward! 🌟',
+                'You\'ve earned 25 points for completing your first transaction via referral.',
+                'REFERRAL'
+            );
+        } catch (_) { }
 
         return { success: true };
     } catch (error) {

@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "./auth";
 import { logAdminAction } from "./audit";
+import { createNotification } from "./notifications";
 
 /**
  * Ensures the user is a superadmin or has exact SLA permissions.
@@ -205,6 +206,21 @@ export async function checkSLABreaches() {
             const createdBreaches = await prisma.sLABreach.createManyAndReturn({
                 data: allBreachesToCreate
             });
+
+            // Notify Admins/Safety about new breaches
+            try {
+                // In a real app, this would be a scoped notification for admins
+                // For MVP, we alert the system notification channel
+                for (const breach of createdBreaches) {
+                    await createNotification(
+                        null, // System-wide or Admin-broadcast
+                        'SLA Breach Detected ⚠️',
+                        `Rule ${breach.ruleId} has been breached for target ${breach.targetId}.`,
+                        'SYSTEM'
+                    );
+                }
+            } catch (_) { }
+
             newBreaches.push(...createdBreaches);
         }
 

@@ -133,3 +133,44 @@ export async function broadcastNotification(title, message, type = 'SYSTEM', tar
         return { success: false, error: 'Database error' };
     }
 }
+
+/**
+ * Delete a specific notification
+ */
+export async function deleteNotification(id) {
+    try {
+        const user = await getCurrentUser();
+        if (!user) return { success: false, error: 'Not authenticated' };
+
+        await prisma.notification.delete({
+            where: {
+                id,
+                userId: user.id // Security: ensure only owner can delete
+            }
+        });
+
+        return { success: true };
+    } catch (error) {
+        console.error('Failed to delete notification', error);
+        return { success: false, error: 'Failed to delete notification' };
+    }
+}
+
+/**
+ * Clear all notifications for the current user
+ */
+export async function clearAllNotifications() {
+    try {
+        const user = await getCurrentUser();
+        if (!user) return { success: false, error: 'Not authenticated' };
+
+        await prisma.notification.deleteMany({
+            where: { userId: user.id }
+        });
+
+        return { success: true };
+    } catch (error) {
+        console.error('Failed to clear notifications', error);
+        return { success: false, error: 'Failed to clear notifications' };
+    }
+}

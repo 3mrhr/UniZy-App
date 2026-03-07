@@ -13,24 +13,7 @@ export async function getDashboardAnalytics() {
         if (!admin || !admin.role.includes('ADMIN')) return { success: false, error: 'Unauthorized' };
 
         // Run all queries in parallel for performance
-        const [
-            totalStudents,
-            totalDrivers,
-            totalMerchants,
-            totalProviders,
-            orders,
-            totalTransactions,
-            txnRevenue,
-            txnCommission,
-            bookings,
-            promos,
-            totalTickets,
-            openTickets,
-            activeListings,
-            activeDeals,
-            activeMeals,
-            pendingVerifications,
-        ] = await Promise.all([
+        const results = await Promise.all([
             prisma.user.count({ where: { role: 'STUDENT' } }),
             prisma.user.count({ where: { role: 'DRIVER' } }),
             prisma.user.count({ where: { role: 'MERCHANT' } }),
@@ -49,7 +32,36 @@ export async function getDashboardAnalytics() {
             prisma.deal.count({ where: { status: 'ACTIVE' } }),
             prisma.meal.count({ where: { status: 'ACTIVE' } }),
             prisma.verificationDocument.count({ where: { status: 'PENDING' } }),
+            prisma.user.count({
+                where: {
+                    updatedAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) }
+                }
+            }),
+            prisma.order.count({
+                where: {
+                    createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) }
+                }
+            }),
         ]);
+
+        const totalStudents = results[0];
+        const totalDrivers = results[1];
+        const totalMerchants = results[2];
+        const totalProviders = results[3];
+        const orders = results[4];
+        const totalTransactions = results[5];
+        const txnRevenue = results[6];
+        const txnCommission = results[7];
+        const bookings = results[8];
+        const promos = results[9];
+        const totalTickets = results[10];
+        const openTickets = results[11];
+        const activeListings = results[12];
+        const activeDeals = results[13];
+        const activeMeals = results[14];
+        const pendingVerifications = results[15];
+        const activeUsers24h = results[16];
+        const newOrders24h = results[17];
 
         const totalOrders = orders.length;
         const pendingOrders = orders.filter(o => o.status === 'PENDING').length;
@@ -79,6 +91,10 @@ export async function getDashboardAnalytics() {
                 marketplace: { listings: activeListings, deals: activeDeals, meals: activeMeals },
                 transactions: totalTransactions,
                 pendingVerifications,
+                activeUsers24h: activeUsers24h || 0,
+                growth: {
+                    orders24h: newOrders24h || 0,
+                }
             }
         };
     } catch (error) {

@@ -157,7 +157,18 @@ export async function updateTripStatus(tripId, newStatus) {
         });
 
         try {
-            await createNotification(trip.userId, 'Ride Update', `Your ride is now ${newStatus}.`, 'SYSTEM');
+            let title = 'Ride Update';
+            let message = `Your ride is now ${newStatus}.`;
+
+            if (newStatus === 'ARRIVED') {
+                title = 'Driver Arrived! 🚗';
+                message = 'Your driver is at the pickup point. Look for them now!';
+            } else if (newStatus === 'IN_PROGRESS') {
+                title = 'Trip Started';
+                message = 'You are on your way. Stay safe!';
+            }
+
+            await createNotification(trip.userId, title, message, 'SYSTEM', `/activity/tracking/${trip.id}`);
         } catch (_) { }
 
         revalidatePath('/driver');

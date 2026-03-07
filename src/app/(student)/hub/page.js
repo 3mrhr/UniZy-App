@@ -2,12 +2,15 @@
 
 import Link from 'next/link';
 
-import React, { useState, useEffect, useTransition } from 'react';
+import React, { useState, useEffect, useTransition, useCallback } from 'react';
 import { useLanguage } from '@/i18n/LanguageProvider';
-import { Users, Megaphone, Edit3, MessageCircle, Heart, Share2, MoreHorizontal, Image as ImageIcon, Flag, Loader2 } from 'lucide-react';
-import { getPosts, createPost, flagPost } from '@/app/actions/hub';
+import { Users, Megaphone, Edit3, MessageCircle, Heart, Share2, MoreHorizontal, Image as ImageIcon, Flag, Loader2, X, Search, Utensils, Home, Tag } from 'lucide-react';
+import { getPosts, createPost, flagPost, toggleLike, addComment, getNotices } from '@/app/actions/hub';
+import { globalSearch } from '@/app/actions/search';
 import { getCurrentUser } from '@/app/actions/auth';
 import ReportButton from '@/components/ReportButton';
+import ServiceBentoGrid from '@/components/ServiceBentoGrid';
+import debounce from 'lodash/debounce';
 
 const HUB_TABS = [
     { id: 'feed', en: 'Community Feed', ar: 'المجتمع', icon: Users },
@@ -52,6 +55,15 @@ export default function HubPage() {
     const [isPending, startTransition] = useTransition();
     const [reportedIds, setReportedIds] = useState(new Set());
 
+    // Search & Notices State
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchResults, setSearchResults] = useState([]);
+    const [searching, setSearching] = useState(false);
+    const [notices, setNotices] = useState([]);
+    const [noticesLoading, setNoticesLoading] = useState(false);
+    const [commentingId, setCommentingId] = useState(null);
+    const [commentText, setCommentText] = useState('');
+
     // Load posts from DB
     useEffect(() => {
         async function load() {
@@ -59,25 +71,6 @@ export default function HubPage() {
             const result = await getPosts();
             if (result.posts && result.posts.length > 0) {
                 setPosts(result.posts);
-            } else {
-                // Seed with demo posts if DB is empty
-                setPosts([
-                    {
-                        id: 'demo-1', content: 'Does anyone have past exams for BioPhysics 101? 🙏',
-                        category: 'study_help', likes: 12, comments: 5, createdAt: new Date(Date.now() - 7200000).toISOString(),
-                        author: { name: 'Sarah M.', university: 'Assiut University' }
-                    },
-                    {
-                        id: 'demo-2', content: 'Found a black wallet near the library entrance. Handed it to security at gate 2.',
-                        category: 'lost_found', likes: 45, comments: 2, createdAt: new Date(Date.now() - 18000000).toISOString(),
-                        author: { name: 'Ahmed Kareem', university: 'Assiut University' }
-                    },
-                    {
-                        id: 'demo-3', content: 'Looking for a 3rd roommate in a furnished apartment near the university (5 mins walk). Rent is super affordable. DM me!',
-                        category: 'housing', likes: 28, comments: 14, createdAt: new Date(Date.now() - 86400000).toISOString(),
-                        author: { name: 'Nour El-Din', university: 'Assiut University' }
-                    },
-                ]);
             }
             setLoading(false);
         }
@@ -90,10 +83,41 @@ export default function HubPage() {
         load();
     }, []);
 
+    // Load Notices
+    useEffect(() => {
+        if (activeTab === 'notices' && notices.length === 0) {
+            async function fetchNotices() {
+                setNoticesLoading(true);
+                const result = await getNotices();
+                if (result.success) setNotices(result.notices);
+                setNoticesLoading(false);
+            }
+            fetchNotices();
+        }
+    }, [activeTab]);
+
+    // Global Search Logic
+    const debouncedSearch = useCallback(
+        debounce(async (query) => {
+            if (query.trim().length < 2) {
+                setSearchResults([]);
+                setSearching(false);
+                return;
+            }
+            setSearching(true);
+            const result = await globalSearch(query);
+            setSearchResults(result.results || []);
+            setSearching(false);
+        }, 300),
+        []
+    );
+
+    useEffect(() => {
+        debouncedSearch(searchQuery);
+    }, [searchQuery, debouncedSearch]);
+
     const handlePost = () => {
         if (!postText.trim()) {
-            // Show brief shake animation on the post button by doing nothing - 
-            // the disabled state already prevents action. But let's add a toast.
             if (typeof window !== 'undefined') {
                 import('react-hot-toast').then(({ default: toast }) => {
                     toast.error('Please write something before posting');
@@ -104,41 +128,149 @@ export default function HubPage() {
         startTransition(async () => {
             const result = await createPost({ content: postText, category: postCategory });
             if (result.success) {
-                // Add to top of feed optimistically
                 setPosts(prev => [{
-                    id: result.post?.id || Date.now().toString(),
-                    content: postText,
-                    category: postCategory,
-                    likes: 0, comments: 0,
-                    createdAt: new Date().toISOString(),
-                    author: { name: user?.name || 'You', university: 'Assiut University' }
+                    ...result.post,
+                    likes: 0,
+                    comments: 0,
+                    isLiked: false,
+                    author: { name: user?.name || 'You', university: user?.university || 'Assiut University', profileImage: user?.profileImage }
                 }, ...prev]);
                 setPostText('');
                 setPostCategory('general');
             }
         });
+    };
 
+    const handleLike = async (postId) => {
+        if (!user) return;
+        // Optimistic UI
+        setPosts(prev => prev.map(p => {
+            if (p.id === postId) {
+                const newLiked = !p.isLiked;
+                return {
+                    ...p,
+                    isLiked: newLiked,
+                    likes: newLiked ? p.likes + 1 : p.likes - 1
+                };
+            }
+            return p;
+        }));
+
+        const result = await toggleLike(postId);
+        if (result.error) {
+            // Revert on error
+            setPosts(prev => prev.map(p => {
+                if (p.id === postId) {
+                    const oldLiked = !p.isLiked;
+                    return {
+                        ...p,
+                        isLiked: oldLiked,
+                        likes: oldLiked ? p.likes + 1 : p.likes - 1
+                    };
+                }
+                return p;
+            }));
+        }
+    };
+
+    const handleComment = async (postId) => {
+        if (!commentText.trim()) return;
+        const result = await addComment(postId, commentText);
+        if (result.success) {
+            setPosts(prev => prev.map(p => {
+                if (p.id === postId) {
+                    return { ...p, comments: p.comments + 1 };
+                }
+                return p;
+            }));
+            setCommentText('');
+            setCommentingId(null);
+        }
     };
 
     return (
         <main className="min-h-screen pb-24 bg-[var(--unizy-bg-light)] dark:bg-[var(--unizy-bg-dark)] px-4 sm:px-6 lg:px-8 max-w-3xl mx-auto pt-6 transition-colors duration-300">
 
-            {/* Header */}
-            <div className="mb-6 flex justify-between items-center">
-                <div>
-                    <h1 className="text-2xl sm:text-3xl font-extrabold text-[var(--unizy-text-dark)] dark:text-white mb-1">
-                        {isRTL ? 'مجتمع يوني زي' : 'Student Hub'}
-                    </h1>
-                    <p className="text-[var(--unizy-text-muted)] dark:text-gray-400 text-sm">
-                        {isRTL ? 'تواصل مع زملائك في الحرم الجامعي' : 'Connect with your campus community'}
-                    </p>
+            {/* Header & Search */}
+            <div className="mb-8 space-y-4">
+                <div className="flex justify-between items-center">
+                    <div>
+                        <h1 className="text-2xl sm:text-3xl font-extrabold text-[var(--unizy-text-dark)] dark:text-white mb-1">
+                            {isRTL ? 'مجتمع يوني زي' : 'Student Hub'}
+                        </h1>
+                        <p className="text-[var(--unizy-text-muted)] dark:text-gray-400 text-sm">
+                            {isRTL ? 'تواصل مع زملائك في الحرم الجامعي' : 'Connect with your campus community'}
+                        </p>
+                    </div>
+                </div>
+
+                {/* Global Search Bar (Playbook Upgrade) */}
+                <div className="relative group z-40">
+                    <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-[var(--unizy-primary)] transition-colors">
+                        {searching ? <Loader2 className="w-5 h-5 animate-spin" /> : <Search className="w-5 h-5" />}
+                    </div>
+                    <input
+                        type="text"
+                        placeholder={isRTL ? 'ابحث عن مطاعم، سكن، أو صفقات...' : 'Search for dining, housing, or deals...'}
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full bg-white dark:bg-[#1E293B] border border-gray-100 dark:border-gray-800 rounded-2xl py-4 pl-12 pr-12 text-sm focus:ring-2 focus:ring-[var(--unizy-primary)] focus:border-transparent outline-none shadow-sm transition-all"
+                    />
+                    {searchQuery && (
+                        <button
+                            onClick={() => setSearchQuery('')}
+                            className="absolute inset-y-0 right-4 flex items-center text-gray-400 hover:text-gray-600"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+                    )}
+
+                    {/* Search Results Dropdown */}
+                    {searchQuery.length >= 2 && (
+                        <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-[#1E293B] rounded-3xl border border-gray-100 dark:border-gray-800 shadow-2xl p-2 max-h-[400px] overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200">
+                            {searchResults.length > 0 ? (
+                                <div className="space-y-1">
+                                    {searchResults.map((result) => (
+                                        <Link
+                                            key={`${result.type}-${result.id}`}
+                                            href={result.url}
+                                            className="flex items-center gap-4 p-3 rounded-2xl hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group"
+                                        >
+                                            <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center shrink-0">
+                                                {result.type === 'meal' && <Utensils className="w-5 h-5 text-orange-500" />}
+                                                {result.type === 'housing' && <Home className="w-5 h-5 text-blue-500" />}
+                                                {result.type === 'deal' && <Tag className="w-5 h-5 text-purple-500" />}
+                                                {result.type === 'hub_post' && <Users className="w-5 h-5 text-green-500" />}
+                                                {result.type === 'roommate' && <Heart className="w-5 h-5 text-red-500" />}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <h4 className="text-sm font-bold text-gray-900 dark:text-white truncate group-hover:text-[var(--unizy-primary)]">
+                                                    {result.title}
+                                                </h4>
+                                                <p className="text-xs text-gray-500 truncate">{result.subtitle}</p>
+                                            </div>
+                                            <div className="text-right">
+                                                {result.price && (
+                                                    <span className="text-xs font-black text-[var(--unizy-primary)]">
+                                                        {result.price} {result.currency}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </Link>
+                                    ))}
+                                </div>
+                            ) : !searching ? (
+                                <div className="p-8 text-center">
+                                    <p className="text-sm text-gray-500 font-bold">No results found for "{searchQuery}"</p>
+                                </div>
+                            ) : null}
+                        </div>
+                    )}
                 </div>
             </div>
 
-            {/* Quick Links */}
-            <div className="flex gap-3 mb-4">
-                <Link href="/hub/roommate" className="px-4 py-2 bg-purple-50 dark:bg-purple-900/20 text-purple-600 rounded-xl text-sm font-bold hover:bg-purple-100 transition-colors">🏠 Roommate Finder</Link>
-            </div>
+            {/* Service Bento Grid (Playbook Upgrade) */}
+            <ServiceBentoGrid />
 
             {/* Tabs */}
             <div className="flex bg-gray-100 dark:bg-gray-800/50 p-1.5 rounded-2xl mb-6">
@@ -256,20 +388,49 @@ export default function HubPage() {
                                     )}
 
                                     {/* Post Actions */}
-                                    <div className="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-gray-800">
-                                        <div className="flex gap-4">
-                                            <button className="flex items-center gap-1.5 text-gray-500 hover:text-red-500 transition-colors text-sm font-medium group">
-                                                <Heart className="w-5 h-5 group-hover:fill-red-500" />
-                                                <span>{post.likes || 0}</span>
-                                            </button>
-                                            <button className="flex items-center gap-1.5 text-gray-500 hover:text-[var(--unizy-primary)] transition-colors text-sm font-medium">
-                                                <MessageCircle className="w-5 h-5" />
-                                                <span>{post.comments || 0}</span>
+                                    <div className="flex flex-col gap-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex gap-4">
+                                                <button
+                                                    onClick={() => handleLike(post.id)}
+                                                    className={`flex items-center gap-1.5 transition-colors text-sm font-bold group ${post.isLiked ? 'text-red-500' : 'text-gray-500 hover:text-red-500'}`}
+                                                >
+                                                    <Heart className={`w-5 h-5 ${post.isLiked ? 'fill-red-500' : 'group-hover:fill-red-500'}`} />
+                                                    <span>{post.likes || 0}</span>
+                                                </button>
+                                                <button
+                                                    onClick={() => setCommentingId(commentingId === post.id ? null : post.id)}
+                                                    className={`flex items-center gap-1.5 transition-colors text-sm font-bold ${commentingId === post.id ? 'text-[var(--unizy-primary)]' : 'text-gray-500 hover:text-[var(--unizy-primary)]'}`}
+                                                >
+                                                    <MessageCircle className="w-5 h-5" />
+                                                    <span>{post.comments || 0}</span>
+                                                </button>
+                                            </div>
+                                            <button className="flex items-center gap-1.5 text-gray-500 hover:text-[var(--unizy-primary)] transition-colors text-sm font-bold">
+                                                <Share2 className="w-5 h-5" />
                                             </button>
                                         </div>
-                                        <button className="flex items-center gap-1.5 text-gray-500 hover:text-[var(--unizy-primary)] transition-colors text-sm font-medium">
-                                            <Share2 className="w-5 h-5" />
-                                        </button>
+
+                                        {/* Comment Input Overlay */}
+                                        {commentingId === post.id && (
+                                            <div className="flex gap-2 animate-in slide-in-from-top-1 duration-200">
+                                                <input
+                                                    autoFocus
+                                                    type="text"
+                                                    placeholder="Write a comment..."
+                                                    value={commentText}
+                                                    onChange={(e) => setCommentText(e.target.value)}
+                                                    onKeyDown={(e) => e.key === 'Enter' && handleComment(post.id)}
+                                                    className="flex-1 bg-gray-50 dark:bg-gray-800/50 rounded-xl px-4 py-2 text-sm outline-none border border-transparent focus:border-[var(--unizy-primary)] transition-all"
+                                                />
+                                                <button
+                                                    onClick={() => handleComment(post.id)}
+                                                    className="bg-[var(--unizy-primary)] text-white px-4 py-2 rounded-xl text-xs font-bold hover:opacity-90 transition-all"
+                                                >
+                                                    Reply
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             ))}
@@ -279,14 +440,51 @@ export default function HubPage() {
             )}
 
             {activeTab === 'notices' && (
-                <div className="animate-fade-in text-center py-20 bg-white dark:bg-[#1E293B] rounded-3xl border border-gray-100 dark:border-gray-800">
-                    <Megaphone className="w-16 h-16 mx-auto mb-4 text-gray-300 dark:text-gray-600" />
-                    <h3 className="text-lg font-bold text-[var(--unizy-text-dark)] dark:text-white mb-2">
-                        {isRTL ? 'لا توجد إعلانات حالياً' : 'No Official Notices'}
-                    </h3>
-                    <p className="text-gray-500 text-sm max-w-sm mx-auto">
-                        {isRTL ? 'ستظهر هنا الإعلانات الرسمية من الجامعة وإدارة التطبيق.' : 'Official announcements from the University and UniZy admin will appear here.'}
-                    </p>
+                <div className="animate-fade-in space-y-4">
+                    {noticesLoading ? (
+                        <div className="text-center py-20">
+                            <Loader2 className="w-8 h-8 mx-auto animate-spin text-brand-500" />
+                            <p className="text-gray-400 font-bold text-sm mt-3">Fetching official notices...</p>
+                        </div>
+                    ) : notices.length > 0 ? (
+                        notices.map(notice => (
+                            <div key={notice.id} className="bg-white dark:bg-[#1E293B] rounded-3xl p-6 border border-gray-100 dark:border-gray-800 shadow-sm relative overflow-hidden group">
+                                {/* Notice Type Indicator */}
+                                <div className={`absolute top-0 left-0 w-1 h-full ${notice.type === 'EMERGENCY' ? 'bg-red-500' :
+                                    notice.type === 'ACADEMIC' ? 'bg-blue-500' :
+                                        notice.type === 'EVENT' ? 'bg-purple-500' : 'bg-gray-400'
+                                    }`} />
+
+                                <div className="flex justify-between items-start mb-2">
+                                    <h3 className="text-lg font-bold text-[var(--unizy-text-dark)] dark:text-white group-hover:text-[var(--unizy-primary)] transition-colors">
+                                        {notice.title}
+                                    </h3>
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-lg">
+                                        {notice.type}
+                                    </span>
+                                </div>
+                                <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed mb-4">
+                                    {notice.message}
+                                </p>
+                                <div className="flex items-center gap-2 text-xs text-gray-400 font-bold">
+                                    <Megaphone className="w-3 h-3" />
+                                    <span>{notice.university}</span>
+                                    <span>•</span>
+                                    <span>{new Date(notice.createdAt).toLocaleDateString()}</span>
+                                </div>
+                            </div>
+                        ))
+                    ) : (
+                        <div className="text-center py-20 bg-white dark:bg-[#1E293B] rounded-3xl border border-gray-100 dark:border-gray-800">
+                            <Megaphone className="w-16 h-16 mx-auto mb-4 text-gray-300 dark:text-gray-600" />
+                            <h3 className="text-lg font-bold text-[var(--unizy-text-dark)] dark:text-white mb-2">
+                                {isRTL ? 'لا توجد إعلانات حالياً' : 'No Official Notices'}
+                            </h3>
+                            <p className="text-gray-500 text-sm max-w-sm mx-auto">
+                                {isRTL ? 'ستظهر هنا الإعلانات الرسمية من الجامعة وإدارة التطبيق.' : 'Official announcements from the University and UniZy admin will appear here.'}
+                            </p>
+                        </div>
+                    )}
                 </div>
             )}
 

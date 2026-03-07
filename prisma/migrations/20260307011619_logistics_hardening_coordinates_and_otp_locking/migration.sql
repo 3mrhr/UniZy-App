@@ -1,0 +1,13 @@
+-- AlterTable
+ALTER TABLE "CustomDeliveryRequest" ADD COLUMN     "dropoffLat" DOUBLE PRECISION,
+ADD COLUMN     "dropoffLng" DOUBLE PRECISION,
+ADD COLUMN     "failedOtpAttempts" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN     "pickupLat" DOUBLE PRECISION,
+ADD COLUMN     "pickupLng" DOUBLE PRECISION;
+
+-- AlterTable
+ALTER TABLE "Order" ADD COLUMN     "dropoffLat" DOUBLE PRECISION,
+ADD COLUMN     "dropoffLng" DOUBLE PRECISION,
+ADD COLUMN     "failedOtpAttempts" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN     "pickupLat" DOUBLE PRECISION,
+ADD COLUMN     "pickupLng" DOUBLE PRECISION;

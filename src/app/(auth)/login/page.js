@@ -6,7 +6,9 @@ import Link from 'next/link';
 import Image from 'next/image';
 import ThemeLangControls from '@/components/ThemeLangControls';
 import { loginUser } from '@/app/actions/auth';
+import { getOAuthUrl } from '@/app/actions/oauth';
 import { useLanguage } from '@/i18n/LanguageProvider';
+import { toast } from 'react-hot-toast';
 
 export default function Login() {
     const router = useRouter();
@@ -124,6 +126,49 @@ export default function Login() {
                             <>{a.login || 'Sign In'} <span className="text-lg">{locale === 'ar' ? '←' : '→'}</span></>
                         )}
                     </button>
+
+                    <div className="relative my-8">
+                        <div className="absolute inset-0 flex items-center">
+                            <span className="w-full border-t border-gray-200 dark:border-gray-800"></span>
+                        </div>
+                        <div className="relative flex justify-center text-xs uppercase">
+                            <span className="bg-[#fbfcff] dark:bg-[#0a0c10] px-2 text-gray-400 font-black tracking-widest">{a.orContinueWith || 'Or Continue With'}</span>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <button
+                            type="button"
+                            onClick={async () => {
+                                const res = await getOAuthUrl('google');
+                                if (res.url) window.location.href = res.url;
+                                else toast.error('OAuth initiation failed');
+                            }}
+                            className="flex items-center justify-center gap-3 py-4 px-4 bg-white dark:bg-unizy-navy border border-gray-200 dark:border-white/5 rounded-2xl hover:bg-gray-50 dark:hover:bg-unizy-navy/80 transition-all active:scale-95 shadow-sm group"
+                        >
+                            <svg className="w-5 h-5 group-hover:scale-110 transition-transform" viewBox="0 0 24 24">
+                                <path fill="#EA4335" d="M24 12.48c0-.86-.07-1.74-.22-2.31H12v4.38h6.76c-.29 1.58-1.2 2.91-2.54 3.79v3.15h4.1A12 12 0 0 0 24 12.48z" />
+                                <path fill="#4285F4" d="M12 24c3.24 0 5.97-1.07 7.97-2.91l-4.1-3.15c-1.12.76-2.56 1.25-3.87 1.25-2.97 0-5.5-2-6.42-4.66H1.42v3.6A12 12 0 0 0 12 24z" />
+                                <path fill="#FBBC05" d="M5.58 14.53c-.23-.69-.36-1.42-.36-2.18s.13-1.5.36-2.19V6.57H1.42A12 12 0 0 0 0 12c0 1.95.46 3.8 1.42 5.43l4.16-3.32z" />
+                                <path fill="#34A853" d="M12 4.4c1.76 0 3.36.6 4.6 1.77l3.43-3.41A12 12 0 0 0 1.42 6.57l4.16 3.32c.92-2.66 3.45-4.66 6.42-4.66z" />
+                            </svg>
+                            <span className="text-xs font-black text-gray-700 dark:text-gray-300">Google</span>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={async () => {
+                                const res = await getOAuthUrl('apple');
+                                if (res.url) window.location.href = res.url;
+                                else toast.error('OAuth initiation failed');
+                            }}
+                            className="flex items-center justify-center gap-3 py-4 px-4 bg-white dark:bg-unizy-navy border border-gray-200 dark:border-white/5 rounded-2xl hover:bg-gray-50 dark:hover:bg-unizy-navy/80 transition-all active:scale-95 shadow-sm group"
+                        >
+                            <svg className="w-5 h-5 dark:fill-white group-hover:scale-110 transition-transform" viewBox="0 0 24 24">
+                                <path d="M17.05 20.28c-.96.95-2.21 1.72-3.71 1.72-1.42 0-2.33-.87-3.79-.87-1.44 0-2.54.87-3.81.87-1.39 0-2.82-.91-3.83-1.92C.1 18.27-.47 15.39.42 12.3c.63-2.2 2.4-3.52 4.25-3.52 1.42 0 2.4.91 3.73.91s2.21-.91 3.71-.91c1.55 0 2.91.89 3.66 1.91-3.15 1.55-2.6 5.86.58 7.15-.65 1.54-1.34 2.4-2.3 3.35zM12.03 8.24c-.02-2.06 1.47-3.82 3.33-3.9 0.17 2.19-1.9 4.09-3.33 3.9z" />
+                            </svg>
+                            <span className="text-xs font-black text-gray-700 dark:text-gray-300">Apple</span>
+                        </button>
+                    </div>
 
                     <p className="text-center text-sm font-bold text-gray-500 dark:text-gray-400 mt-10">
                         {a.dontHaveAccount || 'New on campus?'} <Link href="/register" className="text-brand-600 font-extrabold hover:underline">{a.signup || 'Join UniZy'}</Link>

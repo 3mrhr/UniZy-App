@@ -2,6 +2,7 @@
 
 import { prisma } from '@/lib/prisma';
 import { requireUser, requireRole, requireOwnership } from '@/lib/authz';
+import { createNotification } from './notifications';
 
 /**
  * Get or create a wallet for the current user.
@@ -126,6 +127,18 @@ export async function spendFromWallet(userId, amount, description, transactionId
 
             return { walletTxn, updatedWallet };
         });
+
+        // Low Balance Alert
+        try {
+            if (result.updatedWallet.balance < 50 && result.updatedWallet.balance > 0) {
+                await createNotification(
+                    userId,
+                    'Low Wallet Balance ⚠️',
+                    `Your balance is now ${result.updatedWallet.balance} EGP. Top up soon to keep ordering!`,
+                    'SYSTEM'
+                );
+            }
+        } catch (_) { }
 
         return { success: true, newBalance: result.updatedWallet.balance };
     } catch (error) {

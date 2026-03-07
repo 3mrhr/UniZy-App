@@ -37,12 +37,19 @@ export async function getActiveMeals(category = null, searchQuery = '') {
             whereClause.AND = AND_clauses;
         }
 
-        const meals = await prisma.meal.findMany({
+        // Only show meals from open merchants
+        whereClause.merchant = {
+            ...whereClause.merchant,
+            storeOpen: true
+        };
+
+        let meals = await prisma.meal.findMany({
             where: whereClause,
             include: {
                 merchant: {
                     select: {
                         name: true,
+                        storeOpen: true
                     }
                 }
             },
@@ -51,6 +58,38 @@ export async function getActiveMeals(category = null, searchQuery = '') {
                 { createdAt: 'desc' }
             ]
         });
+
+        // Relevance Scoring Logic
+        if (searchQuery && searchQuery.trim() !== '') {
+            const query = searchQuery.toLowerCase().trim();
+            meals = meals.map(meal => {
+                let score = 0;
+                const name = meal.name.toLowerCase();
+                const arName = (meal.arName || '').toLowerCase();
+                const desc = (meal.description || '').toLowerCase();
+                const merchantName = (meal.merchant?.name || '').toLowerCase();
+
+                // Exact title match (highest)
+                if (name === query || arName === query) score += 100;
+                // Title starts with query
+                else if (name.startsWith(query) || arName.startsWith(query)) score += 50;
+                // Title contains query
+                else if (name.includes(query) || arName.includes(query)) score += 30;
+
+                // Merchant name match
+                if (merchantName.includes(query)) score += 20;
+
+                // Description match
+                if (desc.includes(query)) score += 10;
+
+                return { ...meal, _score: score };
+            });
+
+            // Re-sort by score
+            meals.sort((a, b) => b._score - a._score);
+            // Filter out zero score matches if meaningful
+            meals = meals.filter(m => m._score > 0);
+        }
 
         return { success: true, meals };
     } catch (error) {

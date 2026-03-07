@@ -5,10 +5,12 @@ import Image from "next/image";
 import { Search, Bell } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
+import { getUnreadNotificationCount } from "@/app/actions/notifications";
 
 export default function MobileHeader() {
     const pathname = usePathname();
     const [scrolled, setScrolled] = useState(false);
+    const [unreadCount, setUnreadCount] = useState(0);
 
     // Hide if it's the desktop view (handled by CSS classes `sm:hidden`), 
     // or if it's an auth page / public promo page
@@ -26,8 +28,24 @@ export default function MobileHeader() {
         const handleScroll = () => {
             setScrolled(window.scrollY > 10);
         };
+
+        const fetchNotifications = async () => {
+            try {
+                const res = await getUnreadNotificationCount();
+                if (res.success) setUnreadCount(res.unreadCount);
+            } catch (err) {
+                console.error("Failed to fetch notification count", err);
+            }
+        };
+
+        fetchNotifications();
+        const interval = setInterval(fetchNotifications, 60000); // 1 minute
+
         window.addEventListener("scroll", handleScroll);
-        return () => window.removeEventListener("scroll", handleScroll);
+        return () => {
+            window.removeEventListener("scroll", handleScroll);
+            clearInterval(interval);
+        };
     }, []);
 
     if (isPublicPage || isAuthPage || isSpecialPortal || isSearchPage) return null;
@@ -47,7 +65,11 @@ export default function MobileHeader() {
 
                     <Link href="/notifications" className="relative p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-full transition-colors">
                         <Bell size={20} />
-                        <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white dark:border-unizy-navy"></span>
+                        {unreadCount > 0 && (
+                            <span className="absolute top-1 right-1 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-white dark:border-unizy-navy px-1">
+                                {unreadCount > 9 ? '9+' : unreadCount}
+                            </span>
+                        )}
                     </Link>
                 </div>
 

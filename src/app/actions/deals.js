@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from './auth';
 import { revalidatePath } from 'next/cache';
 import { computeCommissionSnapshot, computePricingSnapshot, generateTxnCode } from './financial';
+import { createNotification } from './notifications';
 
 /**
  * Fetch all active deals, optionally filtered by category and search term.
@@ -281,6 +282,16 @@ export async function redeemDeal(dealId) {
 
             return transactionRecord;
         });
+
+        try {
+            await createNotification(
+                user.id,
+                'Deal Redeemed! 🎟️',
+                `You've successfully redeemed "${deal.title}". Use code: ${deal.promoCode}`,
+                'SYSTEM',
+                `/deals/${deal.id}`
+            );
+        } catch (_) { }
 
         revalidatePath(`/deals/${dealId}`);
         return { success: true, transaction: result };

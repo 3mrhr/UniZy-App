@@ -5,6 +5,7 @@ import { Resend } from 'resend';
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "./auth";
+import { createNotification } from "./notifications";
 
 /**
  * Request an OTP for a given phone or email.
@@ -126,6 +127,34 @@ export async function uploadVerificationDocument(userId, type, fileUrl) {
             data: { status: "REJECTED", rejectionReason: "Replaced by new upload" },
         });
 
+        // Playbook: Hardened Fraud Check - Detect duplicate IDs across accounts
+        const duplicateDoc = await prisma.verificationDocument.findFirst({
+            where: {
+                fileUrl,
+                userId: { not: userId },
+                status: 'VERIFIED'
+            },
+            include: { user: true }
+        });
+
+        if (duplicateDoc) {
+            // Flag the user for investigation
+            await prisma.user.update({
+                where: { id: userId },
+                data: { status: 'SUSPENDED' }
+            });
+
+            await createNotification(
+                userId,
+                'Identity Flagged',
+                'Your account has been suspended due to document irregularity. Our team is investigating.',
+                'SAFETY',
+                '/help'
+            );
+
+            return { error: 'Document irregularity detected. Account flagged for review.' };
+        }
+
         await prisma.verificationDocument.create({
             data: {
                 userId,
@@ -215,6 +244,17 @@ export async function approveVerification(documentId, adminId) {
         });
 
         revalidatePath("/admin/verifications");
+
+        try {
+            await createNotification(
+                doc.userId,
+                'Identity Verified',
+                'Congratulations! Your identity has been successfully verified.',
+                'SAFETY',
+                '/account'
+            );
+        } catch (_) { }
+
         return { success: true, message: "Document approved." };
     } catch (error) {
         console.error("Error approving verification:", error);
@@ -264,6 +304,17 @@ export async function rejectVerification(documentId, adminId, reason = "Invalid 
         });
 
         revalidatePath("/admin/verifications");
+
+        try {
+            await createNotification(
+                doc.userId,
+                'Verification Rejected',
+                `Your id verification was rejected: ${reason}. Please re-upload valid documents.`,
+                'SAFETY',
+                '/account/verification'
+            );
+        } catch (_) { }
+
         return { success: true, message: "Document rejected." };
     } catch (error) {
         console.error("Error rejecting verification:", error);

@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from './auth';
 import { logAdminAction } from './audit';
 import { revalidatePath } from 'next/cache';
+import { createNotification } from './notifications';
 
 /**
  * STUDENT ACTIONS
@@ -191,6 +192,19 @@ export async function sendTicketMessage({ ticketId, content, isAdmin = false }) 
         revalidatePath(`/support/${ticketId}`);
         revalidatePath(`/admin/support/${ticketId}`);
 
+        try {
+            const recipientId = isAdmin ? ticket.userId : (ticket.assignedAgentId || null);
+            if (recipientId && recipientId !== user.id) {
+                await createNotification(
+                    recipientId,
+                    'New Message',
+                    `New message in support ticket: ${ticket.subject}`,
+                    'SYSTEM',
+                    isAdmin ? `/support/${ticketId}` : `/admin/support/${ticketId}`
+                );
+            }
+        } catch (_) { }
+
         return { success: true, message };
     } catch (error) {
         console.error('Error sending ticket message:', error);
@@ -214,6 +228,16 @@ export async function updateTicketStatus(ticketId, status) {
 
         // Log admin action
         await logAdminAction('UPDATE_TICKET_STATUS', 'SUPPORT', { ticketId, status });
+
+        try {
+            await createNotification(
+                ticket.userId,
+                'Support Update',
+                `Your ticket status has been updated to ${status}.`,
+                'SYSTEM',
+                `/support/${ticketId}`
+            );
+        } catch (_) { }
 
         revalidatePath(`/support/${ticketId}`);
         revalidatePath(`/admin/support/${ticketId}`);

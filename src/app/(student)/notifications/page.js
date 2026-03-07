@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useLanguage } from '@/i18n/LanguageProvider';
 import { Bell, Check, Trash2, ArrowLeft, Package, Star, Info, ShieldAlert } from 'lucide-react';
-import { getMyNotifications, markNotificationsAsRead } from '@/app/actions/notifications';
+import { getMyNotifications, markNotificationsAsRead, deleteNotification, clearAllNotifications } from '@/app/actions/notifications';
 import toast from 'react-hot-toast';
 
 export default function NotificationsPage() {
@@ -44,6 +44,39 @@ export default function NotificationsPage() {
         }
     };
 
+    const handleDelete = async (e, id) => {
+        e.stopPropagation();
+        const res = await deleteNotification(id);
+        if (res.success) {
+            setNotifications(notifications.filter(n => n.id !== id));
+            toast.success('Notification deleted');
+        }
+    };
+
+    const handleClearAll = async () => {
+        if (!confirm('Are you sure you want to clear all notifications?')) return;
+        const res = await clearAllNotifications();
+        if (res.success) {
+            setNotifications([]);
+            toast.success('Inbox cleared');
+        }
+    };
+
+    const formatTime = (date) => {
+        const now = new Date();
+        const past = new Date(date);
+        const diffMs = now - past;
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMins / 60);
+        const diffDays = Math.floor(diffHours / 24);
+
+        if (diffMins < 1) return 'Just now';
+        if (diffMins < 60) return `${diffMins}m ago`;
+        if (diffHours < 24) return `${diffHours}h ago`;
+        if (diffDays < 7) return `${diffDays}d ago`;
+        return past.toLocaleDateString();
+    };
+
     const getIconInfo = (type) => {
         switch (type) {
             case 'ORDER': return { icon: Package, color: 'text-blue-500', bg: 'bg-blue-100 dark:bg-blue-900/30' };
@@ -62,11 +95,18 @@ export default function NotificationsPage() {
                     </Link>
                     <h1 className="text-2xl font-black text-gray-900 dark:text-white">Notifications</h1>
                 </div>
-                {notifications.some(n => !n.isRead) && (
-                    <button onClick={handleMarkAllRead} className="text-sm font-bold text-brand-600 hover:text-brand-700 bg-brand-50 dark:bg-brand-900/20 px-4 py-2 rounded-xl transition-colors">
-                        Mark All Read
-                    </button>
-                )}
+                <div className="flex gap-2">
+                    {notifications.length > 0 && (
+                        <button onClick={handleClearAll} className="p-2 text-gray-400 hover:text-red-500 transition-colors">
+                            <Trash2 size={20} />
+                        </button>
+                    )}
+                    {notifications.some(n => !n.isRead) && (
+                        <button onClick={handleMarkAllRead} className="text-sm font-bold text-brand-600 hover:text-brand-700 bg-brand-50 dark:bg-brand-900/20 px-4 py-2 rounded-xl transition-colors">
+                            Mark All Read
+                        </button>
+                    )}
+                </div>
             </header>
 
             <main className="max-w-2xl mx-auto px-6 w-full">
@@ -88,17 +128,25 @@ export default function NotificationsPage() {
                                 <div key={notif.id} onClick={() => {
                                     if (!notif.isRead) handleMarkRead(notif.id);
                                     if (notif.link) window.location.href = notif.link;
-                                }} className={`p-4 rounded-3xl border ${notif.isRead ? 'bg-white dark:bg-unizy-dark border-gray-100 dark:border-white/5 shadow-sm opacity-70' : 'bg-white dark:bg-unizy-dark border-brand-100 dark:border-brand-900/30 shadow-md cursor-pointer hover:border-brand-300 transition-colors'} flex gap-4`}>
+                                }} className={`group p-4 rounded-3xl border ${notif.isRead ? 'bg-white dark:bg-unizy-dark border-gray-100 dark:border-white/5 shadow-sm opacity-70' : 'bg-white dark:bg-unizy-dark border-brand-100 dark:border-brand-900/30 shadow-md cursor-pointer hover:border-brand-300 transition-colors'} flex gap-4`}>
                                     <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${IconData.bg} ${IconData.color}`}>
                                         <Icon size={24} />
                                     </div>
                                     <div className="flex-1">
                                         <div className="flex justify-between items-start mb-1">
                                             <h4 className={`font-bold ${notif.isRead ? 'text-gray-700 dark:text-gray-300' : 'text-gray-900 dark:text-white'}`}>{notif.title}</h4>
-                                            {!notif.isRead && <span className="w-2.5 h-2.5 rounded-full bg-brand-500 shrink-0 mt-1"></span>}
+                                            <div className="flex items-center gap-2">
+                                                {!notif.isRead && <span className="w-2.5 h-2.5 rounded-full bg-brand-500 shrink-0"></span>}
+                                                <button
+                                                    onClick={(e) => handleDelete(e, notif.id)}
+                                                    className="p-1 text-gray-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                                                >
+                                                    <Trash2 size={14} />
+                                                </button>
+                                            </div>
                                         </div>
                                         <p className="text-sm text-gray-500 dark:text-gray-400 mb-2 leading-relaxed">{notif.message}</p>
-                                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{new Date(notif.createdAt).toLocaleDateString()}</span>
+                                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{formatTime(notif.createdAt)}</span>
                                     </div>
                                 </div>
                             );

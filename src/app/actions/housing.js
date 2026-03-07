@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from '@/app/actions/auth';
 import { revalidatePath } from 'next/cache';
 import { completeReferralIfEligible } from './referrals';
+import { createNotification } from './notifications';
 import { requireUser, requireRole, requireOwnership } from '@/lib/authz';
 import { logAdminAction } from './audit';
 
@@ -124,6 +125,18 @@ export async function updateHousingRequestStatus(requestId, newStatus) {
             where: { id: requestId },
             data: { status: newStatus }
         });
+
+        try {
+            if (newStatus === 'ACCEPTED') {
+                await createNotification(
+                    request.userId,
+                    'Viewing Confirmed',
+                    `The provider for "${request.listing.title}" has accepted your request. Expect a call soon!`,
+                    'SYSTEM',
+                    '/housing/requests'
+                );
+            }
+        } catch (_) { }
 
         revalidatePath('/provider');
         return { success: true };
@@ -340,8 +353,19 @@ export async function createHousingRequest(listingId, type, message = '') {
                 housingListingId: listingId,
                 type,
                 message
-            }
+            },
+            include: { listing: true }
         });
+
+        try {
+            await createNotification(
+                req.listing.providerId,
+                'New Housing Interest',
+                `${user.name} is interested in "${req.listing.title}".`,
+                'SYSTEM',
+                '/provider/leads'
+            );
+        } catch (_) { }
 
         // Trigger referral completion if this is the student's first high-intent action
         await completeReferralIfEligible(user.id);

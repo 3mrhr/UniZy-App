@@ -138,3 +138,51 @@ export async function computePricingSnapshot(module, zoneId = null) {
 export async function generateTxnCode() {
     return `TXN-${new Date().getFullYear()}-${crypto.randomInt(100000, 1000000)}`;
 }
+
+/**
+ * Distributes the commission from a transaction to the provider's wallet.
+ * Should be called when an order/delivery is marked as COMPLETED/DELIVERED.
+ */
+export async function distributeCommission(transactionId) {
+    try {
+        const result = await prisma.$transaction(async (tx) => {
+            const txn = await tx.transaction.findUnique({
+                where: { id: transactionId }
+            });
+
+            if (!txn || txn.status === 'COMPLETED') return null;
+            if (!txn.providerId) return null;
+
+            // 1. Update Provider Wallet
+            const wallet = await tx.wallet.upsert({
+                where: { userId: txn.providerId },
+                update: { balance: { increment: txn.providerNetAmount } },
+                create: { userId: txn.providerId, balance: txn.providerNetAmount }
+            });
+
+            // 2. Record Wallet Transaction
+            await tx.walletTransaction.create({
+                data: {
+                    walletId: wallet.id,
+                    type: 'COMMISSION',
+                    amount: txn.providerNetAmount,
+                    description: `Commission for Txn ${txn.txnCode} (${txn.type})`,
+                    transactionId: txn.id
+                }
+            });
+
+            // 3. Mark Transaction as COMPLETED
+            await tx.transaction.update({
+                where: { id: txn.id },
+                data: { status: 'COMPLETED' }
+            });
+
+            return { wallet, txn };
+        });
+
+        return { success: true, data: result };
+    } catch (error) {
+        console.error('Failed to distribute commission:', error);
+        return { success: false, error: 'Payout processing failed.' };
+    }
+}
