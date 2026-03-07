@@ -14,6 +14,11 @@
   --color-unizy-dark: #0c1622;
   --color-unizy-teal: #2dd4bf;
   --color-unizy-orange: #f97316;
+
+  /* HSL Tokens for Pro Max Lighting */
+  --brand-hsl: 221 83% 53%;
+  --brand-glow: hsla(221, 83%, 53%, 0.15);
+  --glass-aura: hsla(221, 83%, 53%, 0.05);
 }
 
 :root {
