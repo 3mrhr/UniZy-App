@@ -4,7 +4,13 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useWalletStore } from '@/store/useWalletStore';
 import { ArrowLeft, History, PlusCircle, ShoppingBag, Search, Filter } from 'lucide-react';
-import { format } from 'date-fns';
+
+
+const formatDateTime = (dateValue) => {
+    const date = new Date(dateValue);
+    if (Number.isNaN(date.getTime())) return '';
+    return new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'short', day: '2-digit', hour: 'numeric', minute: '2-digit' }).format(date).replace(',', ' •');
+};
 
 export default function HistoryPage() {
     const router = useRouter();
@@ -80,7 +86,7 @@ export default function HistoryPage() {
                                         </span>
                                     </div>
                                     <p className="text-[11px] text-gray-400 font-bold uppercase tracking-widest">
-                                        {format(new Date(txn.createdAt), 'EEEE, MMM dd • h:mm a')}
+                                        {formatDateTime(txn.createdAt)}
                                     </p>
                                 </div>
                                 <div className="text-right">

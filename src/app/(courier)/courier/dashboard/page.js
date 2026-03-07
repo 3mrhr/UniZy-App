@@ -8,9 +8,9 @@ import {
     getCourierActiveTasks,
     completeCustomDelivery
 } from '@/app/actions/delivery';
-import { getAvailableOrders, acceptOrder, updateOrderStatus } from '@/app/actions/orders';
+import { getDriverOrders, acceptOrder, updateOrderStatus } from '@/app/actions/orders';
 import { getAvailableTrips, acceptTrip, updateTripStatus } from '@/app/actions/transport';
-import { Package, Bike, Clock, MapPin, CheckCircle, XCircle, DollarSign, Zap, Power, ChevronRight, MessageCircle, Star } from 'lucide-react';
+import { Package, Bike, Clock, MapPin, CheckCircle, XCircle, DollarSign, Zap, Power, ChevronRight, MessageCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function CourierDashboard() {
@@ -29,7 +29,7 @@ export default function CourierDashboard() {
         setIsLoading(true);
         const [availCustom, availMerchant, availTrips, activeRes] = await Promise.all([
             getAvailableCustomRequests(),
-            getAvailableOrders('READY'),
+            getDriverOrders(),
             getAvailableTrips(),
             getCourierActiveTasks()
         ]);

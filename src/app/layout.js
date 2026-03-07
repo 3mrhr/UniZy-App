@@ -9,10 +9,6 @@ import ThemeLangControls from "@/components/ThemeLangControls";
 import Image from "next/image";
 import Link from "next/link";
 import "./globals.css";
-import { Inter } from 'next/font/google';
-
-const inter = Inter({ subsets: ['latin'] });
-
 export default function RootLayout({ children }) {
   const pathname = usePathname();
 
@@ -31,7 +27,7 @@ export default function RootLayout({ children }) {
 
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.className} bg-white dark:bg-unizy-navy text-gray-900 dark:text-white transition-colors duration-300`}>
+      <body className="bg-white dark:bg-unizy-navy text-gray-900 dark:text-white transition-colors duration-300">
         <ThemeProvider attribute="data-theme" defaultTheme="system" enableSystem>
           <LanguageProvider>
             <div className="min-h-screen flex flex-col">

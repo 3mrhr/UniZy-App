@@ -1,15 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getIronSession } from 'iron-session';
-import { cookies } from 'next/headers';
-
-// Needs to match the sessionOptions in src/lib/session.js exactly
-const sessionOptions = {
-    password: process.env.SESSION_SECRET,
-    cookieName: 'unizy_session',
-    cookieOptions: {
-        secure: process.env.NODE_ENV === 'production',
-    },
-};
+import { getSessionOptions } from '@/lib/sessionOptions';
 
 export async function middleware(request) {
     const { pathname } = request.nextUrl;
@@ -32,7 +23,7 @@ export async function middleware(request) {
 
     // Read session using iron-session Edge support over Response/Request natively
     const res = NextResponse.next();
-    const session = await getIronSession(request, res, sessionOptions);
+    const session = await getIronSession(request, res, getSessionOptions());
     const user = session.user;
 
     // If no user found and hitting a protected route

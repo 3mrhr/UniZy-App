@@ -1,39 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { ChevronLeft, Plus, Bus, MapPin, Save, Trash2, RefreshCcw } from 'lucide-react';
+import { ChevronLeft, Plus, Bus, MapPin, Save, Trash2, RefreshCcw, Info } from 'lucide-react';
 import { getShuttleBuses, adminUpdateShuttleLocation, adminCreateShuttle, adminDeleteShuttle } from '@/app/actions/transport';
 import toast from 'react-hot-toast';
-import 'leaflet/dist/leaflet.css';
-
-const MapContainer = dynamic(() => import('react-leaflet').then(mod => mod.MapContainer), { ssr: false });
-const TileLayer = dynamic(() => import('react-leaflet').then(mod => mod.TileLayer), { ssr: false });
-const Marker = dynamic(() => import('react-leaflet').then(mod => mod.Marker), { ssr: false });
-const DraggableMarker = dynamic(() => import('react-leaflet').then(mod => {
-    // We'll define a custom draggable marker component here
-    return function DraggableMarker({ position, onDragEnd, children }) {
-        const [pos, setPos] = useState(position);
-        return (
-            <mod.Marker
-                draggable={true}
-                eventHandlers={{
-                    dragend: (e) => {
-                        const marker = e.target;
-                        const newPos = marker.getLatLng();
-                        setPos([newPos.lat, newPos.lng]);
-                        onDragEnd([newPos.lat, newPos.lng]);
-                    }
-                }}
-                position={pos}
-            >
-                {children}
-            </mod.Marker>
-        );
-    };
-}), { ssr: false });
-
 export default function AdminShuttlePage() {
     const [buses, setBuses] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -49,17 +20,6 @@ export default function AdminShuttlePage() {
 
     useEffect(() => {
         fetchData();
-        // Fix icons
-        if (typeof window !== 'undefined') {
-            import('leaflet').then(L => {
-                delete L.Icon.Default.prototype._getIconUrl;
-                L.Icon.Default.mergeOptions({
-                    iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
-                    iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
-                    shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
-                });
-            });
-        }
     }, []);
 
     const handleUpdateLocation = async (id, newPos) => {
@@ -181,26 +141,31 @@ export default function AdminShuttlePage() {
                         </p>
                     </div>
 
-                    {typeof window !== 'undefined' && (
-                        <MapContainer center={[27.185, 31.171]} zoom={14} className="h-full w-full">
-                            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                            {buses.map(bus => (
-                                <DraggableMarker
-                                    key={bus.id}
-                                    position={[bus.lat, bus.lng]}
-                                    onDragEnd={(newPos) => handleUpdateLocation(bus.id, newPos)}
-                                >
-                                    <Marker position={[bus.lat, bus.lng]}> {/* Fallback for visibility */}
-                                        <Popup>
-                                            <div className="text-center font-black">
-                                                Bus #{bus.busNumber}
-                                            </div>
-                                        </Popup>
-                                    </Marker>
-                                </DraggableMarker>
-                            ))}
-                        </MapContainer>
-                    )}
+                    <div className="h-full w-full p-6">
+                        <div className="h-full rounded-3xl bg-white/80 dark:bg-white/5 border border-gray-100 dark:border-white/10 p-6 overflow-auto">
+                            <h3 className="text-sm font-black uppercase tracking-widest text-gray-500 mb-4">Fleet Position Controls</h3>
+                            <div className="space-y-3">
+                                {buses.map(bus => (
+                                    <div key={bus.id} className="rounded-2xl border border-gray-100 dark:border-white/5 bg-gray-50 dark:bg-unizy-dark p-4">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <p className="text-sm font-black text-gray-900 dark:text-white">Bus #{bus.busNumber} • {bus.plateNumber}</p>
+                                            <p className="text-[10px] font-bold text-gray-500 uppercase">{bus.status}</p>
+                                        </div>
+                                        <p className="text-xs font-bold text-gray-600 dark:text-gray-300 mb-3">Current: {bus.lat.toFixed(4)}, {bus.lng.toFixed(4)}</p>
+                                        <button
+                                            onClick={() => handleUpdateLocation(bus.id, [bus.lat + 0.0005, bus.lng + 0.0005])}
+                                            className="inline-flex items-center gap-2 text-xs font-black bg-brand-600 text-white px-3 py-2 rounded-xl"
+                                        >
+                                            <Save size={14} /> Simulate Move + Save
+                                        </button>
+                                    </div>
+                                ))}
+                                {buses.length === 0 && (
+                                    <p className="text-sm text-gray-500 italic">No buses available to manage.</p>
+                                )}
+                            </div>
+                        </div>
+                    </div>
                 </main>
             </div>
         </div>

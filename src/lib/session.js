@@ -1,18 +1,9 @@
 import { getIronSession } from 'iron-session';
 import { cookies } from 'next/headers';
-
-const sessionOptions = {
-    password: process.env.SESSION_SECRET,
-    cookieName: 'unizy_session',
-    cookieOptions: {
-        secure: process.env.NODE_ENV === 'production',
-        httpOnly: true,
-        maxAge: 60 * 60 * 24 * 7, // 1 week
-    },
-};
+import { getSessionOptions } from './sessionOptions';
 
 export async function getSession() {
     const cookieStore = await cookies();
-    const session = await getIronSession(cookieStore, sessionOptions);
+    const session = await getIronSession(cookieStore, getSessionOptions());
     return session;
 }

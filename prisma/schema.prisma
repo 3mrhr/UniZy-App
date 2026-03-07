@@ -1031,6 +1031,8 @@ model HubLike {
   post      HubPost  @relation(fields: [postId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@unique([postId, userId])
+}
 
 model MealPlan {
   id            String             @id @default(uuid())

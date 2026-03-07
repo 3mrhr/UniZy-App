@@ -8,16 +8,6 @@ import {
     Wallet,
     Car,
     AlertCircle,
-    Settings,
-    ArrowUpRight
-} from 'lucide-react';
-
-import {
-    Utensils,
-    Home,
-    Wallet,
-    Car,
-    AlertCircle,
     ArrowUpRight,
     Users,
     Zap

@@ -1,19 +1,10 @@
 import { NextResponse } from 'next/server';
 import { getIronSession } from 'iron-session';
-import { cookies } from 'next/headers';
-
-// Needs to match the sessionOptions in src/lib/session.js exactly
-const sessionOptions = {
-    password: process.env.SESSION_SECRET,
-    cookieName: 'unizy_session',
-    cookieOptions: {
-        secure: process.env.NODE_ENV === 'production',
-    },
-};
+import { getSessionOptions } from '@/lib/sessionOptions';
 
 export async function GET(request) {
     const res = new NextResponse();
-    const session = await getIronSession(request, res, sessionOptions);
+    const session = await getIronSession(request, res, getSessionOptions());
     const user = session.user;
 
     if (!user) {

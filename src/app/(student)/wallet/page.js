@@ -4,7 +4,13 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useWalletStore } from '@/store/useWalletStore';
 import { Wallet, ArrowUpRight, History, CreditCard, PlusCircle, AlertCircle, ShoppingBag, X, CheckCircle2 } from 'lucide-react';
-import { format } from 'date-fns';
+
+
+const formatDateTime = (dateValue) => {
+    const date = new Date(dateValue);
+    if (Number.isNaN(date.getTime())) return '';
+    return new Intl.DateTimeFormat('en-US', { month: 'short', day: '2-digit', hour: 'numeric', minute: '2-digit' }).format(date);
+};
 
 export default function WalletPage() {
     const { wallet, loading, error, fetchWallet, initialized } = useWalletStore();
@@ -231,7 +237,7 @@ export default function WalletPage() {
                                         {txn.status === 'PENDING' && <span className="ml-2 text-[8px] font-black uppercase tracking-widest bg-amber-500/10 text-amber-500 px-2 py-0.5 rounded-full">Pending</span>}
                                     </p>
                                     <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">
-                                        {format(new Date(txn.createdAt), 'MMM dd, h:mm a')}
+                                        {formatDateTime(txn.createdAt)}
                                     </p>
                                 </div>
                                 <div className="text-right">
