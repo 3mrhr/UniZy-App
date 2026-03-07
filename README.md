@@ -1,94 +1,141 @@
-# UniZy — Student Super App (MVP)
+# UniZy App
 
-UniZy is a multi-service platform designed for university students, bringing **Housing**, **Transport**, **Delivery**, **Local Deals**, and **Student Services** into one cohesive experience.
+UniZy is a multi-service student platform that unifies university-focused services in one product experience: housing, transport, food & delivery, local offers, and operational support workflows.
 
-This repository contains the MVP built with **Next.js App Router** and a **Prisma + PostgreSQL** backend, structured around distinct roles:
-
-- **Student** (demand side)
-- **Merchant** (restaurants/stores)
-- **Provider** (housing/landlords + service providers)
-- **Driver** (transport + delivery logistics)
-- **Admin** (operations + moderation)
-
-> Note: Payments and Password Reset are intentionally deferred for later phases. Verification/OTP is currently simulated/optional.
+This repository contains the UniZy web application built with **Next.js App Router**, **Prisma**, and **PostgreSQL**, with dedicated experiences for students, merchants, providers, drivers, and administrators.
 
 ---
 
-## Features (High-Level)
+## Table of Contents
 
-### Student App
-- Student hub (service menu)
-- Delivery marketplace (browse merchants → view menu → cart → checkout → tracking)
-- Housing browsing and requests
-- Transport booking UI
-- Rewards and activity tracking
-- i18n: English + Egyptian Arabic (RTL/LTR)
-- Dark/Light theming
-
-### Supply Portals
-- **Merchant** portal: order management + menu controls
-- **Provider** portal: housing listings + lead/request management
-- **Driver** portal: availability, assignments, basic earnings/settlements views
-
-### Admin Panel
-- Overview dashboard & metrics
-- Moderation workflows (e.g., housing approvals)
-- Verification queue (simulated/optional)
+- [Overview](#overview)
+- [Core Product Areas](#core-product-areas)
+- [Technology Stack](#technology-stack)
+- [Repository Structure](#repository-structure)
+- [Prerequisites](#prerequisites)
+- [Environment Configuration](#environment-configuration)
+- [Run with Docker (Recommended)](#run-with-docker-recommended)
+- [Run Locally](#run-locally)
+- [Database & Seeding](#database--seeding)
+- [Available Scripts](#available-scripts)
+- [Authentication, Roles, and Seeded Users](#authentication-roles-and-seeded-users)
+- [Quality Assurance](#quality-assurance)
+- [Current MVP Limitations](#current-mvp-limitations)
+- [Contribution Guidelines](#contribution-guidelines)
+- [License](#license)
 
 ---
 
-## Tech Stack
+## Overview
+
+UniZy is designed as a campus-first “super app” experience with role-specific portals:
+
+- **Student**: discover and use services.
+- **Merchant**: manage menus and order operations.
+- **Provider**: manage housing/services inventory and requests.
+- **Driver**: handle availability and logistics workflows.
+- **Admin**: monitor platform operations and moderation queues.
+
+The current codebase represents an MVP with core flows implemented and some features intentionally deferred for future phases.
+
+---
+
+## Core Product Areas
+
+### Student Experience
+- Service hub and navigation
+- Delivery marketplace (merchant browsing, cart, checkout, tracking)
+- Housing browse/request flows
+- Transport booking flows
+- Rewards/activity views
+- Localization support (English + Egyptian Arabic, RTL/LTR)
+- Light/dark theme support
+
+### Supply-Side Portals
+- **Merchant Portal**: order queue and menu controls
+- **Provider Portal**: listings and lead/request management
+- **Driver Portal**: availability, assignment, and earnings views
+
+### Admin Experience
+- Operational dashboard and metrics
+- Moderation and approval workflows
+- Verification queue (MVP simulation)
+
+---
+
+## Technology Stack
 
 - **Framework:** Next.js (App Router)
 - **UI:** React + Tailwind CSS
-- **State:** Zustand
-- **DB:** PostgreSQL
+- **State Management:** Zustand
+- **Database:** PostgreSQL
 - **ORM:** Prisma
-- **Auth/session:** iron-session
-- **Media:** Cloudinary (optional; can run without it)
+- **Session/Auth:** iron-session
+- **Media Uploads:** Cloudinary (optional)
 
 ---
 
-## Project Structure
+## Repository Structure
 
-```txt
+```text
 src/
   app/
-    (public)/     Public landing pages
-    (auth)/       Login/Register flows
-    (student)/    Student application modules
-    (admin)/      Admin panel
-    (driver)/     Driver portal
-    (provider)/   Housing provider / landlord portal
-    (merchant)/   Merchant portal
-  components/     Reusable UI components
-  i18n/           Language dictionaries + provider
+    (public)/      Public pages
+    (auth)/        Login/register/recovery flows
+    (student)/     Student modules
+    (admin)/       Admin panel
+    (driver)/      Driver portal
+    (provider)/    Provider portal
+    (merchant)/    Merchant portal
+  lib/             Shared server/client utilities
+  store/           Zustand stores
 prisma/
-  schema.prisma   Prisma schema
-  seed.mjs        Seed script
-docker-compose.yml
-Dockerfile
-QA_CORE_CHECKLIST.md
-QA_BETA_CHECKLIST.md
+  schema.prisma    Prisma schema
+  seed.mjs         Seed script
+scripts/           Utility and benchmarking scripts
 ```
 
 ---
 
-## Getting Started (Recommended: Docker)
+## Prerequisites
 
-This repo includes docker-compose.yml with PostgreSQL and the app container.
+Before running the project, ensure you have:
 
-1) Clone & run
+- **Node.js** 18+
+- **npm** 9+
+- **PostgreSQL** (if not using Docker)
+- **Docker + Docker Compose** (recommended path)
+
+---
+
+## Environment Configuration
+
+Create a `.env` file at the repository root:
+
+```env
+# Required
+DATABASE_URL="postgresql://USER:PASSWORD@localhost:5432/unizy_dev"
+SESSION_SECRET="replace-with-a-long-random-string"
+
+# Optional (required only for image uploads)
+CLOUDINARY_CLOUD_NAME=""
+CLOUDINARY_API_KEY=""
+CLOUDINARY_API_SECRET=""
+```
+
+> Keep secrets out of source control. Use environment-specific values for local, staging, and production deployments.
+
+---
+
+## Run with Docker (Recommended)
+
+### 1) Start services
 
 ```bash
-git clone https://github.com/3mrhr/UniZy-App.git
-cd UniZy-App
 docker compose up --build
 ```
 
-2) Initialize DB (first run)
-
-In another terminal:
+### 2) Initialize database (first run)
 
 ```bash
 docker compose exec app npx prisma generate
@@ -96,35 +143,25 @@ docker compose exec app npx prisma db push
 docker compose exec app npm run seed
 ```
 
-3) Open the app
-	•	http://localhost:3000
+### 3) Open the app
+
+- http://localhost:3000
 
 ---
 
-## Getting Started (Local Node + Your Own PostgreSQL)
+## Run Locally
 
-1) Install deps
+### 1) Install dependencies
 
 ```bash
 npm install
 ```
 
-2) Create .env
+### 2) Configure environment
 
-Create a .env file in the repo root:
+Add `.env` as described in [Environment Configuration](#environment-configuration).
 
-```env
-# Required
-DATABASE_URL="postgresql://USER:PASSWORD@localhost:5432/unizy_dev"
-SESSION_SECRET="change-me-to-a-long-random-string"
-
-# Optional (only needed if you enable image uploads)
-CLOUDINARY_CLOUD_NAME=""
-CLOUDINARY_API_KEY=""
-CLOUDINARY_API_SECRET=""
-```
-
-3) Prisma setup
+### 3) Apply database setup
 
 ```bash
 npx prisma generate
@@ -132,7 +169,7 @@ npx prisma db push
 npm run seed
 ```
 
-4) Run dev server
+### 4) Start development server
 
 ```bash
 npm run dev
@@ -140,60 +177,85 @@ npm run dev
 
 ---
 
-## Scripts
+## Database & Seeding
+
+The seed process populates baseline users and data for local testing.
 
 ```bash
-npm run dev        # start dev server
-npm run build      # build production output
-npm run start      # run production server
-npm run lint       # eslint
-npm run seed       # seed database (prisma/seed.mjs)
+npm run seed
+```
+
+If your schema changes:
+
+```bash
+npx prisma generate
+npx prisma db push
+npm run seed
 ```
 
 ---
 
-## Login & Roles (Seeded Accounts)
+## Available Scripts
 
-After running npm run seed, log in at:
-	•	/login
+```bash
+npm run dev       # Start development server
+npm run build     # Build production bundle
+npm run start     # Run production server
+npm run lint      # Run ESLint
+npm run seed      # Seed database via prisma/seed.mjs
+```
+
+---
+
+## Authentication, Roles, and Seeded Users
+
+After seeding, log in via:
+
+- `/login`
 
 Default seeded password:
-	•	unizy2026
 
-Example seeded accounts (may expand depending on seed script):
-	•	Admin: admin@unizy.com
-	•	Driver: driver1@unizy.com
-	•	Provider: provider1@unizy.com
-	•	Merchant: merchant_pizza@unizy.com
+- `unizy2026`
 
----
+Example seeded users (subject to seed script evolution):
 
-## QA / Testing
-
-Use the included checklists:
-	•	QA_CORE_CHECKLIST.md — core flows (recommended for quick regression testing)
-	•	QA_BETA_CHECKLIST.md — deeper scenario coverage (edge cases / “unthinkables”)
+- Admin: `admin@unizy.com`
+- Driver: `driver1@unizy.com`
+- Provider: `provider1@unizy.com`
+- Merchant: `merchant_pizza@unizy.com`
 
 ---
 
-## Current Intentional Limitations
+## Quality Assurance
 
-These are deliberately not final yet:
-	•	Payments: deferred (no real gateway behavior required right now)
-	•	Password Reset: deferred (no production-ready reset email flow yet)
-	•	OTP/Verification: simulated/optional (placeholders allowed)
+Use the included QA checklists for manual regression and scenario validation:
+
+- `QA_CORE_CHECKLIST.md` — core user flows and sanity checks
+- `QA_BETA_CHECKLIST.md` — deeper edge-case and stress scenarios
 
 ---
 
-## Contributing / Workflow
+## Current MVP Limitations
+
+The following areas are intentionally deferred or simulated:
+
+- **Payments:** production payment gateway integration is pending
+- **Password reset:** full production reset/email flow is pending
+- **OTP/verification:** currently simulated/optional in parts of the product
+
+---
+
+## Contribution Guidelines
 
 Recommended workflow:
-	1.	Create a feature branch
-	2.	Keep changes small and testable
-	3.	Update QA checklist entries when you change user-facing behavior
+
+1. Create a focused feature branch
+2. Keep changes small and testable
+3. Update tests/checklists when user-facing behavior changes
+4. Run lint and relevant tests before opening a PR
 
 ---
 
 ## License
 
-Private/internal MVP (add license later if open-sourcing).
+This project is currently private/internal MVP codebase. A formal license will be added if/when open-sourced.
