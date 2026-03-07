@@ -960,6 +960,27 @@ model TransportTrip {
   @@index([driverId, status])
 }
 
+model ShuttleBus {
+  id           String   @id @default(uuid())
+  busNumber    String   @unique
+  plateNumber  String   @unique
+  lat          Float
+  lng          Float
+  status       String   @default("ACTIVE") // ACTIVE, IN_REPAIR, OFFLINE
+  lastUpdated  DateTime @default(now())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model ShuttleStation {
+  id        String   @id @default(uuid())
+  name      String
+  lat       Float
+  lng       Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model CampusNotice {
   id          String   @id @default(uuid())
   title       String

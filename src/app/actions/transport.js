@@ -303,3 +303,69 @@ export async function cancelTrip(tripId, reason) {
         return failure('CANCEL_FAILED', 'Failed to cancel trip.');
     }
 }
+
+// ---------------------------------------------
+// SHUTTLE ACTIONS
+// ---------------------------------------------
+
+export async function getShuttleBuses() {
+    try {
+        const buses = await prisma.shuttleBus.findMany({
+            where: { status: 'ACTIVE' },
+            orderBy: { busNumber: 'asc' }
+        });
+        return success(buses);
+    } catch (error) {
+        console.error('Failed to fetch shuttles:', error);
+        return failure('FETCH_FAILED', 'Failed to load shuttle locations.');
+    }
+}
+
+export async function getShuttleStations() {
+    try {
+        const stations = await prisma.shuttleStation.findMany();
+        return success(stations);
+    } catch (error) {
+        return failure('FETCH_FAILED', 'Failed to load stations.');
+    }
+}
+
+// ---------------------------------------------
+// TRANSPORT ADMIN ACTIONS
+// ---------------------------------------------
+
+export async function adminCreateShuttle(data) {
+    try {
+        await requireRole(['ADMIN_TRANSPORT', 'ADMIN']);
+        const bus = await prisma.shuttleBus.create({ data });
+        revalidatePath('/admin/transport');
+        return success(bus);
+    } catch (error) {
+        return failure('CREATE_FAILED', error.message);
+    }
+}
+
+export async function adminUpdateShuttleLocation(id, lat, lng) {
+    try {
+        await requireRole(['ADMIN_TRANSPORT', 'ADMIN']);
+        const bus = await prisma.shuttleBus.update({
+            where: { id },
+            data: { lat, lng, lastUpdated: new Date() }
+        });
+        revalidatePath('/transport');
+        return success(bus);
+    } catch (error) {
+        return failure('UPDATE_FAILED', error.message);
+    }
+}
+
+export async function adminDeleteShuttle(id) {
+    try {
+        await requireRole(['ADMIN_TRANSPORT', 'ADMIN']);
+        await prisma.shuttleBus.delete({ where: { id } });
+        revalidatePath('/admin/transport');
+        return success();
+    } catch (error) {
+        return failure('DELETE_FAILED', error.message);
+    }
+}

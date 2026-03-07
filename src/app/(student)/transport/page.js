@@ -160,8 +160,8 @@ export default function TransportPage() {
                             {isBooking ? (t.booking || 'Booking...') : `${t.book || 'Book'} ${vehicles.find(v => v.id === selectedVehicle)?.name}`}
                         </button>
 
-                        <Link href="/transport/schedule" className="w-full flex items-center justify-center gap-2 mt-3 py-3 rounded-2xl bg-cyan-50 dark:bg-cyan-900/20 text-cyan-600 text-sm font-bold hover:bg-cyan-100 transition-colors">
-                            📅 {t.viewBusSchedule || "View Bus Schedule"}
+                        <Link href="/transport/shuttle" className="w-full flex items-center justify-center gap-2 mt-3 py-3 rounded-2xl bg-cyan-50 dark:bg-cyan-900/20 text-cyan-600 text-sm font-bold hover:bg-cyan-100 transition-colors">
+                            🚌 {t.viewShuttleMap || "Live Bus Tracker"}
                         </Link>
                     </div>
                 </div>
