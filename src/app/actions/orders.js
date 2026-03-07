@@ -815,6 +815,46 @@ export async function pollOrderStatus(requestId) {
             return success({ order: mapped });
         }
 
+        // 3. Try TransportTrip
+        const trip = await prisma.transportTrip.findUnique({
+            where: { id: requestId },
+            include: { user: true, driver: true }
+        });
+
+        if (trip) {
+            requireOwnership(trip.userId, user.id);
+            // Map TripStatus to OrderStatus for UI compatibility
+            const statusMap = {
+                'REQUESTED': 'PENDING',
+                'ACCEPTED': 'ACCEPTED',
+                'ARRIVED': 'READY',
+                'IN_PROGRESS': 'IN_TRANSIT',
+                'COMPLETED': 'DELIVERED',
+                'CANCELLED': 'CANCELLED'
+            };
+
+            const mapped = {
+                id: trip.id,
+                status: statusMap[trip.status] || 'PENDING',
+                service: 'TRANSPORT',
+                total: trip.estimatedPrice,
+                deliveryOTP: trip.tripOTP,
+                driver: trip.driver,
+                pickupLat: trip.pickupLat,
+                pickupLng: trip.pickupLng,
+                dropoffLat: trip.dropoffLat,
+                dropoffLng: trip.dropoffLng,
+                details: JSON.stringify({
+                    pickup: trip.pickupLocation,
+                    dropoff: trip.dropoffLocation,
+                    vehicle: trip.vehicleType
+                }),
+                user: trip.user,
+                createdAt: trip.createdAt
+            };
+            return success({ order: mapped });
+        }
+
         return failure('NOT_FOUND', 'Request not found.');
     } catch (error) {
         console.error('Failed to fetch order status:', error);

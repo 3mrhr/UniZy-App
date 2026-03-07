@@ -13,7 +13,7 @@ import { success, failure } from '@/lib/actionResult';
 // STUDENT ACTIONS
 // ---------------------------------------------
 
-export async function requestTrip({ pickupLocation, dropoffLocation, vehicleType, estimatedPrice }) {
+export async function requestTrip({ pickupLocation, dropoffLocation, pickupLat, pickupLng, dropoffLat, dropoffLng, vehicleType, estimatedPrice }) {
     try {
         const user = await requireRole(['STUDENT']);
 
@@ -33,10 +33,15 @@ export async function requestTrip({ pickupLocation, dropoffLocation, vehicleType
             data: {
                 userId: user.id,
                 pickupLocation,
+                pickupLat,
+                pickupLng,
                 dropoffLocation,
+                dropoffLat,
+                dropoffLng,
                 vehicleType,
                 estimatedPrice,
-                status: 'REQUESTED'
+                status: 'REQUESTED',
+                tripOTP: Math.floor(100000 + Math.random() * 900000).toString()
             }
         });
 
@@ -133,7 +138,7 @@ const TRIP_STATE_MACHINE = {
     'IN_PROGRESS': ['COMPLETED']
 };
 
-export async function updateTripStatus(tripId, newStatus) {
+export async function updateTripStatus(tripId, newStatus, otp = null) {
     try {
         const user = await requireRole(['DRIVER']);
 
@@ -145,6 +150,21 @@ export async function updateTripStatus(tripId, newStatus) {
         const allowed = TRIP_STATE_MACHINE[trip.status];
         if (!allowed || !allowed.includes(newStatus)) {
             return failure('INVALID_STATE', `Cannot transition from ${trip.status} to ${newStatus}.`);
+        }
+
+        // OTP Verification for Pickup (Moving to IN_PROGRESS)
+        if (newStatus === 'IN_PROGRESS') {
+            if (!otp || otp !== trip.tripOTP) {
+                await prisma.transportTrip.update({
+                    where: { id: tripId },
+                    data: { failedOtpAttempts: { increment: 1 } }
+                });
+
+                if ((trip.failedOtpAttempts + 1) >= 5) {
+                    console.warn(`Brute force attempt detected on trip ${tripId}`);
+                }
+                return failure('INVALID_OTP', `Invalid pickup code. Attempts: ${trip.failedOtpAttempts + 1}/5`);
+            }
         }
 
         if (newStatus === 'COMPLETED') {
@@ -172,6 +192,7 @@ export async function updateTripStatus(tripId, newStatus) {
         } catch (_) { }
 
         revalidatePath('/driver');
+        revalidatePath('/transport');
         return success({ trip: updated });
     } catch (error) {
         console.error('Failed to update trip status:', error);

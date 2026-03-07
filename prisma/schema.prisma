@@ -944,6 +944,8 @@ model TransportTrip {
   vehicleType     String
   estimatedPrice  Float
   finalPrice      Float?
+  tripOTP         String?
+  failedOtpAttempts Int       @default(0)
   transactionId   String?    @unique
   scheduledTime   DateTime?
   cancelReason    String?

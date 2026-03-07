@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useLanguage } from '@/i18n/LanguageProvider';
 import { useRouter } from 'next/navigation';
-import { getRideEstimate } from '@/app/actions/orders';
+import { requestTrip } from '@/app/actions/transport';
 import SOSButton from '@/components/SOSButton';
 
 export default function TransportPage() {
@@ -54,14 +54,21 @@ export default function TransportPage() {
         const selected = vehicles.find(v => v.id === selectedVehicle);
         const priceNum = parseFloat(selected.price.replace('EGP ', ''));
 
-        const { createOrder } = await import('@/app/actions/orders');
-        const result = await createOrder('TRANSPORT', {
-            pickup, destination, vehicle: selected.name
-        }, priceNum, promoCode);
+        // For MVP, we use location strings. In the next phase, we'll add a landmark-to-coordinate resolver.
+        const result = await requestTrip({
+            pickupLocation: pickup,
+            dropoffLocation: destination,
+            pickupLat: 27.185, // Placeholder for Assiut Univ
+            pickupLng: 31.171,
+            dropoffLat: 27.186,
+            dropoffLng: 31.172,
+            vehicleType: selected.name,
+            estimatedPrice: priceNum
+        });
 
         setIsBooking(false);
         if (result.success) {
-            router.push(`/activity/tracking/${result.order.id}`);
+            router.push(`/activity/tracking/${result.trip.id}`);
         } else {
             alert(result.error || 'Failed to book');
         }

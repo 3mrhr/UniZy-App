@@ -9,7 +9,8 @@ import {
     completeCustomDelivery
 } from '@/app/actions/delivery';
 import { getAvailableOrders, acceptOrder, updateOrderStatus } from '@/app/actions/orders';
-import { Package, Bike, Clock, MapPin, CheckCircle, XCircle, DollarSign, Zap, Power, ChevronRight, MessageCircle } from 'lucide-react';
+import { getAvailableTrips, acceptTrip, updateTripStatus } from '@/app/actions/transport';
+import { Package, Bike, Clock, MapPin, CheckCircle, XCircle, DollarSign, Zap, Power, ChevronRight, MessageCircle, Star } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function CourierDashboard() {
@@ -22,17 +23,20 @@ export default function CourierDashboard() {
     const [priceInput, setPriceInput] = useState('');
     const [otpInput, setOtpInput] = useState('');
 
+    const [rideTasks, setRideTasks] = useState([]);
+
     const fetchData = async () => {
         setIsLoading(true);
-        const [availCustom, availMerchant, activeRes] = await Promise.all([
+        const [availCustom, availMerchant, availTrips, activeRes] = await Promise.all([
             getAvailableCustomRequests(),
             getAvailableOrders('READY'),
+            getAvailableTrips(),
             getCourierActiveTasks()
         ]);
 
-        // Let's use a simpler approach for now to keep it server-action friendly
         setCustomTasks(availCustom.data || []);
         setMerchantTasks(availMerchant.data || []);
+        setRideTasks(availTrips || []); // transport actions return raw array currently
         setActiveTasks(activeRes.data || []);
         setIsLoading(false);
     };
@@ -62,12 +66,18 @@ export default function CourierDashboard() {
         let res;
         if (type === 'custom') {
             res = await completeCustomDelivery(taskId, otpInput);
+        } else if (type === 'trip') {
+            // Rides require OTP to move to IN_PROGRESS or COMPLETE?
+            // Usually OTP is for STARTING the ride. 
+            const task = activeTasks.find(t => t.id === taskId);
+            const nextStatus = task.status === 'ARRIVED' ? 'IN_PROGRESS' : 'COMPLETED';
+            res = await updateTripStatus(taskId, nextStatus, otpInput);
         } else {
             res = await updateOrderStatus(taskId, 'DELIVERED', otpInput);
         }
 
         if (res.success) {
-            toast.success('Delivery Completed & Wallet Credited! 💰');
+            toast.success('Task Phase Completed! 💰');
             setOtpInput('');
             fetchData();
         } else {
@@ -75,8 +85,26 @@ export default function CourierDashboard() {
         }
     };
 
+    const handleUpdateTrip = async (taskId, status) => {
+        const res = await updateTripStatus(taskId, status);
+        if (res.success) {
+            toast.success(`Trip status updated: ${status}`);
+            fetchData();
+        } else {
+            toast.error(res.error || 'Update failed');
+        }
+    };
+
     const handleAccept = async (id, type) => {
-        const res = type === 'custom' ? await acceptCustomDelivery(id) : await acceptOrder(id);
+        let res;
+        if (type === 'custom') {
+            res = await acceptCustomDelivery(id);
+        } else if (type === 'trip') {
+            res = await acceptTrip(id);
+        } else {
+            res = await acceptOrder(id);
+        }
+
         if (res.success) {
             toast.success('Task Accepted! 🛵');
             fetchData();
@@ -139,7 +167,7 @@ export default function CourierDashboard() {
                                 onClick={() => setActiveTab('available')}
                                 className={`px-8 py-4 rounded-[1.5rem] text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'available' ? 'bg-brand-600 text-white shadow-xl shadow-brand-600/20' : 'bg-white dark:bg-unizy-dark text-gray-400 border border-gray-100 dark:border-white/5'}`}
                             >
-                                Available ({customTasks.length + merchantTasks.length})
+                                Available ({customTasks.length + merchantTasks.length + rideTasks.length})
                             </button>
                             <button
                                 onClick={() => setActiveTab('active')}
@@ -240,7 +268,54 @@ export default function CourierDashboard() {
                                     </div>
                                 ))}
 
-                                {customTasks.length === 0 && merchantTasks.length === 0 && (
+                                {rideTasks.map(task => (
+                                    <div key={task.id} className="group bg-white dark:bg-unizy-dark rounded-[2.5rem] p-8 border border-gray-100 dark:border-white/5 shadow-sm hover:shadow-2xl transition-all duration-500">
+                                        <div className="flex justify-between items-start mb-6">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-14 h-14 rounded-2xl bg-cyan-50 dark:bg-cyan-900/10 flex items-center justify-center text-cyan-600">
+                                                    <Bike size={28} />
+                                                </div>
+                                                <div>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-[10px] bg-cyan-100 dark:bg-cyan-900/20 text-cyan-700 dark:text-cyan-400 px-3 py-1 rounded-full font-black uppercase tracking-widest">Ride Request</span>
+                                                        <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">#{task.id.slice(0, 8)}</span>
+                                                    </div>
+                                                    <h3 className="text-xl font-black text-gray-900 dark:text-white mt-1">{task.vehicleType} Ride</h3>
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                <div className="text-xl font-black text-gray-900 dark:text-white">{task.estimatedPrice} EGP</div>
+                                                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Est. Fare</div>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-8 py-6 border-y border-gray-50 dark:border-white/5 my-6">
+                                            <div className="flex items-start gap-3">
+                                                <div className="w-8 h-8 rounded-xl bg-gray-50 dark:bg-unizy-navy flex items-center justify-center text-gray-400"><MapPin size={16} /></div>
+                                                <div>
+                                                    <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Pickup</div>
+                                                    <div className="text-sm font-bold text-gray-700 dark:text-gray-300">{task.pickupLocation}</div>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-start gap-3">
+                                                <div className="w-8 h-8 rounded-xl bg-brand-50 flex items-center justify-center text-brand-600"><CheckCircle size={16} /></div>
+                                                <div>
+                                                    <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Destination</div>
+                                                    <div className="text-sm font-bold text-gray-700 dark:text-gray-300">{task.dropoffLocation}</div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <button
+                                            onClick={() => handleAccept(task.id, 'trip')}
+                                            className="w-full bg-cyan-600 hover:bg-cyan-700 text-white py-5 rounded-[1.5rem] font-black text-xs uppercase tracking-widest shadow-xl shadow-cyan-600/20 active:scale-95 transition-all"
+                                        >
+                                            Accept Ride
+                                        </button>
+                                    </div>
+                                ))}
+
+                                {customTasks.length === 0 && merchantTasks.length === 0 && rideTasks.length === 0 && (
                                     <div className="py-20 text-center opacity-30 italic">Searching for campus requests...</div>
                                 )}
                             </div>
@@ -249,9 +324,45 @@ export default function CourierDashboard() {
                                 {activeTasks.map(task => (
                                     <div key={task.id} className="bg-white dark:bg-unizy-dark rounded-[2.5rem] p-8 border border-gray-100 dark:border-white/5 shadow-2xl">
                                         <div className="flex justify-between items-center mb-6">
-                                            <h3 className="text-xl font-black text-gray-900 dark:text-white">{task.itemDescription || task.merchant?.name}</h3>
+                                            <h3 className="text-xl font-black text-gray-900 dark:text-white">{task.itemDescription || task.merchant?.name || `${task.vehicleType} Ride`}</h3>
                                             <span className="px-4 py-2 bg-brand-50 dark:bg-brand-900/20 text-brand-700 dark:text-brand-400 rounded-full text-[10px] font-black uppercase tracking-widest animate-pulse">{task.status}</span>
                                         </div>
+
+                                        {task.type === 'trip' && (
+                                            <div className="space-y-4 mb-6">
+                                                {task.status === 'ACCEPTED' && (
+                                                    <button
+                                                        onClick={() => handleUpdateTrip(task.id, 'ARRIVED')}
+                                                        className="w-full bg-blue-600 text-white py-4 rounded-xl font-black text-xs uppercase flex items-center justify-center gap-2"
+                                                    >
+                                                        I Have Arrived <Clock size={16} />
+                                                    </button>
+                                                )}
+                                                
+                                                {(task.status === 'ARRIVED' || task.status === 'IN_PROGRESS') && (
+                                                    <div className="bg-emerald-50 dark:bg-emerald-900/10 p-6 rounded-2xl">
+                                                        <p className="text-xs font-bold text-emerald-700 dark:text-emerald-400 mb-4">
+                                                            {task.status === 'ARRIVED' ? 'Enter Pickup Code to Start:' : 'Enter Completion Code:'}
+                                                        </p>
+                                                        <div className="flex gap-3">
+                                                            <input
+                                                                type="text"
+                                                                placeholder="000000"
+                                                                maxLength={6}
+                                                                className="flex-1 bg-white dark:bg-unizy-navy border-2 border-emerald-200 dark:border-emerald-500/20 rounded-xl px-4 py-3 outline-none font-bold text-center tracking-widest"
+                                                                onChange={(e) => setOtpInput(e.target.value)}
+                                                            />
+                                                            <button
+                                                                onClick={() => handleVerifyCompletion(task.id, 'trip')}
+                                                                className="bg-emerald-600 text-white px-6 py-3 rounded-xl font-black text-xs uppercase"
+                                                            >
+                                                                Verify
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
 
                                         {task.itemDescription && !task.actualCost && (
                                             <div className="bg-orange-50 dark:bg-orange-900/10 p-6 rounded-2xl mb-6">

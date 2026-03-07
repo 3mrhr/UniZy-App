@@ -286,9 +286,9 @@ export async function setCustomItemPrice(requestId, actualCost) {
  */
 export async function getCourierActiveTasks() {
     try {
-        const user = await requireRole(['COURIER']);
+        const user = await requireRole(['COURIER', 'DRIVER']);
 
-        const [orders, custom] = await Promise.all([
+        const [orders, custom, trips] = await Promise.all([
             prisma.order.findMany({
                 where: {
                     driverId: user.id,
@@ -302,10 +302,21 @@ export async function getCourierActiveTasks() {
                     status: { in: ['ACCEPTED', 'PREPARING', 'PICKED_UP'] }
                 },
                 include: { user: { select: { name: true } } }
+            }),
+            prisma.transportTrip.findMany({
+                where: {
+                    driverId: user.id,
+                    status: { in: ['ACCEPTED', 'ARRIVED', 'IN_PROGRESS'] }
+                },
+                include: { user: { select: { name: true } } }
             })
         ]);
 
-        return success([...orders, ...custom]);
+        return success([
+            ...orders.map(o => ({ ...o, type: 'merchant' })),
+            ...custom.map(c => ({ ...c, type: 'custom' })),
+            ...trips.map(t => ({ ...t, type: 'trip' }))
+        ]);
     } catch (error) {
         console.error('Failed to fetch active tasks:', error);
         return failure('FETCH_FAILED', 'Failed to load active tasks.');
