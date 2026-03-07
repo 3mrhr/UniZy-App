@@ -1,20 +1,9 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
-import dynamic from 'next/dynamic';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { ChevronLeft, Bus, MapPin, Navigation, Info, Clock } from 'lucide-react';
-import { getShuttleBuses, getShuttleStations } from '@/app/actions/transport';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
-
-// Dynamically import Leaflet components to avoid SSR issues
-const MapContainer = dynamic(() => import('react-leaflet').then(mod => mod.MapContainer), { ssr: false });
-const TileLayer = dynamic(() => import('react-leaflet').then(mod => mod.TileLayer), { ssr: false });
-const Marker = dynamic(() => import('react-leaflet').then(mod => mod.Marker), { ssr: false });
-const Popup = dynamic(() => import('react-leaflet').then(mod => mod.Popup), { ssr: false });
-const useMap = dynamic(() => import('react-leaflet').then(mod => mod.useMap), { ssr: false });
-
+import { getShuttleBuses } from '@/app/actions/transport';
 // Haversine formula for distance calculation
 function calculateDistance(lat1, lon1, lat2, lon2) {
     const R = 6371; // Radius of the earth in km
@@ -29,32 +18,15 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
 
 export default function ShuttleMapPage() {
     const [buses, setBuses] = useState([]);
-    const [stations, setStations] = useState([]);
     const [userLoc, setUserLoc] = useState([27.185, 31.171]); // Default Assiut Univ
     const [nearestBus, setNearestBus] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        // Fix Leaflet marker icons icon issue in Next.js
-        if (typeof window !== 'undefined') {
-            import('leaflet').then(L => {
-                delete L.Icon.Default.prototype._getIconUrl;
-                L.Icon.Default.mergeOptions({
-                    iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
-                    iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
-                    shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
-                });
-            });
-        }
-
         const loadData = async () => {
-            const [busRes, stationRes] = await Promise.all([
-                getShuttleBuses(),
-                getShuttleStations()
-            ]);
+            const busRes = await getShuttleBuses();
 
             if (busRes.success) setBuses(busRes.data);
-            if (stationRes.success) setStations(stationRes.data);
             setIsLoading(false);
         };
 
@@ -92,64 +64,28 @@ export default function ShuttleMapPage() {
 
             {/* Map Area */}
             <div className="flex-1 mt-20 relative">
-                {typeof window !== 'undefined' && (
-                    <MapContainer center={userLoc} zoom={15} className="h-full w-full">
-                        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-
-                        {/* User Location Marker with Pulsing Ring */}
-                        <Marker position={userLoc} icon={L.divIcon({
-                            className: 'custom-user-icon',
-                            html: `<div class="relative w-6 h-6 flex items-center justify-center">
-                                    <div class="absolute inset-0 bg-orange-500 rounded-full opacity-20 animate-radar"></div>
-                                    <div class="w-2.5 h-2.5 bg-orange-500 rounded-full border-2 border-white shadow-lg z-10"></div>
-                                   </div>`,
-                            iconSize: [24, 24],
-                            iconAnchor: [12, 12]
-                        })}>
-                            <Popup>Your current area</Popup>
-                        </Marker>
-
-                        {/* Bus Markers with Radar Pulse */}
-                        {buses.map(bus => (
-                            <Marker
-                                key={bus.id}
-                                position={[bus.lat, bus.lng]}
-                                icon={L.divIcon({
-                                    className: 'custom-bus-icon',
-                                    html: `<div class="relative w-12 h-12 flex items-center justify-center">
-                                            <div class="absolute inset-0 bg-brand-500 rounded-full opacity-20 animate-radar"></div>
-                                            <div class="w-8 h-8 bg-brand-600 rounded-xl flex items-center justify-center text-white shadow-xl glow-brand border border-white/20 z-10 transition-transform hover:scale-110">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h8"/><path d="M4 10h16"/><path d="M4 14h16"/><path d="M19 18H5a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2Z"/><path d="M7 21v-3"/><path d="M17 21v-3"/></svg>
-                                            </div>
-                                           </div>`,
-                                    iconSize: [48, 48],
-                                    iconAnchor: [24, 24]
-                                })}
-                            >
-                                <Popup>
-                                    <div className="p-3 min-w-[180px] glass-frosted rounded-2xl border-none">
-                                        <div className="flex items-center gap-3 mb-3">
-                                            <div className="w-10 h-10 rounded-xl bg-brand-600 text-white flex items-center justify-center shadow-lg">
-                                                <Bus size={18} />
-                                            </div>
-                                            <div>
-                                                <h4 className="font-black text-sm text-gray-900 dark:text-white">Bus #{bus.busNumber}</h4>
-                                                <p className="text-[10px] font-bold text-gray-400 uppercase">Live Tracking</p>
-                                            </div>
-                                        </div>
-                                        <div className="space-y-1">
-                                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Plate Number</p>
-                                            <p className="text-xs font-black text-gray-700 dark:text-gray-300">{bus.plateNumber}</p>
-                                        </div>
-                                        <div className="mt-3 pt-3 border-t border-gray-100 dark:border-white/5 flex items-center justify-between">
-                                            <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 px-3 py-1 rounded-full uppercase tracking-tighter shadow-sm">{bus.status}</span>
+                <div className="h-full w-full p-6 pt-10">
+                    <div className="h-full rounded-3xl border border-gray-200 dark:border-white/10 bg-white/60 dark:bg-white/5 backdrop-blur-md p-6 overflow-auto">
+                        <h2 className="text-sm font-black uppercase tracking-widest text-gray-500 mb-4">Live Fleet Coordinates</h2>
+                        <div className="space-y-3">
+                            {buses.map(bus => (
+                                <div key={bus.id} className="flex items-center justify-between rounded-2xl bg-gray-50 dark:bg-unizy-dark px-4 py-3 border border-gray-100 dark:border-white/5">
+                                    <div className="flex items-center gap-3">
+                                        <Bus size={16} className="text-brand-500" />
+                                        <div>
+                                            <p className="text-sm font-black text-gray-900 dark:text-white">Bus #{bus.busNumber}</p>
+                                            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">{bus.plateNumber} • {bus.status}</p>
                                         </div>
                                     </div>
-                                </Popup>
-                            </Marker>
-                        ))}
-                    </MapContainer>
-                )}
+                                    <p className="text-xs font-bold text-gray-600 dark:text-gray-300">{bus.lat.toFixed(4)}, {bus.lng.toFixed(4)}</p>
+                                </div>
+                            ))}
+                            {buses.length === 0 && (
+                                <p className="text-sm text-gray-500 italic">No live shuttle data available.</p>
+                            )}
+                        </div>
+                    </div>
+                </div>
 
                 {/* Info Panel Overlay */}
                 <div className="absolute bottom-10 left-6 right-6 z-[1000] space-y-4">
