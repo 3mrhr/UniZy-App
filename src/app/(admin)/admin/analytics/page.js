@@ -34,7 +34,7 @@ export default function AnalyticsPage() {
 
     if (!data) return <div className="p-8 text-center font-bold text-red-500">Failed to load analytics data.</div>;
 
-    const totalActivity = data.breakdown.delivery + data.breakdown.transport + data.breakdown.services;
+    const totalActivity = data.breakdown.delivery + data.breakdown.transport + data.breakdown.services + (data.breakdown.housing || 0);
     const getPercent = (val) => totalActivity > 0 ? Math.round((val / totalActivity) * 100) : 0;
 
     return (
@@ -124,6 +124,16 @@ export default function AnalyticsPage() {
                             </div>
                             <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-3">
                                 <div className="bg-rose-500 h-3 rounded-full" style={{ width: `${getPercent(data.breakdown.services)}%` }}></div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div className="flex justify-between items-center mb-2">
+                                <span className="font-bold flex items-center gap-2"><PieChart className="w-4 h-4 text-emerald-500" /> Housing</span>
+                                <span className="font-black">{data.breakdown.housing || 0} ({getPercent(data.breakdown.housing || 0)}%)</span>
+                            </div>
+                            <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-3">
+                                <div className="bg-emerald-500 h-3 rounded-full" style={{ width: `${getPercent(data.breakdown.housing || 0)}%` }}></div>
                             </div>
                         </div>
                     </div>

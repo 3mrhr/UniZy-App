@@ -56,22 +56,15 @@ export async function listProviders({ category } = {}) {
     }
 }
 
-export async function bookService({ providerId, date, timeSlot, notes, promoCodeStr }) {
+export async function bookService({ providerId, date, timeSlot, notes }) {
     try {
         const user = await getCurrentUser();
         if (!user) return { error: 'Not authenticated' };
 
-        // Pre-validate promo code outside transaction if present
-        let validPromo = null;
-        if (promoCodeStr) {
-            const promoRes = await validatePromoCode(promoCodeStr, 'SERVICES');
-            if (!promoRes.success || !promoRes.promo) {
-                return { error: promoRes.error || 'Invalid promo code' };
-            }
-            validPromo = promoRes.promo;
+        if (!notes || notes.trim().length < 5) {
+            return { error: 'Please provide a brief description of the issue so our team can help.' };
         }
 
-        // Wrap in a transaction to ensure both records are created
         const result = await prisma.$transaction(async (tx) => {
             const booking = await tx.serviceBooking.create({
                 data: {
@@ -79,73 +72,18 @@ export async function bookService({ providerId, date, timeSlot, notes, promoCode
                     providerId,
                     date,
                     timeSlot,
-                    notes: notes || null,
+                    notes,
+                    status: 'PENDING',
                 }
             });
 
-            // Calculate cost or fetch from package (using 100 for demo to show discount)
-            let amount = 100;
-            let promoCodeId = null;
-
-            if (validPromo) {
-                promoCodeId = validPromo.id;
-                if (validPromo.discountType === 'PERCENTAGE') {
-                    amount = amount - (amount * (validPromo.discountAmount / 100));
-                } else {
-                    amount = Math.max(0, amount - validPromo.discountAmount);
-                }
-                await tx.promoCode.update({
-                    where: { id: promoCodeId },
-                    data: { currentUses: { increment: 1 } }
-                });
-            }
-
-            // Compute financial snapshots
-            const promoDiscount = validPromo ? (100 - amount) : 0;
-            const commSnap = await computeCommissionSnapshot('SERVICE', 'PROVIDER', amount, promoDiscount);
-            const priceSnap = await computePricingSnapshot('SERVICES');
-
-            // Create unified transaction record with frozen snapshots
-            const txnCode = generateTxnCode();
-
-            const transactionRecord = await tx.transaction.create({
-                data: {
-                    txnCode,
-                    type: 'SERVICE',
-                    userId: user.id,
-                    providerId: providerId,
-                    serviceBookingId: booking.id,
-                    amount,
-                    promoCodeId,
-                    // Frozen pricing snapshot
-                    basePriceSnapshot: priceSnap.basePriceSnapshot,
-                    feeComponentsSnapshot: priceSnap.feeComponentsSnapshot,
-                    zoneSnapshot: priceSnap.zoneSnapshot,
-                    pricingRuleId: priceSnap.pricingRuleId,
-                    // Frozen commission snapshot
-                    commissionRuleId: commSnap.commissionRuleId,
-                    unizyCommissionAmount: commSnap.unizyCommissionAmount,
-                    providerNetAmount: commSnap.providerNetAmount,
-                    promoSubsidyAmount: commSnap.promoSubsidyAmount,
-                }
-            });
-
-            // Log initial history state
-            await tx.transactionHistory.create({
-                data: {
-                    transactionId: transactionRecord.id,
-                    newStatus: 'PENDING',
-                    actorId: user.id,
-                    reason: 'Initial Booking',
-                }
-            });
-
-            // Notify user
+            // Notify team/admin of a new request
+            // In a real app, this would trigger a WhatsApp/Email to the ops team
             await tx.notification.create({
                 data: {
                     userId: user.id,
-                    title: 'Service Booked',
-                    message: `Your booking for ${date} at ${timeSlot} is confirmed.`,
+                    title: 'Service Request Received',
+                    message: `We've received your request for ${date}. Our team will call/WhatsApp you shortly to confirm and provide pricing.`,
                     type: 'SYSTEM'
                 }
             });
@@ -156,7 +94,7 @@ export async function bookService({ providerId, date, timeSlot, notes, promoCode
         return { success: true, booking: result };
     } catch (error) {
         console.error('Book service error:', error);
-        return { error: 'Failed to book service.' };
+        return { error: 'Failed to submit service request.' };
     }
 }
 

@@ -19,8 +19,11 @@ model User {
   faculty             String?
   academicYear        String?
   gender              String?
+  age                 Int?
   referralCode        String?                @unique
+  tier                StudentTier            @default(BRONZE)
   isVerified          Boolean                @default(false)
+  isShadowBanned      Boolean                @default(false)
   status              UserStatus             @default(ACTIVE)
   verificationStatus  String                 @default("UNVERIFIED")
   profileImage        String?
@@ -77,6 +80,14 @@ model User {
   customDeliveries    CustomDeliveryRequest[] @relation("UserCustomDeliveries")
   courierDeliveries   CustomDeliveryRequest[] @relation("CourierCustomDeliveries")
   mealSubscriptions   MealSubscription[]
+  dailyStreaks        DailyStreak[]
+}
+
+enum StudentTier {
+  BRONZE
+  SILVER
+  GOLD
+  PLATINUM
 }
 
 model Session {
@@ -258,6 +269,8 @@ model Deal {
   expiresIn     String?
   promoCode     String?
   status        String        @default("ACTIVE")
+  maxVouchers   Int?          @default(0)
+  remainingVouchers Int?      @default(0)
   merchantId    String
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
@@ -545,6 +558,9 @@ model Transaction {
   unizyCommissionAmount Float                @default(0.0)
   providerNetAmount     Float                @default(0.0)
   promoSubsidyAmount    Float                @default(0.0)
+  redemptionToken       String?              @unique
+  redemptionStatus      String?              @default("PENDING")
+  redeemedAt            DateTime?
   notes                 String?
   createdAt             DateTime             @default(now())
   updatedAt             DateTime             @updatedAt
@@ -1017,11 +1033,35 @@ model HubComment {
   content   String
   postId    String
   authorId  String
+  parentId  String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   post      HubPost  @relation(fields: [postId], references: [id], onDelete: Cascade)
   author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parent    HubComment? @relation("CommentReplies", fields: [parentId], references: [id])
+  replies   HubComment[] @relation("CommentReplies")
 }
+
+model DailyStreak {
+  id           String   @id @default(uuid())
+  userId       String
+  currentCount Int      @default(0)
+  longestCount Int      @default(0)
+  lastActiveAt DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId])
+}
+
+model Leaderboard {
+  id          String   @id @default(uuid())
+  name        String   // e.g., "Global", "Assiut University", "Engineering"
+  category    String   // e.g., "POINTS", "COMMUNITY"
+  period      String   // e.g., "WEEKLY", "MONTHLY", "ALL_TIME"
+  data        Json     // Snapshotted top N users
+  updatedAt   DateTime @updatedAt
+}
+
 
 model HubLike {
   id        String   @id @default(uuid())
@@ -1030,7 +1070,6 @@ model HubLike {
   createdAt DateTime @default(now())
   post      HubPost  @relation(fields: [postId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
   @@unique([postId, userId])
 }
 

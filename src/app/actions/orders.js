@@ -10,6 +10,34 @@ import { logEvent } from './analytics';
 import { logAdminAction } from './audit';
 import { success, failure } from '@/lib/actionResult';
 
+export async function getAvailableOrders(status = 'READY') {
+    try {
+        await requireRole(['COURIER', 'DRIVER']);
+
+        const orders = await prisma.order.findMany({
+            where: {
+                status,
+                driverId: null,
+                service: 'DELIVERY'
+            },
+            include: {
+                merchant: {
+                    select: { name: true }
+                },
+                user: {
+                    select: { name: true, university: true }
+                }
+            },
+            orderBy: { createdAt: 'desc' }
+        });
+
+        return success(orders);
+    } catch (error) {
+        console.error('Failed to fetch available orders:', error);
+        return failure('FETCH_FAILED', 'Failed to load orders.');
+    }
+}
+
 export async function createOrder(service, details, clientTotal, promoCodeStr = null, lineItems = []) {
     try {
         const user = await requireRole(['STUDENT']);

@@ -1,0 +1,18 @@
+
+> unizy_mvp_app@0.1.0 build
+> next build
+
+   ▲ Next.js 15.1.7
+   - Environments: .env
+
+   Creating an optimized production build ...
+Failed to compile.
+
+./src/app/(courier)/dashboard/page.js
+Attempted import error: 'getAvailableOrders' is not exported from '@/app/actions/orders' (imported as 'getAvailableOrders').
+
+Import trace for requested module:
+./src/app/(courier)/dashboard/page.js
+
+
+> Build failed because of webpack errors

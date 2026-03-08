@@ -5,8 +5,18 @@ import { getCurrentUser } from './auth';
 import { logAdminAction } from './audit';
 
 // ===== CONSTANTS =====
-const POINTS_PER_EGP = 0.1; // 1 EGP = 0.1 reward points
+const POINTS_PER_EGP = 0.1; // 1 EGP = 0.1 reward points (Base)
 const POINTS_EXPIRY_MONTHS = 6; // Points expire after 6 months
+
+// Tier Multipliers (Platinum Level)
+const TIER_MULTIPLIERS = {
+    BRONZE: 1.0,
+    SILVER: 1.2,
+    GOLD: 1.5,
+    PLATINUM: 2.0
+};
+
+const STREAK_BONUS_POINTS = 5; // Points for maintaining a streak daily
 
 // ===== CORE FUNCTIONS =====
 
@@ -61,7 +71,16 @@ export async function getRewardBalance(userId = null) {
  */
 export async function earnRewardPoints(userId, amountPaid, transactionId) {
     try {
-        const points = Math.round(amountPaid * POINTS_PER_EGP * 100) / 100;
+        // Fetch user tier for multiplier
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { tier: true }
+        });
+
+        const multiplier = TIER_MULTIPLIERS[user?.tier] || 1.0;
+        const basePoints = amountPaid * POINTS_PER_EGP;
+        const points = Math.round(basePoints * multiplier * 100) / 100;
+
         if (points <= 0) return { success: true, points: 0 };
 
         const expiresAt = new Date();
@@ -71,7 +90,7 @@ export async function earnRewardPoints(userId, amountPaid, transactionId) {
             data: {
                 type: 'EARN',
                 points,
-                description: `Earned from payment of ${amountPaid} EGP`,
+                description: `Earned from payment of ${amountPaid} EGP (${user?.tier || 'BRONZE'} Tier x${multiplier})`,
                 userId,
                 transactionId,
                 expiresAt,
@@ -82,6 +101,66 @@ export async function earnRewardPoints(userId, amountPaid, transactionId) {
     } catch (error) {
         console.error('Earn points error:', error);
         return { error: 'Failed to earn points.' };
+    }
+}
+
+/**
+ * Update a student's daily streak and award bonus points.
+ * Called on login or first activity of the day.
+ */
+export async function updateDailyStreak(userId) {
+    try {
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+
+        const streak = await prisma.dailyStreak.upsert({
+            where: { userId },
+            update: {},
+            create: { userId, lastActiveAt: new Date(0) }
+        });
+
+        const lastActive = new Date(streak.lastActiveAt);
+        lastActive.setHours(0, 0, 0, 0);
+
+        const diffTime = now.getTime() - lastActive.getTime();
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+        if (diffDays === 0) {
+            // Already active today
+            return { success: true, alreadyActive: true, currentStreak: streak.currentCount };
+        }
+
+        let newCount = 1;
+        if (diffDays === 1) {
+            // Consecutive day
+            newCount = streak.currentCount + 1;
+        }
+
+        const longestCount = Math.max(streak.longestCount, newCount);
+
+        await prisma.$transaction([
+            prisma.dailyStreak.update({
+                where: { userId },
+                data: {
+                    currentCount: newCount,
+                    longestCount,
+                    lastActiveAt: new Date()
+                }
+            }),
+            prisma.rewardTransaction.create({
+                data: {
+                    type: 'EARN',
+                    points: STREAK_BONUS_POINTS,
+                    description: `Daily Streak Bonus (Day ${newCount})`,
+                    userId
+                }
+            })
+        ]);
+
+        return { success: true, newCount, pointsAwarded: STREAK_BONUS_POINTS };
+    } catch (error) {
+        console.error('Update streak error:', error);
+        return { error: 'Failed to update streak.' };
     }
 }
 

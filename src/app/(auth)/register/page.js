@@ -23,6 +23,8 @@ export default function Register() {
     const [university, setUniversity] = useState('Assiut University');
     const [faculty, setFaculty] = useState('');
     const [academicYear, setAcademicYear] = useState('');
+    const [gender, setGender] = useState('MALE');
+    const [age, setAge] = useState('');
     const [referralCode, setReferralCode] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
@@ -42,6 +44,8 @@ export default function Register() {
                 university,
                 faculty,
                 academicYear,
+                gender,
+                age,
                 referralCode
             });
 
@@ -168,6 +172,34 @@ export default function Register() {
                                 <option value="DRIVER">{a.driver || 'Delivery / Ride Driver'}</option>
                                 <option value="ADMIN">Administrator</option>
                             </select>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label className="block text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 ml-1">Gender</label>
+                            <select
+                                value={gender}
+                                onChange={(e) => setGender(e.target.value)}
+                                className="w-full px-5 py-3 rounded-2xl bg-gray-50 dark:bg-unizy-navy/50 border-2 border-transparent focus:bg-white dark:focus:bg-unizy-navy focus:border-brand-500 focus:ring-0 outline-none transition-all text-gray-900 dark:text-white font-bold appearance-none cursor-pointer"
+                                required
+                            >
+                                <option value="MALE">Male</option>
+                                <option value="FEMALE">Female</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 ml-1">Age</label>
+                            <input
+                                type="number"
+                                value={age}
+                                onChange={(e) => setAge(e.target.value)}
+                                className="w-full px-5 py-3 rounded-2xl bg-gray-50 dark:bg-unizy-navy/50 border-2 border-transparent focus:bg-white dark:focus:bg-unizy-navy focus:border-brand-500 focus:ring-0 outline-none transition-all text-gray-900 dark:text-white font-bold"
+                                placeholder="20"
+                                required
+                                min="16"
+                                max="100"
+                            />
                         </div>
                     </div>
 

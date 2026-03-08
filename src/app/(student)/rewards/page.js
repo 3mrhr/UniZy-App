@@ -4,9 +4,10 @@ import Link from 'next/link';
 
 import React, { useState, useEffect } from 'react';
 import { useLanguage } from '@/i18n/LanguageProvider';
-import { Gift, Wallet, History, Ticket, ArrowUpRight, TrendingUp, HelpCircle } from 'lucide-react';
-import { spendRewardPoints, getRewardBalance } from '@/app/actions/rewards-engine';
+import { Gift, Wallet, History, Ticket, ArrowUpRight, TrendingUp, HelpCircle, Flame, Medal, Star, Trophy, Crown, Sparkles } from 'lucide-react';
+import { spendRewardPoints, getRewardBalance, updateDailyStreak } from '@/app/actions/rewards-engine';
 import toast from 'react-hot-toast';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const REWARDS_TABS = [
     { id: 'overview', icon: Wallet, en: 'Overview', ar: 'نظرة عامة' },
@@ -14,10 +15,17 @@ const REWARDS_TABS = [
     { id: 'history', icon: History, en: 'History', ar: 'السجل' },
 ];
 
+const TIER_CONFIG = {
+    BRONZE: { color: 'text-amber-600', bg: 'bg-amber-100', icon: Medal, multiplier: 1.0, next: 500, label: 'Bronze' },
+    SILVER: { color: 'text-gray-400', bg: 'bg-gray-100', icon: Star, multiplier: 1.2, next: 1500, label: 'Silver' },
+    GOLD: { color: 'text-yellow-500', bg: 'bg-yellow-100', icon: Trophy, multiplier: 1.5, next: 5000, label: 'Gold' },
+    PLATINUM: { color: 'text-purple-500', bg: 'bg-purple-100', icon: Crown, multiplier: 2.0, next: Infinity, label: 'Platinum' }
+};
+
 const REDEMPTION_OPTIONS = [
-    { id: 'ro1', points: 50, value: '5 EGP', enTitle: 'Discount on Next Ride', arTitle: 'خصم على المشوار القادم', icon: '🚗', color: 'bg-blue-100 dark:bg-blue-900/30' },
-    { id: 'ro2', points: 100, value: '10 EGP', enTitle: 'Food Delivery Voucher', arTitle: 'قسيمة توصيل طعام', icon: '🍔', color: 'bg-orange-100 dark:bg-orange-900/30' },
-    { id: 'ro3', points: 500, value: '50 EGP', enTitle: 'Wallet Cashback', arTitle: 'استرداد نقدي في المحفظة', icon: '💰', color: 'bg-green-100 dark:bg-green-900/30' },
+    { id: 'ro1', points: 50, value: '5 EGP', enTitle: 'Ride Discount', arTitle: 'خصم مشوار', icon: '🚗', color: 'bg-blue-100 dark:bg-blue-900/30' },
+    { id: 'ro2', points: 100, value: '10 EGP', enTitle: 'Food Voucher', arTitle: 'قسيمة طعام', icon: '🍔', color: 'bg-orange-100 dark:bg-orange-900/30' },
+    { id: 'ro3', points: 500, value: '50 EGP', enTitle: 'Wallet Credits', arTitle: 'رصيد محفظة', icon: '💰', color: 'bg-green-100 dark:bg-green-900/30' },
 ];
 
 const POINTS_HISTORY = [
@@ -33,17 +41,31 @@ export default function RewardsPage() {
     const [activeTab, setActiveTab] = useState('overview');
     const [currentPoints, setCurrentPoints] = useState(0);
     const [totalEarned, setTotalEarned] = useState(0);
+    const [tier, setTier] = useState('BRONZE');
+    const [streak, setStreak] = useState(0);
     const [isRedeeming, setIsRedeeming] = useState(null);
+    const [history, setHistory] = useState([]);
 
     useEffect(() => {
-        async function loadBalance() {
-            const res = await getRewardBalance();
-            if (res.success) {
-                setCurrentPoints(res.balance || 0);
-                setTotalEarned(res.totalEarned || 0);
+        async function loadData() {
+            const [balanceRes, streakRes] = await Promise.all([
+                getRewardBalance(),
+                updateDailyStreak() // Self-trigger on visit
+            ]);
+
+            if (balanceRes.success) {
+                setCurrentPoints(balanceRes.balance || 0);
+                setTotalEarned(balanceRes.totalEarned || 0);
+                setHistory(balanceRes.history || []);
+            }
+            if (streakRes.success) {
+                setStreak(streakRes.newCount || streakRes.currentStreak || 0);
+                if (streakRes.pointsAwarded) {
+                    toast.success(`Daily Streak Bonus! +${streakRes.pointsAwarded} pts`, { icon: '🔥' });
+                }
             }
         }
-        loadBalance();
+        loadData();
     }, []);
 
     const handleRedeem = async (option) => {
@@ -84,36 +106,67 @@ export default function RewardsPage() {
                 <Link href="/rewards/referrals" className="px-4 py-2 bg-amber-50 dark:bg-amber-900/20 text-amber-600 rounded-xl text-sm font-bold hover:bg-amber-100 transition-colors">🔗 Referral Program</Link>
             </div>
 
-            {/* Main Points Card */}
-            <div className="bg-gradient-to-br from-[var(--unizy-primary)] to-blue-600 rounded-3xl p-6 sm:p-8 text-white mb-8 shadow-xl shadow-blue-500/20 relative overflow-hidden">
-                {/* Decorative Background Elements */}
-                <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
-                <div className="absolute bottom-0 left-0 w-40 h-40 bg-blue-300 opacity-20 rounded-full blur-2xl translate-y-1/3 -translate-x-1/4"></div>
+            {/* Premium Points Card */}
+            <div className="bg-gradient-to-br from-unizy-navy via-brand-900 to-black rounded-[2.5rem] p-8 text-white mb-8 shadow-2xl relative overflow-hidden border border-white/10">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-brand-500/10 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2"></div>
 
                 <div className="relative z-10">
-                    <div className="flex justify-between items-start mb-6">
-                        <div>
-                            <p className="text-blue-100 font-medium mb-1">{isRTL ? 'نقاطك الحالية' : 'Current Points'}</p>
-                            <div className="flex items-baseline gap-2">
-                                <h2 className="text-5xl font-black">{currentPoints}</h2>
-                                <span className="text-xl text-blue-200">pts</span>
-                            </div>
+                    <div className="flex justify-between items-center mb-6">
+                        <div className="flex items-center gap-2 bg-white/5 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/10">
+                            <Flame className="w-4 h-4 text-orange-500 fill-orange-500" />
+                            <span className="text-xs font-black tracking-widest uppercase">{streak} Day Streak</span>
                         </div>
-                        <div className="bg-white/20 backdrop-blur-sm border border-white/30 rounded-xl px-4 py-2 text-center">
-                            <p className="text-xs text-blue-50 mb-0.5">{isRTL ? 'تساوي' : 'Equals'}</p>
-                            <p className="font-bold text-lg">≈ {eqvEgp} EGP</p>
+                        <div className="flex items-center gap-2 bg-brand-500/20 px-4 py-1.5 rounded-full border border-brand-500/30">
+                            <Sparkles className="w-3.5 h-3.5 text-brand-400" />
+                            <span className="text-[10px] font-black tracking-widest uppercase text-brand-100">x{TIER_CONFIG[tier].multiplier} Boost</span>
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4 border-t border-white/20 pt-5 mt-2">
-                        <div>
-                            <p className="text-xs text-blue-200 mb-1">{isRTL ? 'إجمالي المكتسب' : 'Total Earned'}</p>
-                            <p className="font-semibold">{totalEarned} <span className="text-xs font-normal opacity-80">pts</span></p>
+                    <p className="text-gray-400 text-xs font-black uppercase tracking-widest mb-1">Available Balance</p>
+                    <div className="flex items-baseline gap-3 mb-8">
+                        <h2 className="text-6xl font-black tracking-tighter">{currentPoints}</h2>
+                        <span className="text-xl font-bold text-gray-500">Points</span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-6 pt-6 border-t border-white/5">
+                        <div className="flex flex-col">
+                            <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Est. Value</span>
+                            <span className="text-lg font-bold">EGP {eqvEgp}</span>
                         </div>
-                        <div className="text-center sm:text-right">
-                            <p className="text-xs text-blue-200 mb-1">{isRTL ? 'معدل الكسب' : 'Earning Rate'}</p>
-                            <p className="font-semibold text-sm">1 EGP = 0.1 pt</p>
+                        <div className="flex flex-col text-right">
+                            <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Life-Time</span>
+                            <span className="text-lg font-bold">{totalEarned}</span>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Tier Progression */}
+            <div className="bg-white dark:bg-unizy-dark rounded-[2rem] p-6 mb-8 border border-gray-100 dark:border-white/5 shadow-sm">
+                <div className="flex items-center gap-4 mb-4">
+                    <div className={`w-12 h-12 rounded-2xl ${TIER_CONFIG[tier].bg} flex items-center justify-center`}>
+                        {(() => {
+                            const Icon = TIER_CONFIG[tier].icon;
+                            return <Icon className={`w-7 h-7 ${TIER_CONFIG[tier].color}`} />;
+                        })()}
+                    </div>
+                    <div>
+                        <h3 className="text-lg font-black text-gray-900 dark:text-white leading-tight">{TIER_CONFIG[tier].label} Tier</h3>
+                        <p className="text-xs font-bold text-gray-500 uppercase">Current Status</p>
+                    </div>
+                </div>
+
+                <div className="space-y-2">
+                    <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-gray-400">
+                        <span>Progress to Silver</span>
+                        <span>{currentPoints} / {TIER_CONFIG[tier].next} pts</span>
+                    </div>
+                    <div className="h-3 w-full bg-gray-100 dark:bg-white/5 rounded-full overflow-hidden">
+                        <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${Math.min((currentPoints / TIER_CONFIG[tier].next) * 100, 100)}%` }}
+                            className="h-full bg-gradient-to-r from-brand-500 to-blue-500 rounded-full"
+                        />
                     </div>
                 </div>
             </div>

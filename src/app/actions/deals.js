@@ -199,6 +199,8 @@ export async function createDeal(dealData) {
                 currency: dealData.currency || 'EGP',
                 expiresIn: dealData.expiresIn || 'Ongoing',
                 promoCode: dealData.promoCode || `DEAL${crypto.randomInt(0, 10000).toString().padStart(4, '0')}`,
+                maxVouchers: dealData.maxVouchers ? parseInt(dealData.maxVouchers) : 0,
+                remainingVouchers: dealData.maxVouchers ? parseInt(dealData.maxVouchers) : 0,
                 merchantId: merchantId,
             }
         });
@@ -227,6 +229,11 @@ export async function redeemDeal(dealId) {
 
         if (!deal) return { success: false, error: 'Deal not found.' };
 
+        // Voucher Scarcity Check
+        if (deal.maxVouchers > 0 && deal.remainingVouchers <= 0) {
+            return { success: false, error: 'Deal sold out! No more vouchers available.' };
+        }
+
         // Anti-Fraud: Strict one-per-user enforcement
         const priorRedemption = await prisma.transaction.findFirst({
             where: {
@@ -248,6 +255,7 @@ export async function redeemDeal(dealId) {
         // Execute unified transaction logging with frozen snapshots
         const result = await prisma.$transaction(async (tx) => {
             const txnCode = generateTxnCode();
+            const redemptionToken = crypto.randomBytes(12).toString('base64url');
 
             const transactionRecord = await tx.transaction.create({
                 data: {
@@ -258,6 +266,8 @@ export async function redeemDeal(dealId) {
                     dealId: deal.id,
                     amount: dealAmount,
                     currency: deal.currency,
+                    redemptionToken,
+                    redemptionStatus: 'PENDING',
                     // Frozen pricing snapshot
                     basePriceSnapshot: priceSnap.basePriceSnapshot,
                     feeComponentsSnapshot: priceSnap.feeComponentsSnapshot,
@@ -271,12 +281,20 @@ export async function redeemDeal(dealId) {
                 }
             });
 
+            // Decrement remaining vouchers if applicable
+            if (deal.maxVouchers > 0) {
+                await tx.deal.update({
+                    where: { id: deal.id },
+                    data: { remainingVouchers: { decrement: 1 } }
+                });
+            }
+
             await tx.transactionHistory.create({
                 data: {
                     transactionId: transactionRecord.id,
                     newStatus: 'CONFIRMED',
                     actorId: user.id,
-                    reason: 'Student redeemed deal',
+                    reason: 'Student redeemed deal (QR Pending)',
                 }
             });
 
@@ -336,5 +354,69 @@ export async function getRedemptionHistory() {
     } catch (error) {
         console.error('Error fetching redemption history:', error);
         return { success: false, error: 'Failed to fetch history.' };
+    }
+}
+
+/**
+ * Verify a redemption token (Merchant capability)
+ */
+export async function verifyRedemption(token) {
+    if (!token) return { success: false, error: 'Redemption token is required.' };
+
+    try {
+        const user = await getCurrentUser();
+        if (!user || !['MERCHANT', 'ADMIN', 'ADMIN_SUPER'].includes(user.role)) {
+            return { success: false, error: 'Unauthorized. Only merchants can verify redemptions.' };
+        }
+
+        const transaction = await prisma.transaction.findUnique({
+            where: { redemptionToken: token },
+            include: {
+                deal: true,
+                user: {
+                    select: { name: true, email: true }
+                }
+            }
+        });
+
+        if (!transaction) return { success: false, error: 'Invalid redemption token.' };
+        if (transaction.redemptionStatus === 'CONSUMED') {
+            return { success: false, error: `This deal was already redeemed on ${transaction.redeemedAt?.toLocaleString()}` };
+        }
+
+        // Check if merchant matches
+        if (user.role === 'MERCHANT' && transaction.providerId !== user.id) {
+            return { success: false, error: 'Unauthorized. This deal belongs to another merchant.' };
+        }
+
+        // Mark as consumed
+        const updated = await prisma.transaction.update({
+            where: { id: transaction.id },
+            data: {
+                redemptionStatus: 'CONSUMED',
+                redeemedAt: new Date(),
+                status: 'COMPLETED'
+            }
+        });
+
+        await prisma.transactionHistory.create({
+            data: {
+                transactionId: updated.id,
+                oldStatus: 'CONFIRMED',
+                newStatus: 'COMPLETED',
+                actorId: user.id,
+                reason: 'Merchant verified QR code',
+            }
+        });
+
+        return {
+            success: true,
+            deal: transaction.deal,
+            customer: transaction.user,
+            amount: transaction.amount
+        };
+    } catch (error) {
+        console.error('Error verifying redemption:', error);
+        return { success: false, error: 'Failed to verify redemption.' };
     }
 }

@@ -7,6 +7,7 @@ import MerchantHeader from './components/MerchantHeader';
 import KanbanBoard from './components/KanbanBoard';
 import MenuManagement from './components/MenuManagement';
 import SettingsModal from './components/SettingsModal';
+import RedemptionVerifier from './components/RedemptionVerifier';
 
 export default function MerchantClient({ merchantData }) {
     const { settlements, dbOrders = [], dbMeals = [], dbDeals = [], merchantName = 'Merchant Hub', storeAddress = '', storeDescription = '', storeOpen = false } = merchantData;
@@ -153,14 +154,17 @@ export default function MerchantClient({ merchantData }) {
                     statusLabel={statusLabel}
                 />
 
-                <MenuManagement
-                    menuItems={menuItems}
-                    toggleAvailability={toggleAvailability}
-                    deals={deals}
-                    totalRevenue={totalRevenue}
-                    settlements={settlements}
-                    setIsSettingsOpen={setIsSettingsOpen}
-                />
+                <div className="lg:col-span-1 flex flex-col gap-6">
+                    <RedemptionVerifier />
+                    <MenuManagement
+                        menuItems={menuItems}
+                        toggleAvailability={toggleAvailability}
+                        deals={deals}
+                        totalRevenue={totalRevenue}
+                        settlements={settlements}
+                        setIsSettingsOpen={setIsSettingsOpen}
+                    />
+                </div>
             </main>
 
             <SettingsModal

@@ -35,7 +35,7 @@ export async function toggleSystemModule(moduleName, isActive) {
     try {
         const user = await getCurrentUser();
         // Master override needed
-        if (!user || user.role !== 'SUPER_ADMIN') {
+        if (!user || user.role !== 'ADMIN_SUPER') {
             return { success: false, error: 'Unauthorized. Only Master Admin can toggle global modules.' };
         }
 

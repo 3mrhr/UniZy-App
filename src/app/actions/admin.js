@@ -34,7 +34,7 @@ export async function updateUserRole(userId, newRole, scopes = null) {
     try {
         await requireRole(['ADMIN_SUPER']);
 
-        // Prevent modifying the very first SUPER_ADMIN account as a failsafe
+        // Prevent modifying the very first ADMIN_SUPER account as a failsafe
         const targetUser = await prisma.user.findUnique({ where: { id: userId } });
         if (targetUser && targetUser.email === 'admin@unizy.com' && newRole !== 'ADMIN_SUPER') {
             return { success: false, error: 'Cannot demote the primary Super Admin.' };

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/i18n/LanguageProvider';
 import { Clock, Info, Search, Star, UtensilsCrossed, CalendarDays, Wallet, ChefHat, Heart, ChevronRight, Leaf, X } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { getActiveMeals, getActiveSubscription, getMealPlans, orderMeal, purchaseSubscription } from '@/app/actions/meals';
 
 const MEAL_CATEGORIES = [
     { id: 'daily', en: 'Daily Offers', ar: 'عروض اليوم', icon: CalendarDays },
@@ -35,15 +36,18 @@ export default function MealsPage() {
     const [isPurchasingPlan, setIsPurchasingPlan] = useState(false);
 
     React.useEffect(() => {
+        let isMounted = true;
         const fetchData = async () => {
+            if (!isMounted) return;
             setIsLoading(true);
             try {
-                const { getActiveMeals, getActiveSubscription, getMealPlans } = await import('@/app/actions/meals');
                 const [mealsRes, subRes, plansRes] = await Promise.all([
                     getActiveMeals(activeCategory, searchQuery),
                     getActiveSubscription(),
                     getMealPlans()
                 ]);
+
+                if (!isMounted) return;
 
                 if (mealsRes.success) setMeals(mealsRes.meals);
                 if (subRes.success) setActiveSubscription(subRes.subscription);
@@ -51,15 +55,15 @@ export default function MealsPage() {
             } catch (error) {
                 console.error("Failed to fetch data", error);
             } finally {
-                setIsLoading(false);
+                if (isMounted) setIsLoading(false);
             }
         };
 
-        const timeoutId = setTimeout(() => {
-            fetchData();
-        }, 300);
-
-        return () => clearTimeout(timeoutId);
+        const timeoutId = setTimeout(fetchData, 300);
+        return () => {
+            isMounted = false;
+            clearTimeout(timeoutId);
+        };
     }, [activeCategory, searchQuery]);
 
     const calculateTotal = (meal) => {
@@ -94,7 +98,6 @@ export default function MealsPage() {
                 optionIds.forEach(optionId => addonsArray.push({ groupId, optionId }));
             });
 
-            const { orderMeal } = await import('@/app/actions/meals');
             const res = await orderMeal({
                 mealId: meal.id,
                 quantity: 1,
@@ -121,7 +124,6 @@ export default function MealsPage() {
     const handlePurchasePlan = async (planId) => {
         setIsPurchasingPlan(true);
         try {
-            const { purchaseSubscription } = await import('@/app/actions/meals');
             const res = await purchaseSubscription(planId);
             if (res.success) {
                 toast.success(isRTL ? "تم تفعيل الاشتراك!" : "Subscription activated!");

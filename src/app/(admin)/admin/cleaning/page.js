@@ -94,6 +94,11 @@ export default function AdminCleaningPage() {
                                         <span className="flex items-center gap-1"><Clock size={10} /> {b.timeSlot}</span>
                                     </div>
                                     <p className="text-xs text-gray-400 mt-1">📍 {b.address}</p>
+                                    {b.notes && (
+                                        <p className="text-[10px] text-gray-500 mt-2 bg-gray-50 dark:bg-gray-800 p-2 rounded-lg italic">
+                                            "{b.notes}"
+                                        </p>
+                                    )}
                                 </div>
                                 <div className="text-right shrink-0">
                                     <p className="text-lg font-black text-emerald-600">{b.package.price} EGP</p>

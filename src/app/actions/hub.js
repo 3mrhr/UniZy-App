@@ -29,8 +29,21 @@ export async function getPosts({ category, page = 1, limit = 20 } = {}) {
     try {
         const user = await getCurrentUser();
         const where = { status: 'ACTIVE' };
+
         if (category && category !== 'all') {
             where.category = category;
+        }
+
+        // Platinum: Shadow-ban filter for the public feed
+        // Content from shadow-banned users is only visible to themselves
+        if (!user || !user.isShadowBanned) {
+            where.author = { isShadowBanned: false };
+        } else {
+            // Shadow-banned user sees their own content + other non-shadow-banned content
+            where.OR = [
+                { author: { isShadowBanned: false } },
+                { authorId: user.id }
+            ];
         }
 
         const posts = await prisma.hubPost.findMany({
@@ -40,7 +53,7 @@ export async function getPosts({ category, page = 1, limit = 20 } = {}) {
             take: limit,
             include: {
                 author: {
-                    select: { id: true, name: true, profileImage: true, university: true }
+                    select: { id: true, name: true, profileImage: true, university: true, tier: true }
                 },
                 likes: user ? { where: { userId: user.id } } : false,
                 _count: {
@@ -221,27 +234,40 @@ export async function toggleLike(postId) {
     }
 }
 
-export async function addComment(postId, content) {
+export async function addComment(postId, content, parentId = null) {
     try {
         const user = await getCurrentUser();
         if (!user) return { error: 'Not authenticated' };
+
+        // Platinum: Auto-flag toxic content (Basic)
+        const toxicWords = ['spam', 'abuse', 'toxic']; // Placeholder for real dictionary
+        const isToxic = toxicWords.some(word => content.toLowerCase().includes(word));
 
         const comment = await prisma.hubComment.create({
             data: {
                 content,
                 postId,
-                authorId: user.id
+                authorId: user.id,
+                parentId: parentId || null
             },
             include: {
-                author: { select: { name: true } }
+                author: { select: { name: true, tier: true, profileImage: true } }
             }
         });
 
-        // Increment counter
+        if (isToxic) {
+            await logAdminAction('AUTO_FLAG_COMMENT', 'HUB', comment.id, { content, authorId: user.id });
+        }
+
+        // Increment counter on post
         await prisma.hubPost.update({
             where: { id: postId },
             data: { commentsCount: { increment: 1 } }
         });
+
+        // Platinum Reward: Gain 1 point for commenting (Engagement loop)
+        const { earnRewardPoints } = await import('./rewards-engine');
+        await earnRewardPoints(user.id, 1, null); // Award small fixed points for social interaction
 
         return { success: true, comment };
     } catch (error) {
@@ -250,17 +276,51 @@ export async function addComment(postId, content) {
     }
 }
 
+/**
+ * Platinum Moderation: Shadow Ban a user.
+ * Hides their content from others without alerting them.
+ */
+export async function shadowBanUser(userId) {
+    try {
+        const admin = await getCurrentUser();
+        if (!admin || admin.role !== 'ADMIN_SUPER') {
+            return { error: 'Only Super Admin can shadow ban users.' };
+        }
+
+        const user = await prisma.user.update({
+            where: { id: userId },
+            data: { isShadowBanned: true }
+        });
+
+        await logAdminAction('SHADOW_BAN_USER', 'HUB', userId, { adminId: admin.id });
+
+        return { success: true, user };
+    } catch (error) {
+        console.error('Shadow ban error:', error);
+        return { error: 'Failed to shadow ban user.' };
+    }
+}
+
 export async function createRoommateRequest(data) {
     try {
         const user = await getCurrentUser();
         if (!user) return { error: 'Not authenticated' };
+
+        const dbUser = await prisma.user.findUnique({
+            where: { id: user.id },
+            select: { gender: true }
+        });
+
+        if (!dbUser?.gender) {
+            return { error: 'Profile gender not set. Please update your profile.' };
+        }
 
         const request = await prisma.roommateRequest.create({
             data: {
                 userId: user.id,
                 budget: parseFloat(data.budget),
                 area: data.area,
-                gender: data.gender,
+                gender: dbUser.gender, // Use profile gender
                 moveInDate: new Date(data.moveInDate),
                 notes: data.notes,
                 smoking: data.smoking,
@@ -279,11 +339,25 @@ export async function createRoommateRequest(data) {
 
 export async function getRoommateRequests() {
     try {
+        const user = await getCurrentUser();
+        const where = { status: 'ACTIVE' };
+
+        // Strictly enforce gender locking if user is authenticated
+        if (user) {
+            const dbUser = await prisma.user.findUnique({
+                where: { id: user.id },
+                select: { gender: true }
+            });
+            if (dbUser?.gender) {
+                where.user = { gender: dbUser.gender };
+            }
+        }
+
         const requests = await prisma.roommateRequest.findMany({
-            where: { status: 'ACTIVE' },
+            where,
             orderBy: { createdAt: 'desc' },
             include: {
-                user: { select: { name: true, university: true, profileImage: true } }
+                user: { select: { id: true, name: true, university: true, profileImage: true, gender: true } }
             }
         });
 
@@ -291,5 +365,87 @@ export async function getRoommateRequests() {
     } catch (error) {
         console.error('Get roommate requests error:', error);
         return { requests: [] };
+    }
+}
+
+export async function getRoommateMatches() {
+    try {
+        const currentUser = await getCurrentUser();
+        if (!currentUser) return { error: 'Not authenticated' };
+
+        // Fetch full user profile to get gender
+        const dbUser = await prisma.user.findUnique({
+            where: { id: currentUser.id },
+            select: { gender: true }
+        });
+
+        if (!dbUser?.gender) {
+            return { error: 'Profile gender not set. Please update your profile.' };
+        }
+
+        // Get current user's roommate preference/request to compare
+        const myRequest = await prisma.roommateRequest.findFirst({
+            where: { userId: currentUser.id },
+            orderBy: { updatedAt: 'desc' }
+        });
+
+        const allRequests = await prisma.roommateRequest.findMany({
+            where: {
+                status: 'ACTIVE',
+                userId: { not: currentUser.id },
+                user: { gender: dbUser.gender } // Strict gender locking
+            },
+            include: {
+                user: { select: { id: true, name: true, university: true, profileImage: true, gender: true } }
+            }
+        });
+
+        if (!myRequest) {
+            // If user hasn't created a request, just return all as neutral
+            return {
+                success: true,
+                requests: allRequests.map(r => ({ ...r, matchScore: 0 }))
+            };
+        }
+
+        const scoredRequests = allRequests.map(other => {
+            let score = 0;
+            const weights = {
+                habits: 20, // smoking, sleep, cleanliness, study
+                budget: 15,
+                area: 5
+            };
+
+            // Habit Checks (Binary matches for now)
+            if (other.smoking === myRequest.smoking) score += weights.habits;
+            if (other.sleep === myRequest.sleep) score += weights.habits;
+            if (other.cleanliness === myRequest.cleanliness) score += weights.habits;
+            if (other.study === myRequest.study) score += weights.habits;
+
+            // Budget Match (Within 15% range)
+            const budgetDiff = Math.abs(other.budget - myRequest.budget);
+            const budgetTolerance = myRequest.budget * 0.15;
+            if (budgetDiff <= budgetTolerance) score += weights.budget;
+
+            // Area Match
+            if (other.area.toLowerCase() === myRequest.area.toLowerCase()) score += weights.area;
+
+            // Normalize to 100
+            const maxScore = (weights.habits * 4) + weights.budget + weights.area;
+            const matchPercentage = Math.round((score / maxScore) * 100);
+
+            return {
+                ...other,
+                matchScore: matchPercentage
+            };
+        });
+
+        // Sort by match score descending
+        scoredRequests.sort((a, b) => b.matchScore - a.matchScore);
+
+        return { success: true, requests: scoredRequests };
+    } catch (error) {
+        console.error('Get roommate matches error:', error);
+        return { error: 'Failed to find matches' };
     }
 }

@@ -141,7 +141,7 @@ export default function CourierDashboard() {
                     {[
                         { label: 'Today', value: '12', icon: <Package size={16} />, color: 'brand' },
                         { label: 'Earned', value: '450 EGP', icon: <DollarSign size={16} />, color: 'emerald' },
-                        { label: 'Rating', value: '4.9', icon: <Star size={16} />, color: 'yellow' }
+                        { label: 'Rating', value: '4.9', icon: <StarIcon size={16} />, color: 'yellow' }
                     ].map(stat => (
                         <div key={stat.label} className="bg-white dark:bg-unizy-dark p-6 rounded-[2rem] border border-gray-100 dark:border-white/5 shadow-sm">
                             <div className={`w-8 h-8 rounded-xl bg-${stat.color}-50 dark:bg-${stat.color}-900/20 flex items-center justify-center text-${stat.color}-600 mb-3`}>
@@ -338,7 +338,7 @@ export default function CourierDashboard() {
                                                         I Have Arrived <Clock size={16} />
                                                     </button>
                                                 )}
-                                                
+
                                                 {(task.status === 'ARRIVED' || task.status === 'IN_PROGRESS') && (
                                                     <div className="bg-emerald-50 dark:bg-emerald-900/10 p-6 rounded-2xl">
                                                         <p className="text-xs font-bold text-emerald-700 dark:text-emerald-400 mb-4">
@@ -425,6 +425,6 @@ export default function CourierDashboard() {
     );
 }
 
-function Star({ size, className }) {
+function StarIcon({ size, className }) {
     return <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>;
 }

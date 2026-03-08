@@ -5,9 +5,9 @@ import { getCurrentUser } from '@/app/actions/auth';
  * Ensures the user is logged in.
  */
 export async function requireUser() {
-  const session = await getSession();
-  if (!session) throw new Error("Unauthorized");
-  return session;
+    const session = await getSession();
+    if (!session) throw new Error("Unauthorized");
+    return session;
 }
 
 /**
@@ -15,6 +15,12 @@ export async function requireUser() {
  */
 export async function requireRole(allowedRoles) {
     const user = await requireUser();
+
+    // Super Admin God-Mode: bypass any administrative role check
+    if (user.role === 'ADMIN_SUPER' && allowedRoles.some(r => r.startsWith('ADMIN_'))) {
+        return user;
+    }
+
     if (!user.role || !allowedRoles.includes(user.role)) {
         throw new Error(`Forbidden: Requires one of roles: ${allowedRoles.join(', ')}`);
     }

@@ -12,17 +12,40 @@ export async function getHousingListings(filters = {}) {
     try {
         let whereClause = { status: 'ACTIVE' };
 
+        // Type Filter (e.g., Studio, Shared, Apartment)
         if (filters.type && filters.type !== 'All') {
-            // Handle gender-based filters separately
+            // Handle gender-based filters separately if they overlap with type logic
             if (filters.type === 'Female Only' || filters.type === 'Male Only') {
                 whereClause.gender = filters.type === 'Female Only' ? 'FEMALE' : 'MALE';
             } else {
-                // Case-insensitive type matching
                 whereClause.type = {
                     equals: filters.type,
                     mode: 'insensitive'
                 };
             }
+        }
+
+        // Price Range Filter
+        if (filters.minPrice || filters.maxPrice) {
+            whereClause.price = {};
+            if (filters.minPrice) whereClause.price.gte = parseFloat(filters.minPrice);
+            if (filters.maxPrice) whereClause.price.lte = parseFloat(filters.maxPrice);
+        }
+
+        // Location/Area Search
+        if (filters.area) {
+            whereClause.location = {
+                contains: filters.area,
+                mode: 'insensitive'
+            };
+        }
+
+        // Amenities Filter (JSON string or array search if applicable)
+        if (filters.amenities && filters.amenities.length > 0) {
+            whereClause.amenities = {
+                contains: filters.amenities.join(','), // Assuming CSV storage or simple string check
+                mode: 'insensitive'
+            };
         }
 
         const listings = await prisma.housingListing.findMany({
@@ -32,12 +55,15 @@ export async function getHousingListings(filters = {}) {
                     select: {
                         name: true,
                         phone: true,
+                        profileImage: true
                     }
                 }
             },
-            orderBy: {
-                createdAt: 'desc'
-            }
+            orderBy: filters.sortBy === 'price_asc'
+                ? { price: 'asc' }
+                : filters.sortBy === 'price_desc'
+                    ? { price: 'desc' }
+                    : { createdAt: 'desc' }
         });
         return listings;
     } catch (error) {

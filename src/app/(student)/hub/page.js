@@ -1,11 +1,11 @@
 "use client";
 
+import React, { useState, useEffect, useTransition, useCallback, Suspense } from 'react';
 import Link from 'next/link';
-
-import React, { useState, useEffect, useTransition, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useLanguage } from '@/i18n/LanguageProvider';
-import { Users, Megaphone, Edit3, MessageCircle, Heart, Share2, MoreHorizontal, Image as ImageIcon, Flag, Loader2, X, Search, Utensils, Home, Tag } from 'lucide-react';
-import { getPosts, createPost, flagPost, toggleLike, addComment, getNotices } from '@/app/actions/hub';
+import { Users, Megaphone, Edit3, MessageCircle, Heart, Share2, MoreHorizontal, Image as ImageIcon, Flag, Loader2, X, Search, Utensils, Home, Tag, Sparkles } from 'lucide-react';
+import { getPosts, createPost, flagPost, toggleLike, addComment, getNotices, getRoommateMatches } from '@/app/actions/hub';
 import { globalSearch } from '@/app/actions/search';
 import { getCurrentUser } from '@/app/actions/auth';
 import ReportButton from '@/components/ReportButton';
@@ -14,6 +14,7 @@ import debounce from 'lodash/debounce';
 
 const HUB_TABS = [
     { id: 'feed', en: 'Community Feed', ar: 'المجتمع', icon: Users },
+    { id: 'roommates', en: 'Roommate Radar', ar: 'رادار الزملاء', icon: Heart },
     { id: 'notices', en: 'Campus Notices', ar: 'إعلانات الحرم', icon: Megaphone },
 ];
 
@@ -43,17 +44,26 @@ function timeAgo(dateStr) {
     return `${Math.floor(secs / 86400)}d ago`;
 }
 
-export default function HubPage() {
+function HubContent() {
     const { language } = useLanguage();
     const isRTL = language === 'ar-EG';
-    const [activeTab, setActiveTab] = useState('feed');
+    const searchParams = useSearchParams();
+    const initialTab = searchParams.get('tab') || 'feed';
+
+    const [activeTab, setActiveTab] = useState(initialTab);
     const [postText, setPostText] = useState('');
     const [postCategory, setPostCategory] = useState('general');
     const [posts, setPosts] = useState([]);
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
     const [isPending, startTransition] = useTransition();
-    const [reportedIds, setReportedIds] = useState(new Set());
+
+    const TIER_ICONS = {
+        BRONZE: { icon: Medal, color: 'text-amber-600' },
+        SILVER: { icon: Star, color: 'text-gray-400' },
+        GOLD: { icon: Trophy, color: 'text-yellow-500' },
+        PLATINUM: { icon: Crown, color: 'text-purple-500' }
+    };
 
     // Search & Notices State
     const [searchQuery, setSearchQuery] = useState('');
@@ -64,26 +74,24 @@ export default function HubPage() {
     const [commentingId, setCommentingId] = useState(null);
     const [commentText, setCommentText] = useState('');
 
-    // Load posts from DB
+    // Roommate State
+    const [roommates, setRoommates] = useState([]);
+    const [roommatesLoading, setRoommatesLoading] = useState(false);
+
+    // Initial Load
     useEffect(() => {
         async function load() {
             setLoading(true);
             const result = await getPosts();
-            if (result.posts && result.posts.length > 0) {
-                setPosts(result.posts);
-            }
-            setLoading(false);
-        }
-
-        async function loadUser() {
+            if (result.posts) setPosts(result.posts);
             const fetchedUser = await getCurrentUser();
             setUser(fetchedUser);
+            setLoading(false);
         }
-        loadUser();
         load();
     }, []);
 
-    // Load Notices
+    // Tab Data Loading
     useEffect(() => {
         if (activeTab === 'notices' && notices.length === 0) {
             async function fetchNotices() {
@@ -94,9 +102,18 @@ export default function HubPage() {
             }
             fetchNotices();
         }
+        if (activeTab === 'roommates' && roommates.length === 0) {
+            async function fetchRoommates() {
+                setRoommatesLoading(true);
+                const result = await getRoommateMatches();
+                if (result.success) setRoommates(result.requests);
+                setRoommatesLoading(false);
+            }
+            fetchRoommates();
+        }
     }, [activeTab]);
 
-    // Global Search Logic
+    // Search Logic
     const debouncedSearch = useCallback(
         debounce(async (query) => {
             if (query.trim().length < 2) {
@@ -116,15 +133,9 @@ export default function HubPage() {
         debouncedSearch(searchQuery);
     }, [searchQuery, debouncedSearch]);
 
+    // Handlers
     const handlePost = () => {
-        if (!postText.trim()) {
-            if (typeof window !== 'undefined') {
-                import('react-hot-toast').then(({ default: toast }) => {
-                    toast.error('Please write something before posting');
-                });
-            }
-            return;
-        }
+        if (!postText.trim()) return;
         startTransition(async () => {
             const result = await createPost({ content: postText, category: postCategory });
             if (result.success) {
@@ -133,7 +144,12 @@ export default function HubPage() {
                     likes: 0,
                     comments: 0,
                     isLiked: false,
-                    author: { name: user?.name || 'You', university: user?.university || 'Assiut University', profileImage: user?.profileImage }
+                    author: {
+                        name: user?.name,
+                        profileImage: user?.profileImage,
+                        university: user?.university,
+                        tier: user?.tier || 'BRONZE'
+                    }
                 }, ...prev]);
                 setPostText('');
                 setPostCategory('general');
@@ -142,352 +158,206 @@ export default function HubPage() {
     };
 
     const handleLike = async (postId) => {
-        if (!user) return;
-        // Optimistic UI
         setPosts(prev => prev.map(p => {
             if (p.id === postId) {
                 const newLiked = !p.isLiked;
-                return {
-                    ...p,
-                    isLiked: newLiked,
-                    likes: newLiked ? p.likes + 1 : p.likes - 1
-                };
+                return { ...p, isLiked: newLiked, likes: newLiked ? p.likes + 1 : p.likes - 1 };
             }
             return p;
         }));
-
-        const result = await toggleLike(postId);
-        if (result.error) {
-            // Revert on error
-            setPosts(prev => prev.map(p => {
-                if (p.id === postId) {
-                    const oldLiked = !p.isLiked;
-                    return {
-                        ...p,
-                        isLiked: oldLiked,
-                        likes: oldLiked ? p.likes + 1 : p.likes - 1
-                    };
-                }
-                return p;
-            }));
-        }
+        await toggleLike(postId);
     };
 
     const handleComment = async (postId) => {
         if (!commentText.trim()) return;
         const result = await addComment(postId, commentText);
         if (result.success) {
-            setPosts(prev => prev.map(p => {
-                if (p.id === postId) {
-                    return { ...p, comments: p.comments + 1 };
-                }
-                return p;
-            }));
+            setPosts(prev => prev.map(p => p.id === postId ? { ...p, comments: p.comments + 1 } : p));
             setCommentText('');
             setCommentingId(null);
         }
     };
 
     return (
-        <main className="min-h-screen pb-24 bg-[var(--unizy-bg-light)] dark:bg-[var(--unizy-bg-dark)] px-4 sm:px-6 lg:px-8 max-w-3xl mx-auto pt-6 transition-colors duration-300">
+        <main className="min-h-screen pb-24 bg-[#f8fafc] dark:bg-unizy-navy px-4 sm:px-6 lg:px-8 max-w-3xl mx-auto pt-6 transition-colors duration-300">
 
-            {/* Header & Search */}
-            <div className="mb-8 space-y-4">
-                <div className="flex justify-between items-center">
-                    <div>
-                        <h1 className="text-2xl sm:text-3xl font-extrabold text-[var(--unizy-text-dark)] dark:text-white mb-1">
-                            {isRTL ? 'مجتمع يوني زي' : 'Student Hub'}
-                        </h1>
-                        <p className="text-[var(--unizy-text-muted)] dark:text-gray-400 text-sm">
-                            {isRTL ? 'تواصل مع زملائك في الحرم الجامعي' : 'Connect with your campus community'}
-                        </p>
-                    </div>
-                </div>
+            {/* Brand Aura */}
+            <div className="fixed inset-0 pointer-events-none">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-brand-500/5 blur-[100px] rounded-full" />
+                <div className="absolute bottom-0 left-0 w-64 h-64 bg-purple-500/5 blur-[100px] rounded-full" />
+            </div>
 
-                {/* Global Search Bar (Playbook Upgrade) */}
-                <div className="relative group z-40">
-                    <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-[var(--unizy-primary)] transition-colors">
-                        {searching ? <Loader2 className="w-5 h-5 animate-spin" /> : <Search className="w-5 h-5" />}
-                    </div>
+            <div className="relative z-10 mb-8 space-y-4">
+                <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tighter">
+                    {isRTL ? 'مجتمع يوني زي' : 'The Student Hub'}
+                </h1>
+
+                {/* Search */}
+                <div className="relative group">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-brand-500 transition-colors" />
                     <input
                         type="text"
-                        placeholder={isRTL ? 'ابحث عن مطاعم، سكن، أو صفقات...' : 'Search for dining, housing, or deals...'}
+                        placeholder="Search for something..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full bg-white dark:bg-[#1E293B] border border-gray-100 dark:border-gray-800 rounded-2xl py-4 pl-12 pr-12 text-sm focus:ring-2 focus:ring-[var(--unizy-primary)] focus:border-transparent outline-none shadow-sm transition-all"
+                        className="w-full bg-white/40 dark:bg-unizy-dark/40 border border-white/60 dark:border-white/10 rounded-2xl py-4 pl-12 pr-4 text-sm font-bold focus:ring-2 focus:ring-brand-500 outline-none backdrop-blur-xl transition-all shadow-glass"
                     />
-                    {searchQuery && (
-                        <button
-                            onClick={() => setSearchQuery('')}
-                            className="absolute inset-y-0 right-4 flex items-center text-gray-400 hover:text-gray-600"
-                        >
-                            <X className="w-5 h-5" />
-                        </button>
-                    )}
-
-                    {/* Search Results Dropdown */}
                     {searchQuery.length >= 2 && (
-                        <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-[#1E293B] rounded-3xl border border-gray-100 dark:border-gray-800 shadow-2xl p-2 max-h-[400px] overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200">
-                            {searchResults.length > 0 ? (
-                                <div className="space-y-1">
-                                    {searchResults.map((result) => (
-                                        <Link
-                                            key={`${result.type}-${result.id}`}
-                                            href={result.url}
-                                            className="flex items-center gap-4 p-3 rounded-2xl hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group"
-                                        >
-                                            <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center shrink-0">
-                                                {result.type === 'meal' && <Utensils className="w-5 h-5 text-orange-500" />}
-                                                {result.type === 'housing' && <Home className="w-5 h-5 text-blue-500" />}
-                                                {result.type === 'deal' && <Tag className="w-5 h-5 text-purple-500" />}
-                                                {result.type === 'hub_post' && <Users className="w-5 h-5 text-green-500" />}
-                                                {result.type === 'roommate' && <Heart className="w-5 h-5 text-red-500" />}
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <h4 className="text-sm font-bold text-gray-900 dark:text-white truncate group-hover:text-[var(--unizy-primary)]">
-                                                    {result.title}
-                                                </h4>
-                                                <p className="text-xs text-gray-500 truncate">{result.subtitle}</p>
-                                            </div>
-                                            <div className="text-right">
-                                                {result.price && (
-                                                    <span className="text-xs font-black text-[var(--unizy-primary)]">
-                                                        {result.price} {result.currency}
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </Link>
-                                    ))}
-                                </div>
-                            ) : !searching ? (
-                                <div className="p-8 text-center">
-                                    <p className="text-sm text-gray-500 font-bold">No results found for "{searchQuery}"</p>
-                                </div>
-                            ) : null}
+                        <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-unizy-dark rounded-3xl border border-gray-100 dark:border-white/10 shadow-2xl p-2 z-50">
+                            {searchResults.length > 0 ? searchResults.map(res => (
+                                <Link key={res.id} href={res.url} className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-white/5 rounded-2xl transition-colors">
+                                    <div className="w-8 h-8 rounded-lg bg-brand-500/10 flex items-center justify-center">
+                                        {res.type === 'meal' ? <Utensils className="w-4 h-4 text-orange-500" /> : <Home className="w-4 h-4 text-blue-500" />}
+                                    </div>
+                                    <span className="text-sm font-bold text-gray-900 dark:text-white">{res.title}</span>
+                                </Link>
+                            )) : <p className="p-4 text-sm text-gray-500 text-center">No results found</p>}
                         </div>
                     )}
                 </div>
             </div>
 
-            {/* Service Bento Grid (Playbook Upgrade) */}
             <ServiceBentoGrid />
 
             {/* Tabs */}
-            <div className="flex bg-gray-100 dark:bg-gray-800/50 p-1.5 rounded-2xl mb-6">
+            <div className="relative z-10 flex bg-white/20 dark:bg-unizy-dark/20 backdrop-blur-xl p-1.5 rounded-2xl mb-8 border border-white/40 dark:border-white/5 shadow-glass">
                 {HUB_TABS.map((tab) => (
                     <button
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
-                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === tab.id
-                            ? 'bg-white dark:bg-[#1E293B] text-[var(--unizy-primary)] shadow-sm'
-                            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-                            }`}
+                        className={`flex-1 flex flex-col items-center py-3 rounded-xl transition-all duration-300 ${activeTab === tab.id ? 'bg-white dark:bg-unizy-dark text-brand-600 dark:text-brand-400 shadow-glass-intense scale-[1.02]' : 'text-gray-500 dark:text-gray-400'}`}
                     >
-                        <tab.icon className={`w-4 h-4 ${activeTab === tab.id ? 'opacity-100' : 'opacity-70'}`} />
-                        {isRTL ? tab.ar : tab.en}
+                        <tab.icon className="w-4 h-4 mb-1" />
+                        <span className="text-[10px] font-black uppercase tracking-widest">{isRTL ? tab.ar : tab.en}</span>
                     </button>
                 ))}
             </div>
 
+            {/* Feed View */}
             {activeTab === 'feed' && (
-                <div className="animate-fade-in">
-                    {/* Create Post Box */}
-                    <div className="bg-white dark:bg-[#1E293B] rounded-3xl p-5 border border-gray-100 dark:border-gray-800 shadow-sm mb-6">
-                        <div className="flex gap-4 mb-4">
-                            <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 border border-gray-200 dark:border-gray-700">
-                                <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'Student')}&background=random&color=fff`} alt="User" className="w-full h-full object-cover" />
-                            </div>
-                            <textarea
-                                placeholder={isRTL ? 'بم تفكر؟ اطلب مساعدة أو شارك خبراً...' : 'What\'s on your mind? Ask for help or share news...'}
-                                value={postText}
-                                onChange={(e) => setPostText(e.target.value)}
-                                className="w-full bg-gray-50 dark:bg-gray-800/50 rounded-xl p-3 text-sm text-[var(--unizy-text-dark)] dark:text-white border-0 focus:ring-1 focus:ring-[var(--unizy-primary)] outline-none resize-none pt-3"
-                                rows={2}
-                            ></textarea>
-                        </div>
-                        <div className="flex justify-between items-center pl-14 rtl:pl-0 rtl:pr-14">
-                            <div className="flex items-center gap-2">
-                                <button className="text-gray-400 hover:text-[var(--unizy-primary)] transition-colors p-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20">
-                                    <ImageIcon className="w-5 h-5" />
-                                </button>
-                                <select
-                                    value={postCategory}
-                                    onChange={(e) => setPostCategory(e.target.value)}
-                                    className="text-xs font-bold bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 rounded-lg px-2 py-1.5 border-0 outline-none appearance-none cursor-pointer"
-                                >
-                                    {CATEGORY_OPTIONS.map(c => (
-                                        <option key={c.value} value={c.value}>{c.label}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <button
-                                onClick={handlePost}
-                                disabled={!postText.trim() || isPending}
-                                className={`px-6 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all ${postText.trim().length > 0
-                                    ? 'bg-[var(--unizy-primary)] text-white hover:opacity-90 shadow-md shadow-blue-500/20'
-                                    : 'bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed'
-                                    }`}
-                            >
-                                {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Edit3 className="w-4 h-4" />}
-                                {isRTL ? 'نشر' : 'Post'}
+                <div className="relative z-10 space-y-6">
+                    <div className="bg-white/40 dark:bg-unizy-dark/40 backdrop-blur-xl p-6 rounded-3xl border border-white/60 dark:border-white/10 shadow-glass">
+                        <textarea
+                            value={postText}
+                            onChange={(e) => setPostText(e.target.value)}
+                            placeholder="Share something with your campus..."
+                            className="w-full bg-transparent border-0 focus:ring-0 text-sm font-medium text-gray-900 dark:text-white resize-none"
+                            rows={3}
+                        />
+                        <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-100 dark:border-white/5">
+                            <select value={postCategory} onChange={(e) => setPostCategory(e.target.value)} className="bg-transparent text-xs font-bold text-gray-400 outline-none border-0">
+                                {CATEGORY_OPTIONS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                            </select>
+                            <button onClick={handlePost} disabled={!postText.trim() || isPending} className="px-6 py-2.5 bg-brand-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg shadow-brand-500/20">
+                                {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Post'}
                             </button>
                         </div>
                     </div>
 
-                    {/* Loading */}
-                    {loading && (
-                        <div className="text-center py-12">
-                            <Loader2 className="w-8 h-8 mx-auto animate-spin text-brand-500" />
-                            <p className="text-gray-400 font-bold text-sm mt-3">Loading posts...</p>
-                        </div>
-                    )}
-
-                    {/* Feed Stream */}
-                    {!loading && (
-                        <div className="space-y-4">
-                            {posts.map(post => (
-                                <div key={post.id} className="bg-white dark:bg-[#1E293B] rounded-3xl p-5 border border-gray-100 dark:border-gray-800 shadow-sm">
-                                    {/* Post Header */}
-                                    <div className="flex justify-between items-start mb-3">
-                                        <div className="flex gap-3 items-center">
-                                            <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(post.author?.name || 'User')}&background=random&color=fff`} alt={post.author?.name} className="w-10 h-10 rounded-full border border-gray-100 dark:border-gray-700" />
-                                            <div>
-                                                <h3 className="font-bold text-[var(--unizy-text-dark)] dark:text-white text-sm">{post.author?.name || 'Anonymous'}</h3>
-                                                <div className="flex items-center gap-2 text-xs text-gray-500">
-                                                    <span>{post.author?.university || ''}</span>
-                                                    <span>•</span>
-                                                    <span>{timeAgo(post.createdAt)}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        {/* Report Button */}
-                                        <ReportButton
-                                            type="HUB_POST"
-                                            targetId={post.id}
-                                            targetUserId={post.authorId}
-                                        />
+                    {loading ? (
+                        <div className="py-20 flex justify-center"><Loader2 className="w-10 h-10 animate-spin text-brand-500" /></div>
+                    ) : posts.map(post => (
+                        <div key={post.id} className="bg-white/40 dark:bg-unizy-dark/40 backdrop-blur-xl p-6 rounded-3xl border border-white/60 dark:border-white/10 shadow-glass">
+                            <div className="flex justify-between mb-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-full bg-brand-500/10 overflow-hidden border border-brand-500/20">
+                                        <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(post.author?.name || 'U')}&background=random`} alt="" className="w-full h-full object-cover" />
                                     </div>
-
-                                    {/* Post Tag */}
-                                    <div className="mb-2">
-                                        <span className={`inline-block text-xs font-bold px-2 py-0.5 rounded border ${TAG_COLORS[post.category] || TAG_COLORS.general}`}>
-                                            {CATEGORY_OPTIONS.find(c => c.value === post.category)?.label || post.category}
-                                        </span>
-                                    </div>
-
-                                    {/* Post Content */}
-                                    <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed mb-4 whitespace-pre-wrap">
-                                        {post.content}
-                                    </p>
-
-                                    {/* Post Image */}
-                                    {post.imageUrl && (
-                                        <div className="rounded-2xl overflow-hidden mb-4 bg-gray-100 dark:bg-gray-800 max-h-64">
-                                            <img src={post.imageUrl} alt="Post attachment" className="w-full h-full object-cover" />
+                                    <div>
+                                        <div className="flex items-center gap-1.5">
+                                            <h4 className="text-sm font-black text-gray-900 dark:text-white">{post.author?.name}</h4>
+                                            {post.author?.tier && post.author.tier !== 'BRONZE' && (() => {
+                                                const TierIcon = TIER_ICONS[post.author.tier].icon;
+                                                return <TierIcon className={`w-3 h-3 ${TIER_ICONS[post.author.tier].color}`} />;
+                                            })()}
                                         </div>
-                                    )}
-
-                                    {/* Post Actions */}
-                                    <div className="flex flex-col gap-4 pt-4 border-t border-gray-100 dark:border-gray-800">
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex gap-4">
-                                                <button
-                                                    onClick={() => handleLike(post.id)}
-                                                    className={`flex items-center gap-1.5 transition-colors text-sm font-bold group ${post.isLiked ? 'text-red-500' : 'text-gray-500 hover:text-red-500'}`}
-                                                >
-                                                    <Heart className={`w-5 h-5 ${post.isLiked ? 'fill-red-500' : 'group-hover:fill-red-500'}`} />
-                                                    <span>{post.likes || 0}</span>
-                                                </button>
-                                                <button
-                                                    onClick={() => setCommentingId(commentingId === post.id ? null : post.id)}
-                                                    className={`flex items-center gap-1.5 transition-colors text-sm font-bold ${commentingId === post.id ? 'text-[var(--unizy-primary)]' : 'text-gray-500 hover:text-[var(--unizy-primary)]'}`}
-                                                >
-                                                    <MessageCircle className="w-5 h-5" />
-                                                    <span>{post.comments || 0}</span>
-                                                </button>
-                                            </div>
-                                            <button className="flex items-center gap-1.5 text-gray-500 hover:text-[var(--unizy-primary)] transition-colors text-sm font-bold">
-                                                <Share2 className="w-5 h-5" />
-                                            </button>
-                                        </div>
-
-                                        {/* Comment Input Overlay */}
-                                        {commentingId === post.id && (
-                                            <div className="flex gap-2 animate-in slide-in-from-top-1 duration-200">
-                                                <input
-                                                    autoFocus
-                                                    type="text"
-                                                    placeholder="Write a comment..."
-                                                    value={commentText}
-                                                    onChange={(e) => setCommentText(e.target.value)}
-                                                    onKeyDown={(e) => e.key === 'Enter' && handleComment(post.id)}
-                                                    className="flex-1 bg-gray-50 dark:bg-gray-800/50 rounded-xl px-4 py-2 text-sm outline-none border border-transparent focus:border-[var(--unizy-primary)] transition-all"
-                                                />
-                                                <button
-                                                    onClick={() => handleComment(post.id)}
-                                                    className="bg-[var(--unizy-primary)] text-white px-4 py-2 rounded-xl text-xs font-bold hover:opacity-90 transition-all"
-                                                >
-                                                    Reply
-                                                </button>
-                                            </div>
-                                        )}
+                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{timeAgo(post.createdAt)}</p>
                                     </div>
                                 </div>
-                            ))}
+                                <ReportButton type="HUB_POST" targetId={post.id} targetUserId={post.authorId} />
+                            </div>
+                            <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-6">{post.content}</p>
+                            <div className="flex items-center gap-6 pt-4 border-t border-gray-100 dark:border-white/5">
+                                <button onClick={() => handleLike(post.id)} className={`flex items-center gap-1.5 text-xs font-black ${post.isLiked ? 'text-rose-500' : 'text-gray-400'}`}>
+                                    <Heart className={`w-4 h-4 ${post.isLiked ? 'fill-current' : ''}`} /> {post.likes}
+                                </button>
+                                <button onClick={() => setCommentingId(post.id)} className="flex items-center gap-1.5 text-xs font-black text-gray-400">
+                                    <MessageCircle className="w-4 h-4" /> {post.comments}
+                                </button>
+                            </div>
+                            {commentingId === post.id && (
+                                <div className="mt-4 flex gap-2">
+                                    <input value={commentText} onChange={(e) => setCommentText(e.target.value)} placeholder="Type a comment..." className="flex-1 bg-gray-50 dark:bg-white/5 rounded-xl px-4 py-2 text-xs font-bold outline-none" />
+                                    <button onClick={() => handleComment(post.id)} className="px-4 py-2 bg-brand-600 text-white rounded-xl text-xs font-black uppercase tracking-widest">Reply</button>
+                                </div>
+                            )}
                         </div>
-                    )}
+                    ))}
                 </div>
             )}
 
-            {activeTab === 'notices' && (
-                <div className="animate-fade-in space-y-4">
-                    {noticesLoading ? (
-                        <div className="text-center py-20">
-                            <Loader2 className="w-8 h-8 mx-auto animate-spin text-brand-500" />
-                            <p className="text-gray-400 font-bold text-sm mt-3">Fetching official notices...</p>
-                        </div>
-                    ) : notices.length > 0 ? (
-                        notices.map(notice => (
-                            <div key={notice.id} className="bg-white dark:bg-[#1E293B] rounded-3xl p-6 border border-gray-100 dark:border-gray-800 shadow-sm relative overflow-hidden group">
-                                {/* Notice Type Indicator */}
-                                <div className={`absolute top-0 left-0 w-1 h-full ${notice.type === 'EMERGENCY' ? 'bg-red-500' :
-                                    notice.type === 'ACADEMIC' ? 'bg-blue-500' :
-                                        notice.type === 'EVENT' ? 'bg-purple-500' : 'bg-gray-400'
-                                    }`} />
+            {/* Roommate View */}
+            {activeTab === 'roommates' && (
+                <div className="relative z-10 animate-fade-in space-y-6">
+                    <div className="bg-brand-600 rounded-[2.5rem] p-10 text-white text-center shadow-xl shadow-brand-500/20 overflow-hidden relative">
+                        <Sparkles className="absolute top-4 right-4 w-6 h-6 opacity-20" />
+                        <h2 className="text-3xl font-black tracking-tighter mb-2">Roommate Radar</h2>
+                        <p className="text-brand-100 font-medium opacity-80">Finding peers with 90%+ compatibility based on your habits.</p>
+                    </div>
 
-                                <div className="flex justify-between items-start mb-2">
-                                    <h3 className="text-lg font-bold text-[var(--unizy-text-dark)] dark:text-white group-hover:text-[var(--unizy-primary)] transition-colors">
-                                        {notice.title}
-                                    </h3>
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-lg">
-                                        {notice.type}
-                                    </span>
-                                </div>
-                                <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed mb-4">
-                                    {notice.message}
-                                </p>
-                                <div className="flex items-center gap-2 text-xs text-gray-400 font-bold">
-                                    <Megaphone className="w-3 h-3" />
-                                    <span>{notice.university}</span>
-                                    <span>•</span>
-                                    <span>{new Date(notice.createdAt).toLocaleDateString()}</span>
+                    {roommatesLoading ? (
+                        <div className="py-20 flex justify-center"><Loader2 className="w-10 h-10 animate-spin text-brand-500" /></div>
+                    ) : roommates.length > 0 ? roommates.map(req => (
+                        <div key={req.id} className="bg-white/40 dark:bg-unizy-dark/40 backdrop-blur-xl p-6 rounded-[2rem] border border-white/60 dark:border-white/10 shadow-glass flex items-center gap-6">
+                            <div className="relative w-20 h-20 flex-shrink-0 flex items-center justify-center">
+                                <div className="absolute inset-0 rounded-full border-4 border-gray-100 dark:border-white/5" />
+                                <div className="absolute inset-0 rounded-full border-4 border-brand-500" style={{ clipPath: `inset(0 ${100 - req.matchScore}% 0 0)` }} />
+                                <span className="text-lg font-black text-gray-900 dark:text-white">{req.matchScore}%</span>
+                            </div>
+                            <div className="flex-1">
+                                <h4 className="text-lg font-black text-gray-900 dark:text-white">{req.user.name}</h4>
+                                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">{req.area} • {req.budget} EGP</p>
+                                <div className="flex gap-2">
+                                    {['cleanliness', 'study'].map(tag => (
+                                        <span key={tag} className="px-2 py-1 bg-brand-500/10 text-brand-600 dark:text-brand-400 text-[8px] font-black uppercase tracking-widest rounded-lg">{req[tag]}</span>
+                                    ))}
                                 </div>
                             </div>
-                        ))
-                    ) : (
-                        <div className="text-center py-20 bg-white dark:bg-[#1E293B] rounded-3xl border border-gray-100 dark:border-gray-800">
-                            <Megaphone className="w-16 h-16 mx-auto mb-4 text-gray-300 dark:text-gray-600" />
-                            <h3 className="text-lg font-bold text-[var(--unizy-text-dark)] dark:text-white mb-2">
-                                {isRTL ? 'لا توجد إعلانات حالياً' : 'No Official Notices'}
-                            </h3>
-                            <p className="text-gray-500 text-sm max-w-sm mx-auto">
-                                {isRTL ? 'ستظهر هنا الإعلانات الرسمية من الجامعة وإدارة التطبيق.' : 'Official announcements from the University and UniZy admin will appear here.'}
-                            </p>
+                            <button className="px-6 py-3 bg-brand-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-brand-500/20 active:scale-95 transition-all">Handshake</button>
+                        </div>
+                    )) : (
+                        <div className="py-20 text-center">
+                            <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                            <p className="text-gray-500 font-black uppercase tracking-widest">No matches found</p>
                         </div>
                     )}
                 </div>
             )}
 
+            {/* Notices View */}
+            {activeTab === 'notices' && (
+                <div className="relative z-10 animate-fade-in space-y-4">
+                    {noticesLoading ? (
+                        <div className="py-20 flex justify-center"><Loader2 className="w-10 h-10 animate-spin text-brand-500" /></div>
+                    ) : notices.map(notice => (
+                        <div key={notice.id} className="bg-white/40 dark:bg-unizy-dark/40 backdrop-blur-xl p-6 rounded-[2rem] border border-white/60 dark:border-white/10 shadow-glass border-l-4 border-l-brand-500">
+                            <h3 className="text-lg font-black text-gray-900 dark:text-white mb-2">{notice.title}</h3>
+                            <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-4">{notice.message}</p>
+                            <div className="flex items-center gap-2 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                                <Megaphone className="w-3 h-3" /> {notice.university}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
         </main>
+    );
+}
+
+export default function HubPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen flex items-center justify-center font-black">UNIZY HUB...</div>}>
+            <HubContent />
+        </Suspense>
     );
 }

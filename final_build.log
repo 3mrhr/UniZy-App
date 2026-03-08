@@ -1,0 +1,36 @@
+
+> unizy_mvp_app@0.1.0 build
+> next build
+
+   ▲ Next.js 15.1.7
+   - Environments: .env
+
+   Creating an optimized production build ...
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename '/Users/omar1/Desktop/Business/UniZy/Full App/.next/cache/webpack/server-production/0.pack_' -> '/Users/omar1/Desktop/Business/UniZy/Full App/.next/cache/webpack/server-production/0.pack'
+Failed to compile.
+
+src/app/(courier)/dashboard/page.js
+You cannot have two parallel pages that resolve to the same path. Please check /(courier)/dashboard/page and /dashboard/route. Refer to the route group docs for more information: https://nextjs.org/docs/app/building-your-application/routing/route-groups
+
+./src/app/(student)/transport/shuttle/page.js
+Module not found: Can't resolve 'leaflet'
+
+https://nextjs.org/docs/messages/module-not-found
+
+./src/app/(student)/transport/shuttle/page.js
+Module not found: Can't resolve 'leaflet/dist/leaflet.css'
+
+https://nextjs.org/docs/messages/module-not-found
+
+./src/app/(student)/wallet/history/page.js
+Module not found: Can't resolve 'date-fns'
+
+https://nextjs.org/docs/messages/module-not-found
+
+./src/app/(student)/wallet/page.js
+Module not found: Can't resolve 'date-fns'
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+> Build failed because of webpack errors

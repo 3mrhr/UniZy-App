@@ -107,8 +107,8 @@ export default function CleaningPage() {
                         {booked ? (
                             <div className="text-center py-8">
                                 <CheckCircle size={48} className="mx-auto text-emerald-500 mb-4" />
-                                <h3 className="text-xl font-black text-gray-900 dark:text-white">Cleaning Booked!</h3>
-                                <p className="text-gray-400 text-sm mt-1">We'll confirm your booking shortly.</p>
+                                <h3 className="text-xl font-black text-gray-900 dark:text-white">Request Sent!</h3>
+                                <p className="text-gray-400 text-sm mt-1">Our team will call or WhatsApp you shortly to confirm your cleaning slot and details.</p>
                             </div>
                         ) : (
                             <>
@@ -116,29 +116,33 @@ export default function CleaningPage() {
                                     <h3 className="text-lg font-black text-gray-900 dark:text-white">Book {selectedPkg.name}</h3>
                                     <button onClick={() => setSelectedPkg(null)} className="text-gray-400 hover:text-gray-600 text-sm font-bold">✕</button>
                                 </div>
-                                <div className="bg-emerald-50 dark:bg-emerald-900/10 rounded-2xl p-3 flex items-center justify-between">
-                                    <span className="text-sm font-bold text-emerald-700 dark:text-emerald-400">{selectedPkg.name}</span>
-                                    <span className="text-lg font-black text-emerald-600">{selectedPkg.price} EGP</span>
+                                <div className="bg-emerald-50 dark:bg-emerald-900/10 rounded-2xl p-3">
+                                    <div className="flex items-center justify-between mb-1">
+                                        <span className="text-sm font-black text-emerald-700 dark:text-emerald-400">{selectedPkg.name}</span>
+                                        <span className="text-lg font-black text-emerald-600">{selectedPkg.price} EGP</span>
+                                    </div>
+                                    <p className="text-[10px] text-emerald-600/60 font-bold uppercase tracking-widest">{selectedPkg.frequency === 'ONE_TIME' ? 'One-time Service' : 'Subscription Plan'}</p>
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Date</label>
+                                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Preferred Date</label>
                                     <input type="date" value={bookingDate} onChange={e => setBookingDate(e.target.value)} className="w-full px-4 py-3 rounded-2xl bg-gray-50 dark:bg-unizy-navy/50 border-2 border-transparent focus:border-emerald-500 outline-none text-gray-900 dark:text-white font-bold" />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Time Slot</label>
+                                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Preferred Time</label>
                                     <select value={bookingTime} onChange={e => setBookingTime(e.target.value)} className="w-full px-4 py-3 rounded-2xl bg-gray-50 dark:bg-unizy-navy/50 border-2 border-transparent focus:border-emerald-500 outline-none text-gray-900 dark:text-white font-bold appearance-none">
-                                        <option value="">Select time...</option>
-                                        <option value="8:00 AM - 11:00 AM">8:00 AM - 11:00 AM</option>
-                                        <option value="11:00 AM - 2:00 PM">11:00 AM - 2:00 PM</option>
-                                        <option value="2:00 PM - 5:00 PM">2:00 PM - 5:00 PM</option>
+                                        <option value="">Any time</option>
+                                        <option value="Morning (8AM-11AM)">Morning (8AM-11AM)</option>
+                                        <option value="Afternoon (11AM-2PM)">Afternoon (11AM-2PM)</option>
+                                        <option value="Evening (2PM-5PM)">Evening (2PM-5PM)</option>
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Property Address</label>
-                                    <input type="text" value={bookingAddress} onChange={e => setBookingAddress(e.target.value)} placeholder="e.g. Building 5, Floor 3, Apt 12 — near Gate 2" className="w-full px-4 py-3 rounded-2xl bg-gray-50 dark:bg-unizy-navy/50 border-2 border-transparent focus:border-emerald-500 outline-none text-gray-900 dark:text-white font-bold" />
+                                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Service Address</label>
+                                    <input type="text" value={bookingAddress} onChange={e => setBookingAddress(e.target.value)} placeholder="Building, Floor, Apartment..." className="w-full px-4 py-3 rounded-2xl bg-gray-50 dark:bg-unizy-navy/50 border-2 border-transparent focus:border-emerald-500 outline-none text-gray-900 dark:text-white font-bold" />
                                 </div>
-                                <button onClick={handleBook} disabled={!bookingDate || !bookingTime || !bookingAddress} className="w-full py-3.5 bg-emerald-600 text-white rounded-2xl font-black hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-500/30 disabled:opacity-50 disabled:cursor-not-allowed">
-                                    Confirm Booking — {selectedPkg.price} EGP
+                                <p className="text-[10px] text-gray-400 font-bold text-center italic">Pricing confirmed via phone/WhatsApp call.</p>
+                                <button onClick={handleBook} disabled={!bookingDate || !bookingAddress} className="w-full py-3.5 bg-emerald-600 text-white rounded-2xl font-black hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-500/30 disabled:opacity-50 disabled:cursor-not-allowed">
+                                    Request Cleaning Slot
                                 </button>
                             </>
                         )}

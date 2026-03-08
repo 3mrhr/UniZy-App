@@ -15,13 +15,13 @@ export default function MobileHeader() {
     // Hide if it's the desktop view (handled by CSS classes `sm:hidden`), 
     // or if it's an auth page / public promo page
     const isPublicPage = pathname === "/";
-    const isAuthPage = pathname === "/login" || pathname === "/signup";
+    const isAuthPage = pathname === "/login" || pathname === "/signup" || pathname.startsWith("/auth");
     const isSpecialPortal = pathname.startsWith("/admin") ||
         pathname.startsWith("/driver") ||
         pathname.startsWith("/provider") ||
         pathname.startsWith("/merchant");
 
-    // Also hide on the search page itself so we don't double up on search bars
+    // Also hide on the search page itself if it has its own search bar
     const isSearchPage = pathname === "/search";
 
     useEffect(() => {
@@ -48,7 +48,7 @@ export default function MobileHeader() {
         };
     }, []);
 
-    if (isPublicPage || isAuthPage || isSpecialPortal || isSearchPage) return null;
+    if (isAuthPage || isSpecialPortal) return null;
 
     return (
         <header className={`sm:hidden sticky top-0 z-50 transition-all duration-300 ${scrolled ? "bg-white/90 dark:bg-unizy-navy/90 backdrop-blur-md shadow-sm border-b border-slate-100 dark:border-slate-800" : "bg-white dark:bg-unizy-navy"

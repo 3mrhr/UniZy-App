@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Shield, Trash2, CheckCircle, AlertTriangle, MessageSquare, Flag, Eye } from 'lucide-react';
-import { getModQueue, approvePost, deletePost } from '@/app/actions/hub';
+import { Shield, Trash2, CheckCircle, AlertTriangle, MessageSquare, Flag, Eye, Ghost, Medal, Star, Trophy, Crown } from 'lucide-react';
+import { getModQueue, approvePost, deletePost, shadowBanUser } from '@/app/actions/hub';
 
 export default function AdminHubModeration() {
     const [flaggedPosts, setFlaggedPosts] = useState([]);
@@ -37,17 +37,23 @@ export default function AdminHubModeration() {
         } catch { setFlaggedPosts(prevPosts); }
     };
 
-    const handleDelete = async (id) => {
-        const prevPosts = [...flaggedPosts];
-        setFlaggedPosts(prev => prev.filter(p => p.id !== id));
-        setStats(prev => ({ ...prev, flaggedPosts: Math.max(0, prev.flaggedPosts - 1), removedPosts: prev.removedPosts + 1 }));
+    const handleShadowBan = async (userId) => {
+        if (!confirm('Shadow ban this user? They will still be able to post, but no one else will see their content.')) return;
         try {
-            const res = await deletePost(id);
-            if (!res.success) {
-                setFlaggedPosts(prevPosts);
-                alert(res.error || 'Failed to delete post');
+            const res = await shadowBanUser(userId);
+            if (res.success) {
+                alert('User shadow banned successfully.');
+            } else {
+                alert(res.error || 'Failed to shadow ban');
             }
-        } catch { setFlaggedPosts(prevPosts); }
+        } catch { alert('Something went wrong'); }
+    };
+
+    const TIER_ICONS = {
+        BRONZE: { icon: Medal, color: 'text-amber-600' },
+        SILVER: { icon: Star, color: 'text-gray-400' },
+        GOLD: { icon: Trophy, color: 'text-yellow-500' },
+        PLATINUM: { icon: Crown, color: 'text-purple-500' }
     };
 
     return (
@@ -115,6 +121,13 @@ export default function AdminHubModeration() {
                                             title="Approve — return to feed"
                                         >
                                             <CheckCircle size={16} />
+                                        </button>
+                                        <button
+                                            onClick={() => handleShadowBan(post.authorId)}
+                                            className="p-2.5 bg-purple-100 dark:bg-purple-900/20 text-purple-600 rounded-xl hover:bg-purple-200 transition-all"
+                                            title="Shadow Ban User"
+                                        >
+                                            <Ghost size={16} />
                                         </button>
                                         <button
                                             onClick={() => handleDelete(post.id)}

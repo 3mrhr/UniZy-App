@@ -73,6 +73,10 @@ export async function getDashboardAnalytics() {
         const totalServiceBookings = bookings.length;
         const totalPromoUses = promos.reduce((sum, p) => sum + p.currentUses, 0);
 
+        // Housing Metrics
+        const totalHousingRequests = await prisma.housingRequest.count();
+        const activeRoommateRequests = await prisma.roommateRequest.count({ where: { status: 'ACTIVE' } });
+
         // Revenue = SUM(Transaction.amount), not Order.total
         const revenue = txnRevenue._sum.amount || 0;
         const commission = txnCommission._sum.unizyCommissionAmount || 0;
@@ -80,15 +84,24 @@ export async function getDashboardAnalytics() {
         return {
             success: true,
             stats: {
-                // Revenue from Transaction snapshots (real, not mock)
                 revenue,
                 commission,
                 orders: { total: totalOrders, pending: pendingOrders, active: activeOrders, completed: completedOrders },
                 users: { students: totalStudents, drivers: totalDrivers, merchants: totalMerchants, providers: totalProviders },
-                breakdown: { delivery: deliveryOrders, transport: transportOrders, services: totalServiceBookings },
+                breakdown: {
+                    delivery: deliveryOrders,
+                    transport: transportOrders,
+                    services: totalServiceBookings,
+                    housing: totalHousingRequests // Added for Module 6
+                },
                 promos: { totalUses: totalPromoUses },
                 tickets: { total: totalTickets, open: openTickets },
-                marketplace: { listings: activeListings, deals: activeDeals, meals: activeMeals },
+                marketplace: {
+                    listings: activeListings,
+                    deals: activeDeals,
+                    meals: activeMeals,
+                    roommates: activeRoommateRequests // Added for Module 6
+                },
                 transactions: totalTransactions,
                 pendingVerifications,
                 activeUsers24h: activeUsers24h || 0,

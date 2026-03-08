@@ -118,6 +118,7 @@ export async function registerUser(data) {
             faculty,
             academicYear,
             gender,
+            age,
             referralCode
         } = data;
 
@@ -153,6 +154,7 @@ export async function registerUser(data) {
                 faculty: faculty || null,
                 academicYear: academicYear || null,
                 gender: gender || null,
+                age: age ? parseInt(age) : null,
                 referralCode: userReferralCode,
                 isVerified: false,
             }

@@ -133,12 +133,27 @@ export default function DealsPage() {
                                 )}
 
                                 {/* Discount Badge */}
-                                <div className="absolute top-4 left-4 bg-red-500 text-white px-3 py-1.5 rounded-xl font-black text-xs shadow-xl flex items-center gap-1.5 tracking-wide">
+                                <div className="absolute top-4 left-4 bg-red-500 text-white px-3 py-1.5 rounded-xl font-black text-xs shadow-xl flex items-center gap-1.5 tracking-wide z-10">
                                     <Tag className="w-3 h-3" /> {deal.discount}
                                 </div>
 
+                                {/* Scarcity Badge */}
+                                {deal.maxVouchers > 0 && deal.remainingVouchers > 0 && deal.remainingVouchers <= 5 && (
+                                    <div className="absolute bottom-4 left-4 bg-orange-500 text-white px-3 py-1.5 rounded-xl font-black text-[10px] shadow-xl flex items-center gap-1.5 tracking-wide z-10 animate-pulse">
+                                        🔥 Only {deal.remainingVouchers} left
+                                    </div>
+                                )}
+
+                                {deal.maxVouchers > 0 && deal.remainingVouchers <= 0 && (
+                                    <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px] z-20 flex items-center justify-center">
+                                        <div className="bg-white text-black px-6 py-2 rounded-2xl font-black text-sm rotate-[-10deg] shadow-2xl border-4 border-black">
+                                            SOLD OUT
+                                        </div>
+                                    </div>
+                                )}
+
                                 {/* Save Button */}
-                                <button onClick={(e) => { e.preventDefault(); alert('Saved!'); }} className="absolute top-4 right-4 w-10 h-10 bg-white/90 dark:bg-unizy-dark/90 backdrop-blur-md rounded-full flex items-center justify-center text-gray-400 hover:text-red-500 hover:scale-110 active:scale-90 transition-all shadow-xl z-10 border border-white/20">
+                                <button onClick={(e) => { e.preventDefault(); alert('Saved!'); }} className="absolute top-4 right-4 w-10 h-10 bg-white/90 dark:bg-unizy-dark/90 backdrop-blur-md rounded-full flex items-center justify-center text-gray-400 hover:text-red-500 hover:scale-110 active:scale-90 transition-all shadow-xl z-20 border border-white/20">
                                     ❤️
                                 </button>
 

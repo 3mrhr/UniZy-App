@@ -20,6 +20,8 @@ export default function DealDetailsPage({ params }) {
     const [codeCopied, setCodeCopied] = useState(false);
     const [isRedeemed, setIsRedeemed] = useState(false);
     const [isRedeeming, setIsRedeeming] = useState(false);
+    const [redemptionToken, setRedemptionToken] = useState(null);
+    const [qrDataUrl, setQrDataUrl] = useState('');
 
     useEffect(() => {
         const fetchDealDetails = async () => {
@@ -60,6 +62,16 @@ export default function DealDetailsPage({ params }) {
                 const res = await redeemDeal(deal.id);
                 if (res.success) {
                     setIsRedeemed(true);
+                    if (res.transaction?.redemptionToken) {
+                        setRedemptionToken(res.transaction.redemptionToken);
+                        // Generate QR Code
+                        const QRCode = (await import('qrcode')).default;
+                        QRCode.toDataURL(res.transaction.redemptionToken, {
+                            margin: 2,
+                            width: 256,
+                            color: { dark: '#000000', light: '#ffffff' }
+                        }).then(setQrDataUrl);
+                    }
                     import('react-hot-toast').then(({ toast }) => toast.success("Deal redeemed successfully!"));
                 } else {
                     import('react-hot-toast').then(({ toast }) => toast.error(res.error || "Failed to log redemption"));
@@ -205,34 +217,53 @@ export default function DealDetailsPage({ params }) {
                     <div className="absolute top-0 right-0 w-32 h-32 bg-brand-500/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2"></div>
 
                     <h3 className="text-xl font-black text-brand-900 dark:text-white mb-2 z-10">
-                        In-Store Redemption Code
+                        {isRedeemed ? 'Your Redemption QR' : 'In-Store Redemption Code'}
                     </h3>
                     <p className="text-sm font-medium text-brand-700/80 dark:text-brand-200/60 mb-6 max-w-sm z-10">
-                        {isRedeemed ? 'Show this exclusive promo code to the cashier before paying.' : 'Tap to reveal and copy your exclusive student promo code. This will be logged to your account.'}
+                        {isRedeemed ? 'Show this QR code to the merchant to verify your discount.' : 'Tap to reveal and copy your exclusive student promo code. This will be logged to your account.'}
                     </p>
 
-                    <div className="relative group w-full max-w-xs cursor-pointer z-10" onClick={handleRevealAndCopy}>
-                        <div className="absolute inset-0 bg-brand-500 bg-opacity-20 rounded-[1.5rem] blur-xl group-hover:bg-opacity-30 transition-all"></div>
-                        <div className={`relative flex items-center justify-between bg-white dark:bg-unizy-dark border-2 border-dashed ${isRedeemed ? 'border-green-500' : 'border-brand-500'} rounded-[1.5rem] py-4 px-6 shadow-md transition-transform group-active:scale-95`}>
-                            {isRedeeming ? (
-                                <div className="w-full flex justify-center py-1">
-                                    <div className="w-6 h-6 border-2 border-brand-200 border-t-brand-600 rounded-full animate-spin"></div>
-                                </div>
-                            ) : (
-                                <>
-                                    <span className={`font-mono text-2xl font-black tracking-widest ${isRedeemed ? 'text-green-600 dark:text-green-400' : 'text-brand-600 dark:text-brand-400'} w-full text-center ${!isRedeemed ? 'blur-sm select-none' : ''}`}>
-                                        {!isRedeemed ? '••••••••' : (deal.promoCode || 'UNIZY50')}
-                                    </span>
-                                    {codeCopied ? (
-                                        <CheckCircle2 className="w-6 h-6 text-green-500 absolute right-4" />
-                                    ) : (
-                                        <Copy className="w-6 h-6 text-brand-400 group-hover:text-brand-600 absolute right-4 transition-colors" />
-                                    )}
-                                </>
-                            )}
+                    {isRedeemed && qrDataUrl ? (
+                        <div className="bg-white p-4 rounded-3xl shadow-xl mb-6 z-10 border-4 border-brand-500/10">
+                            <img src={qrDataUrl} alt="Redemption QR Code" className="w-48 h-48" />
+                            <div className="mt-3 text-[10px] font-black tracking-widest text-brand-500 uppercase">
+                                Token: {redemptionToken}
+                            </div>
                         </div>
-                    </div>
-                    {codeCopied && <p className="text-sm text-green-600 dark:text-green-400 mt-4 font-bold animate-fade-in z-10">Copied to clipboard!</p>}
+                    ) : (
+                        <div className="relative group w-full max-w-xs cursor-pointer z-10" onClick={handleRevealAndCopy}>
+                            <div className="absolute inset-0 bg-brand-500 bg-opacity-20 rounded-[1.5rem] blur-xl group-hover:bg-opacity-30 transition-all"></div>
+                            <div className={`relative flex items-center justify-between bg-white dark:bg-unizy-dark border-2 border-dashed ${isRedeemed ? 'border-green-500' : 'border-brand-500'} rounded-[1.5rem] py-4 px-6 shadow-md transition-transform group-active:scale-95`}>
+                                {isRedeeming ? (
+                                    <div className="w-full flex justify-center py-1">
+                                        <div className="w-6 h-6 border-2 border-brand-200 border-t-brand-600 rounded-full animate-spin"></div>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <span className={`font-mono text-2xl font-black tracking-widest ${isRedeemed ? 'text-green-600 dark:text-green-400' : 'text-brand-600 dark:text-brand-400'} w-full text-center blur-sm select-none`}>
+                                            {'••••••••'}
+                                        </span>
+                                        <Copy className="w-6 h-6 text-brand-400 group-hover:text-brand-600 absolute right-4 transition-colors" />
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {isRedeemed && (
+                        <div className="mt-4 flex flex-col items-center gap-2 z-10">
+                            <div className="flex items-center gap-2 bg-white dark:bg-unizy-dark px-4 py-2 rounded-2xl border border-green-100 dark:border-green-900/30 shadow-sm">
+                                <span className="font-mono text-lg font-black text-green-600 tracking-widest">{deal.promoCode}</span>
+                                <button onClick={() => {
+                                    navigator.clipboard.writeText(deal.promoCode);
+                                    import('react-hot-toast').then(({ toast }) => toast.success("Code copied!"));
+                                }} className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
+                                    <Copy className="w-4 h-4 text-gray-400" />
+                                </button>
+                            </div>
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Show code if QR fails</p>
+                        </div>
+                    )}
                 </div>
 
                 {/* Details Section */}

@@ -9,6 +9,8 @@ import {
 } from 'lucide-react';
 import { getDashboardAnalytics } from '@/app/actions/analytics';
 import { getSystemModules, toggleSystemModule } from '@/app/actions/settings';
+import { getAuditLogs } from '@/app/actions/audit';
+import { useRouter } from 'next/navigation';
 
 const RECENT_ALERTS = [
     { id: 1, type: 'MODERATION', title: 'New Listing Flagged', description: 'Listing "Modern Studio nr Campus" flagged for inaccurate pics.', time: '2 mins ago', severity: 'HIGH' },
@@ -17,19 +19,26 @@ const RECENT_ALERTS = [
 ];
 
 export default function SuperadminOverview() {
+    const router = useRouter();
     const [statsData, setStatsData] = useState(null);
     const [modules, setModules] = useState({ delivery: true, transport: true, housing: true, deals: true });
+    const [recentLogs, setRecentLogs] = useState([]);
     const [isToggling, setIsToggling] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         const fetchStats = async () => {
-            const [res, modRes] = await Promise.all([
+            setIsLoading(true);
+            const [res, modRes, logRes] = await Promise.all([
                 getDashboardAnalytics(),
-                getSystemModules()
+                getSystemModules(),
+                getAuditLogs({ limit: 5 })
             ]);
 
             if (res.success) setStatsData(res.stats);
             if (modRes.success) setModules(modRes.modules);
+            if (logRes.success) setRecentLogs(logRes.data.slice(0, 5));
+            setIsLoading(false);
         };
         fetchStats();
     }, []);
@@ -116,32 +125,31 @@ export default function SuperadminOverview() {
                     </div>
 
                     <div className="space-y-4">
-                        {RECENT_ALERTS.map((alert) => (
-                            <div key={alert.id} className="flex items-center gap-5 p-5 rounded-3xl bg-gray-50 dark:bg-[#0F172A] border border-gray-100 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-600 transition-all group cursor-pointer">
-                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${alert.severity === 'HIGH' ? 'bg-red-50 dark:bg-red-500/10 text-red-500' :
-                                    alert.severity === 'MEDIUM' ? 'bg-orange-50 dark:bg-orange-500/10 text-orange-500' :
-                                        'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-500'
+                        {recentLogs.length > 0 ? recentLogs.map((log) => (
+                            <div key={log.id} className="flex items-center gap-5 p-5 rounded-3xl bg-gray-50 dark:bg-[#0F172A] border border-gray-100 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-600 transition-all group cursor-pointer">
+                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${log.module === 'HUB' ? 'bg-orange-50 dark:bg-orange-500/10 text-orange-500' :
+                                    log.module === 'AUTH' ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-500' :
+                                        'bg-brand-50 dark:bg-brand-500/10 text-brand-500'
                                     }`}>
-                                    <AlertCircle className="w-6 h-6" />
+                                    <ShieldAlert className="w-6 h-6" />
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center justify-between mb-1">
-                                        <span className={`text-[10px] font-black uppercase tracking-widest ${alert.severity === 'HIGH' ? 'text-red-500' :
-                                            alert.severity === 'MEDIUM' ? 'text-orange-500' :
-                                                'text-indigo-500'
-                                            }`}>
-                                            {alert.type}
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-brand-500">
+                                            {log.module}
                                         </span>
-                                        <span className="text-xs font-medium text-gray-400">{alert.time}</span>
+                                        <span className="text-xs font-medium text-gray-400">{new Date(log.createdAt).toLocaleTimeString()}</span>
                                     </div>
-                                    <h4 className="font-black text-gray-900 dark:text-white truncate">{alert.title}</h4>
-                                    <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-1">{alert.description}</p>
+                                    <h4 className="font-black text-gray-900 dark:text-white truncate">{log.action}</h4>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-1">Target: {log.targetId || 'System'}</p>
                                 </div>
                                 <div className="p-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                     <ChevronRight className="w-5 h-5 text-gray-400" />
                                 </div>
                             </div>
-                        ))}
+                        )) : (
+                            <p className="text-center py-10 text-gray-400 font-bold">No recent audit logs found.</p>
+                        )}
                     </div>
                 </div>
 
@@ -167,7 +175,7 @@ export default function SuperadminOverview() {
                         </button>
                     </div>
 
-                    <div className="mt-8 p-6 rounded-3xl bg-brand-600 text-white relative overflow-hidden group cursor-pointer">
+                    <div onClick={() => router.push('/admin/master-mode')} className="mt-8 p-6 rounded-3xl bg-brand-600 text-white relative overflow-hidden group cursor-pointer">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-white/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:scale-110 transition-transform"></div>
                         <h4 className="font-black text-lg mb-1 relative z-10">Extreme Moderation</h4>
                         <p className="text-brand-100 text-xs font-medium mb-4 relative z-10">Delete or edit any entity globally.</p>

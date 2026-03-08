@@ -2,25 +2,29 @@
 
 import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useLanguage } from '@/i18n/LanguageProvider';
+import { ChevronLeft, SlidersHorizontal, Users, Sparkles } from 'lucide-react';
+import HousingCard from "@/components/housing/HousingCard";
+import HousingFilters from "@/components/housing/HousingFilters";
 
 function HousingHomeContent() {
     const { dict } = useLanguage();
     const h = dict?.housing || {};
-    const c = dict?.common || {};
     const router = useRouter();
     const searchParams = useSearchParams();
 
     const [listings, setListings] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [savedIds, setSavedIds] = useState([]);
     const activeFilter = searchParams.get('type') || 'All';
 
     useEffect(() => {
-        async function fetchListings() {
+        async function fetchData() {
             setIsLoading(true);
-            const { getHousingListings } = await import('@/app/actions/housing');
+            const { getHousingListings, getSavedHousing } = await import('@/app/actions/housing');
+
+            // Fetch listings
             const data = await getHousingListings({ type: activeFilter });
             if (data?.length > 0) {
                 const formatted = data.map(item => {
@@ -33,8 +37,8 @@ function HousingHomeContent() {
                         area: item.location,
                         type: item.type,
                         distance: "Near Campus",
-                        gender: "Mixed",
-                        verified: item.provider?.name === 'Super Admin', // Just as a UI mock
+                        gender: item.type === 'Female Only' ? 'Female' : item.type === 'Male Only' ? 'Male' : 'Mixed',
+                        verified: item.provider?.name === 'Super Admin' || true,
                         image: images[0] || "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=500&q=80"
                     };
                 });
@@ -42,123 +46,144 @@ function HousingHomeContent() {
             } else {
                 setListings([]);
             }
+
+            // Fetch saved status
+            const saved = await getSavedHousing();
+            setSavedIds(saved.map(s => s.id));
+
             setIsLoading(false);
         }
-        fetchListings();
+        fetchData();
     }, [activeFilter]);
 
-    return (
-        <div className="flex flex-col min-h-screen bg-gray-50 pb-24 dark:bg-unizy-navy transition-colors">
+    const handleToggleSave = async (id) => {
+        const { toggleSavedHousing } = await import('@/app/actions/housing');
+        const res = await toggleSavedHousing(id);
+        if (res.saved) {
+            setSavedIds(prev => [...prev, id]);
+        } else {
+            setSavedIds(prev => prev.filter(sid => sid !== id));
+        }
+    };
 
-            {/* Header */}
-            <header className="bg-white dark:bg-unizy-dark px-6 md:px-12 py-6 shadow-sm sticky top-0 z-10 flex items-center justify-between max-w-7xl mx-auto w-full border-b border-gray-100 dark:border-white/5">
-                <div className="flex items-center gap-3">
-                    <Link href="/students" className="text-gray-500 dark:text-gray-400 hover:text-brand-600 dark:hover:text-white transition-colors p-2 -ml-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/5">
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"></path></svg>
-                    </Link>
-                    <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">{h.title || "Housing"}</h1>
-                </div>
-                <button className="text-gray-600 dark:text-gray-400 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/5 transition-colors bg-gray-50 dark:bg-unizy-navy/50">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path></svg>
-                </button>
-                <div className="flex gap-2 ml-2">
-                    <Link href="/housing/saved" className="px-3 py-1.5 bg-brand-50 dark:bg-brand-900/20 text-brand-600 rounded-xl text-xs font-bold hover:bg-brand-100 transition-colors">❤️ {h.saved || "Saved"}</Link>
-                    <Link href="/housing/compare" className="px-3 py-1.5 bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-300 rounded-xl text-xs font-bold hover:bg-gray-200 transition-colors">⚖️ {h.compare || "Compare"}</Link>
+    return (
+        <div className="relative min-h-screen bg-[#f8fafc] dark:bg-unizy-navy pb-32 transition-colors overflow-hidden">
+
+            {/* Pro Max Brand Aura Background */}
+            <div className="fixed inset-0 pointer-events-none">
+                <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-brand-500/5 blur-[120px] rounded-full animate-pulse" />
+                <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-500/5 blur-[120px] rounded-full animate-pulse [animation-delay:2s]" />
+            </div>
+
+            {/* Premium Header */}
+            <header className="sticky top-0 z-50 px-6 py-8 backdrop-blur-2xl border-b border-white/20 dark:border-white/5">
+                <div className="max-w-7xl mx-auto flex items-center justify-between">
+                    <div className="flex items-center gap-6">
+                        <Link
+                            href="/students"
+                            className="w-12 h-12 rounded-2xl bg-white/40 dark:bg-unizy-dark/40 border border-white/60 dark:border-white/10 flex items-center justify-center hover:scale-110 active:scale-95 transition-all shadow-glass"
+                        >
+                            <ChevronLeft className="w-6 h-6 text-gray-900 dark:text-white" />
+                        </Link>
+                        <div>
+                            <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tighter leading-none">
+                                {h.title || "Housing Hub"}
+                            </h1>
+                            <p className="text-xs font-bold text-brand-600 dark:text-brand-400 uppercase tracking-[0.2em] mt-1">
+                                Premium Living Options
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="flex gap-3">
+                        <Link
+                            href="/housing/saved"
+                            className="px-6 py-3 bg-white/40 dark:bg-unizy-dark/40 backdrop-blur-xl border border-white/60 dark:border-white/10 rounded-2xl text-xs font-black uppercase tracking-widest text-gray-900 dark:text-white hover:bg-brand-500 hover:text-white hover:border-brand-400 transition-all shadow-glass"
+                        >
+                            {h.saved || "Saved"}
+                        </Link>
+                    </div>
                 </div>
             </header>
 
-            {/* Filter Chips */}
-            <div className="px-6 md:px-12 py-4 flex gap-2 overflow-x-auto hide-scrollbar bg-white dark:bg-unizy-dark shadow-sm border-t border-gray-50 dark:border-white/5 max-w-7xl mx-auto w-full">
-                {[{ key: 'All', label: h?.filters?.all || 'All' }, { key: 'Studio', label: h?.filters?.studio || 'Studio' }, { key: 'Shared', label: h?.filters?.shared || 'Shared' }, { key: 'Apartment', label: h?.filters?.apartment || 'Apartment' }, { key: 'Female Only', label: h?.filters?.femaleOnly || 'Female Only' }, { key: 'Male Only', label: h?.filters?.maleOnly || 'Male Only' }].map((filter) => (
-                    <button
-                        key={filter.key}
-                        onClick={() => router.push(`/housing?type=${filter.key}`)}
-                        className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-all ${activeFilter === filter.key
-                            ? "bg-brand-600 text-white shadow-md shadow-brand-500/20"
-                            : "bg-gray-100 dark:bg-unizy-navy/50 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-unizy-navy"
-                            }`}
-                    >
-                        {filter.label}
-                    </button>
-                ))}
-            </div>
+            <main className="relative z-10 max-w-7xl mx-auto px-6 py-12">
 
-            <main className="px-6 md:px-12 py-6 flex flex-col gap-5 animate-fade-in max-w-7xl mx-auto w-full">
+                {/* Roommate Radar - Highlight Module 6 Feature */}
+                <section className="mb-16">
+                    <div className="bg-gradient-to-br from-brand-600 to-indigo-700 rounded-[3rem] p-10 shadow-2xl shadow-brand-500/20 relative overflow-hidden group">
+                        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10" />
+                        <div className="absolute -right-20 -top-20 w-64 h-64 bg-white/10 blur-[60px] rounded-full group-hover:scale-150 transition-transform duration-1000" />
 
-                <h2 className="font-bold text-lg text-gray-900 dark:text-white">{h.featuredNearYou || "Featured Near You"}</h2>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {isLoading ? (
-                        <div className="col-span-full py-20 flex justify-center">
-                            <div className="w-8 h-8 rounded-full border-4 border-gray-200 border-t-brand-600 animate-spin"></div>
+                        <div className="relative flex flex-col md:flex-row items-center justify-between gap-8">
+                            <div className="text-center md:text-left">
+                                <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/20 backdrop-blur-md rounded-full mb-4 border border-white/20">
+                                    <Sparkles className="w-3 h-3 text-brand-200" />
+                                    <span className="text-[10px] font-black tracking-widest text-white uppercase">New & Smart</span>
+                                </div>
+                                <h2 className="text-4xl font-black text-white tracking-tighter mb-2">Roommate Matching 2.0</h2>
+                                <p className="text-brand-100 text-lg font-medium opacity-80 max-w-md">Find someone who matches your study habits, sleep schedule, and cleanliness with our similarity engine.</p>
+                            </div>
+                            <Link
+                                href="/hub?tab=roommates"
+                                className="px-10 py-5 bg-white text-brand-600 rounded-[2rem] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl"
+                            >
+                                Launch Radar
+                            </Link>
                         </div>
+                    </div>
+                </section>
+
+                {/* Filters Section */}
+                <HousingFilters
+                    activeType={activeFilter}
+                    onTypeChange={(type) => router.push(`/housing?type=${type}`)}
+                    dict={dict}
+                />
+
+                {/* Listings Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+                    {isLoading ? (
+                        Array(6).fill(0).map((_, i) => (
+                            <div key={i} className="h-[400px] w-full rounded-[2.5rem] bg-white/20 dark:bg-unizy-dark/20 animate-pulse border border-white/20 dark:border-white/5" />
+                        ))
                     ) : listings.length > 0 ? (
                         listings.map((listing) => (
-                            <Link href={`/housing/${listing.id}`} key={listing.id} className="block group">
-                                <div className="bg-white dark:bg-unizy-dark rounded-3xl overflow-hidden shadow-sm border border-gray-100 dark:border-white/5 transition-all duration-300 group-hover:shadow-xl group-hover:-translate-y-1">
-
-                                    <div className="relative h-48 w-full bg-gray-200 dark:bg-unizy-navy/30">
-                                        <Image
-                                            src={listing.image}
-                                            alt={listing.title}
-                                            fill
-                                            className="object-cover transition-transform duration-500 group-hover:scale-105"
-                                            sizes="(max-width: 768px) 100vw, 33vw"
-                                        />
-
-                                        {listing.verified && (
-                                            <div className="absolute top-4 left-4 bg-white/90 dark:bg-unizy-dark/90 backdrop-blur-md px-3 py-1 rounded-full flex items-center gap-1 shadow-sm border border-white/50 dark:border-white/10">
-                                                <span className="text-green-500 text-sm">✓</span>
-                                                <span className="text-xs font-bold tracking-wide text-gray-800 dark:text-gray-200">{c.verified || "Verified"}</span>
-                                            </div>
-                                        )}
-
-                                        <div className="absolute bottom-4 right-4 bg-white/90 dark:bg-unizy-dark/90 backdrop-blur-md px-3 py-1.5 rounded-2xl shadow-sm border border-white/50 dark:border-white/10">
-                                            <p className="font-bold text-gray-900 dark:text-white">{listing.price} <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">{h.perMonth || "EGP/mo"}</span></p>
-                                        </div>
-                                    </div>
-
-                                    <div className="p-5">
-                                        <div className="flex justify-between items-start mb-2">
-                                            <h3 className="font-bold text-gray-900 dark:text-white leading-tight w-4/5 group-hover:text-brand-600 transition-colors">{listing.title}</h3>
-                                        </div>
-
-                                        <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-3">
-                                            <span className="flex-shrink-0">📍</span>
-                                            <p className="truncate">{listing.area} • {listing.distance}</p>
-                                        </div>
-
-                                        <div className="flex flex-wrap gap-2 text-xs font-medium">
-                                            <span className="bg-brand-50 dark:bg-brand-900/20 text-brand-700 dark:text-brand-400 px-2.5 py-1 rounded-lg border border-brand-100 dark:border-brand-900/30">{listing.type}</span>
-                                            <span className="bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 px-2.5 py-1 rounded-lg border border-purple-100 dark:border-purple-900/30">{listing.gender}</span>
-                                        </div>
-                                    </div>
-
-                                </div>
-                            </Link>
+                            <HousingCard
+                                key={listing.id}
+                                listing={listing}
+                                isSaved={savedIds.includes(listing.id)}
+                                onToggleSave={handleToggleSave}
+                                dict={dict}
+                            />
                         ))
                     ) : (
-                        <div className="col-span-full py-12 flex flex-col items-center bg-white dark:bg-unizy-dark rounded-3xl border border-gray-100 dark:border-white/5">
-                            <span className="text-5xl mb-4">🏠</span>
-                            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">{h.noListings || "No listings found"}</h3>
-                            <p className="text-gray-500 dark:text-gray-400 text-center text-sm max-w-sm">{h.noListingsDesc || "There are no listings matching your current criteria. Consider adjusting your filters."}</p>
-                            {activeFilter !== 'All' && (
-                                <button onClick={() => router.push('/housing')} className="mt-4 px-6 py-2 bg-brand-50 dark:bg-brand-900/20 text-brand-600 dark:text-brand-400 font-bold rounded-xl hover:bg-brand-100 dark:hover:bg-brand-900/40 transition-colors text-sm">
-                                    {h.clearFilters || "Clear Filters"}
-                                </button>
-                            )}
+                        <div className="col-span-full py-24 flex flex-col items-center">
+                            <div className="w-24 h-24 bg-white/40 dark:bg-unizy-dark/40 backdrop-blur-xl rounded-[2.5rem] flex items-center justify-center border border-white/60 dark:border-white/10 mb-6 group hover:scale-110 transition-transform shadow-glass">
+                                <Users className="w-10 h-10 text-gray-400 group-hover:text-brand-500 transition-colors" />
+                            </div>
+                            <h3 className="text-2xl font-black text-gray-900 dark:text-white mb-2 tracking-tight">{h.noListings || "No luxury spaces found"}</h3>
+                            <p className="text-gray-500 dark:text-gray-400 font-medium mb-8">Try adjusting your bento filters for a different perspective.</p>
+                            <button
+                                onClick={() => router.push('/housing')}
+                                className="px-8 py-4 bg-brand-600 text-white font-black uppercase tracking-widest rounded-2xl hover:bg-brand-700 transition-all shadow-lg shadow-brand-500/20"
+                            >
+                                {h.clearFilters || "Reset Grid"}
+                            </button>
                         </div>
                     )}
                 </div>
-
-            </main >
-        </div >
+            </main>
+        </div>
     );
 }
 
 export default function HousingHome() {
     return (
-        <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
+        <Suspense fallback={
+            <div className="min-h-screen bg-white dark:bg-unizy-navy flex items-center justify-center">
+                <div className="w-12 h-12 rounded-[1.5rem] bg-brand-500/20 border-2 border-brand-500/30 border-t-brand-500 animate-spin" />
+            </div>
+        }>
             <HousingHomeContent />
         </Suspense>
     );

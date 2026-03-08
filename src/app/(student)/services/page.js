@@ -52,8 +52,7 @@ export default function ServicesPage() {
             providerId: bookingProvider.id,
             date: bookingDate,
             timeSlot: bookingTime,
-            notes: bookingNotes,
-            promoCodeStr: promoCode
+            notes: bookingNotes
         });
 
         setIsBooking(false);
@@ -65,10 +64,9 @@ export default function ServicesPage() {
                 setBookingDate('');
                 setBookingTime('');
                 setBookingNotes('');
-                setPromoCode('');
-            }, 2000);
+            }, 3000);
         } else {
-            alert(res.error || 'Failed to book service.');
+            alert(res.error || 'Failed to submit request.');
         }
     };
 
@@ -78,7 +76,7 @@ export default function ServicesPage() {
             <div className="bg-gradient-to-br from-brand-600 via-indigo-600 to-purple-700 px-6 pt-8 pb-14">
                 <div className="max-w-3xl mx-auto">
                     <h1 className="text-3xl font-black text-white">Home Services</h1>
-                    <p className="text-indigo-200 font-bold text-sm mt-1">Find trusted professionals for any repair</p>
+                    <p className="text-indigo-200 font-bold text-sm mt-1">Get a quote for any repair — we'll call you back</p>
                 </div>
             </div>
 
@@ -104,7 +102,7 @@ export default function ServicesPage() {
                 {loading && (
                     <div className="text-center py-16">
                         <Loader2 className="w-8 h-8 mx-auto animate-spin text-brand-500" />
-                        <p className="text-gray-400 font-bold text-sm mt-3">Loading providers...</p>
+                        <p className="text-gray-400 font-bold text-sm mt-3">Loading categories...</p>
                     </div>
                 )}
 
@@ -129,22 +127,18 @@ export default function ServicesPage() {
                                             <div className="flex items-center gap-1 text-amber-500">
                                                 <Star size={14} className="fill-amber-500" />
                                                 <span className="text-sm font-black">{provider.rating}</span>
-                                                <span className="text-[10px] text-gray-400">({provider.reviewCount})</span>
                                             </div>
                                         </div>
                                         <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-1 mb-2">{provider.description}</p>
                                         <div className="flex items-center gap-4 text-xs text-gray-400 font-bold">
                                             <span className="flex items-center gap-1"><MapPin size={12} /> {provider.location}</span>
-                                            <span className="text-brand-600 font-black">{provider.priceRange}</span>
+                                            <span className="text-brand-600 font-black">Price TBD on call</span>
                                         </div>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-50 dark:border-gray-800">
-                                    <a href={`tel:${provider.phone}`} className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-green-100 dark:bg-green-900/20 text-green-600 rounded-xl font-bold text-sm hover:bg-green-200 transition-all">
-                                        <Phone size={14} /> Call
-                                    </a>
-                                    <button onClick={() => setBookingProvider(provider)} className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-brand-600 text-white rounded-xl font-bold text-sm hover:bg-brand-700 transition-all shadow-md shadow-brand-500/20">
-                                        <Calendar size={14} /> Book Now
+                                    <button onClick={() => setBookingProvider(provider)} className="flex-1 flex items-center justify-center gap-2 py-3 bg-brand-600 text-white rounded-xl font-black text-sm hover:bg-brand-700 transition-all shadow-md shadow-brand-500/20">
+                                        <Calendar size={14} /> Request Service
                                     </button>
                                 </div>
                             </div>
@@ -160,46 +154,44 @@ export default function ServicesPage() {
                         {booked ? (
                             <div className="text-center py-8">
                                 <CheckCircle size={48} className="mx-auto text-green-500 mb-4" />
-                                <h3 className="text-xl font-black text-gray-900 dark:text-white">Booking Confirmed!</h3>
-                                <p className="text-gray-400 text-sm mt-1">{bookingProvider.name} will contact you soon.</p>
+                                <h3 className="text-xl font-black text-gray-900 dark:text-white">Request Sent!</h3>
+                                <p className="text-gray-400 text-sm mt-1">Our team will WhatsApp or Call you shortly to confirm the appointment and price.</p>
                             </div>
                         ) : (
                             <>
                                 <div className="flex items-center justify-between">
-                                    <h3 className="text-lg font-black text-gray-900 dark:text-white">Book {bookingProvider.name}</h3>
+                                    <h3 className="text-lg font-black text-gray-900 dark:text-white">Request {bookingProvider.name}</h3>
                                     <button onClick={() => setBookingProvider(null)} className="text-gray-400 hover:text-gray-600 text-sm font-bold">✕</button>
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Date</label>
-                                    <input type="date" value={bookingDate} onChange={e => setBookingDate(e.target.value)} className="w-full px-4 py-3 rounded-2xl bg-gray-50 dark:bg-unizy-navy/50 border-2 border-transparent focus:border-brand-500 outline-none text-gray-900 dark:text-white font-bold" />
+                                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Issue Description</label>
+                                    <textarea value={bookingNotes} onChange={e => setBookingNotes(e.target.value)} rows={3} placeholder="Describe the problem (e.g. leaking sink, broken socket)..." className="w-full px-4 py-3 rounded-2xl bg-gray-50 dark:bg-unizy-navy/50 border-2 border-transparent focus:border-brand-500 outline-none text-gray-900 dark:text-white font-bold resize-none" />
                                 </div>
-                                <div>
-                                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Time Slot</label>
-                                    <select value={bookingTime} onChange={e => setBookingTime(e.target.value)} className="w-full px-4 py-3 rounded-2xl bg-gray-50 dark:bg-unizy-navy/50 border-2 border-transparent focus:border-brand-500 outline-none text-gray-900 dark:text-white font-bold appearance-none">
-                                        <option value="">Select time...</option>
-                                        <option value="8:00 AM - 10:00 AM">8:00 AM - 10:00 AM</option>
-                                        <option value="10:00 AM - 12:00 PM">10:00 AM - 12:00 PM</option>
-                                        <option value="12:00 PM - 2:00 PM">12:00 PM - 2:00 PM</option>
-                                        <option value="2:00 PM - 4:00 PM">2:00 PM - 4:00 PM</option>
-                                        <option value="4:00 PM - 6:00 PM">4:00 PM - 6:00 PM</option>
-                                    </select>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Preferred Date</label>
+                                        <input type="date" value={bookingDate} onChange={e => setBookingDate(e.target.value)} className="w-full px-4 py-3 rounded-2xl bg-gray-50 dark:bg-unizy-navy/50 border-2 border-transparent focus:border-brand-500 outline-none text-gray-900 dark:text-white font-bold text-xs" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Time Slot</label>
+                                        <select value={bookingTime} onChange={e => setBookingTime(e.target.value)} className="w-full px-4 py-3 rounded-2xl bg-gray-50 dark:bg-unizy-navy/50 border-2 border-transparent focus:border-brand-500 outline-none text-gray-900 dark:text-white font-bold appearance-none text-xs">
+                                            <option value="">Any time</option>
+                                            <option value="Morning">Morning</option>
+                                            <option value="Afternoon">Afternoon</option>
+                                            <option value="Evening">Evening</option>
+                                        </select>
+                                    </div>
                                 </div>
-                                <div>
-                                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Notes (optional)</label>
-                                    <textarea value={bookingNotes} onChange={e => setBookingNotes(e.target.value)} rows={2} placeholder="Describe the issue..." className="w-full px-4 py-3 rounded-2xl bg-gray-50 dark:bg-unizy-navy/50 border-2 border-transparent focus:border-brand-500 outline-none text-gray-900 dark:text-white font-bold resize-none" />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Promo Code</label>
-                                    <input type="text" value={promoCode} onChange={e => setPromoCode(e.target.value.toUpperCase())} placeholder="OPTIONAL" className="w-full px-4 py-3 rounded-2xl bg-gray-50 dark:bg-unizy-navy/50 border-2 border-transparent focus:border-brand-500 outline-none text-gray-900 dark:text-white font-bold tracking-wider uppercase" />
-                                </div>
-                                <button onClick={handleBook} disabled={!bookingDate || !bookingTime || isBooking} className="w-full py-3.5 bg-brand-600 text-white rounded-2xl font-black hover:bg-brand-700 transition-all shadow-lg shadow-brand-500/30 disabled:opacity-50 disabled:cursor-not-allowed">
-                                    {isBooking ? 'Processing...' : 'Confirm Booking'}
+                                <p className="text-[10px] text-gray-400 font-bold text-center italic">Pricing will be provided after we review your request.</p>
+                                <button onClick={handleBook} disabled={!bookingDate || !bookingNotes || isBooking} className="w-full py-3.5 bg-brand-600 text-white rounded-2xl font-black hover:bg-brand-700 transition-all shadow-lg shadow-brand-500/30 disabled:opacity-50 disabled:cursor-not-allowed">
+                                    {isBooking ? 'Sending...' : 'Submit Request'}
                                 </button>
                             </>
                         )}
                     </div>
                 </div>
             )}
+
         </main>
     );
 }

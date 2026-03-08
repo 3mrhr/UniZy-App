@@ -1,0 +1,55 @@
+
+> unizy_mvp_app@0.1.0 build
+> next build
+
+   ▲ Next.js 15.1.7
+   - Environments: .env
+
+   Creating an optimized production build ...
+<w> [webpack.cache.PackFileCacheStrategy] Serializing big strings (120kiB) impacts deserialization performance (consider using Buffer instead and decode when needed)
+ ⚠ Compiled with warnings
+
+./node_modules/@prisma/client/runtime/wasm-engine-edge.js
+A Node.js API is used (setImmediate at line: 12) which is not supported in the Edge Runtime.
+Learn more: https://nextjs.org/docs/api-reference/edge-runtime
+
+Import trace for requested module:
+./node_modules/@prisma/client/runtime/wasm-engine-edge.js
+./node_modules/.prisma/client/wasm.js
+./node_modules/.prisma/client/default.js
+./node_modules/@prisma/client/default.js
+./src/lib/prisma.js
+
+Failed to compile.
+
+HookWebpackError: ETIMEDOUT: connection timed out, read
+    at makeWebpackError (/Users/omar1/Desktop/Business/UniZy/Full App/node_modules/next/dist/compiled/webpack/bundle5.js:28:314608)
+    at /Users/omar1/Desktop/Business/UniZy/Full App/node_modules/next/dist/compiled/webpack/bundle5.js:28:106402
+    at eval (eval at create (/Users/omar1/Desktop/Business/UniZy/Full App/node_modules/next/dist/compiled/webpack/bundle5.js:13:9218), <anonymous>:44:1)
+-- inner error --
+Error: ETIMEDOUT: connection timed out, read
+    at Object.readFileSync (node:fs:435:20)
+    at defaultLoadImpl (node:internal/modules/cjs/loader:1147:17)
+    at loadSource (node:internal/modules/cjs/loader:1837:20)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1935:44)
+    at Module.load (node:internal/modules/cjs/loader:1532:32)
+    at Module._load (node:internal/modules/cjs/loader:1334:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.require (node:internal/modules/cjs/loader:1555:12)
+    at mod.require (/Users/omar1/Desktop/Business/UniZy/Full App/node_modules/next/dist/server/require-hook.js:65:28)
+    at require (node:internal/modules/helpers:152:16)
+caused by plugins in Compilation.hooks.processAssets
+Error: ETIMEDOUT: connection timed out, read
+    at Object.readFileSync (node:fs:435:20)
+    at defaultLoadImpl (node:internal/modules/cjs/loader:1147:17)
+    at loadSource (node:internal/modules/cjs/loader:1837:20)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1935:44)
+    at Module.load (node:internal/modules/cjs/loader:1532:32)
+    at Module._load (node:internal/modules/cjs/loader:1334:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.require (node:internal/modules/cjs/loader:1555:12)
+    at mod.require (/Users/omar1/Desktop/Business/UniZy/Full App/node_modules/next/dist/server/require-hook.js:65:28)
+    at require (node:internal/modules/helpers:152:16)
+
+
+> Build failed because of webpack errors
