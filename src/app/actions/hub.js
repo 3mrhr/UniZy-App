@@ -34,12 +34,10 @@ export async function getPosts({ category, page = 1, limit = 20 } = {}) {
             where.category = category;
         }
 
-        // Platinum: Shadow-ban filter for the public feed
-        // Content from shadow-banned users is only visible to themselves
+        // Platinum: Shadow-ban filter
         if (!user || !user.isShadowBanned) {
             where.author = { isShadowBanned: false };
         } else {
-            // Shadow-banned user sees their own content + other non-shadow-banned content
             where.OR = [
                 { author: { isShadowBanned: false } },
                 { authorId: user.id }
@@ -56,6 +54,17 @@ export async function getPosts({ category, page = 1, limit = 20 } = {}) {
                     select: { id: true, name: true, profileImage: true, university: true, tier: true }
                 },
                 likes: user ? { where: { userId: user.id } } : false,
+                comments: {
+                    where: { parentId: null }, // Fetch top-level comments for threading
+                    orderBy: { createdAt: 'asc' },
+                    take: 3, // Preview first 3
+                    include: {
+                        author: { select: { name: true, profileImage: true, tier: true } },
+                        replies: {
+                            include: { author: { select: { name: true, profileImage: true, tier: true } } }
+                        }
+                    }
+                },
                 _count: {
                     select: { comments: true, likes: true }
                 }
@@ -65,16 +74,47 @@ export async function getPosts({ category, page = 1, limit = 20 } = {}) {
         const formattedPosts = posts.map(post => ({
             ...post,
             likes: post._count.likes,
-            comments: post._count.comments,
+            commentsCount: post._count.comments,
             isLiked: post.likes?.length > 0
         }));
 
         const total = await prisma.hubPost.count({ where });
 
-        return { posts: formattedPosts, total, page, totalPages: Math.ceil(total / limit) };
+        return { success: true, posts: formattedPosts, total, page, totalPages: Math.ceil(total / limit) };
     } catch (error) {
         console.error('Get posts error:', error);
-        return { posts: [], total: 0 };
+        return { success: false, posts: [], total: 0 };
+    }
+}
+
+/**
+ * Platinum Alpha: Trending Pulse Algorithm
+ * Weighs likes and comments within the last 48 hours.
+ */
+export async function getTrendingPosts() {
+    try {
+        const fortyEightHoursAgo = new Date();
+        fortyEightHoursAgo.setHours(fortyEightHoursAgo.getHours() - 48);
+
+        const posts = await prisma.hubPost.findMany({
+            where: {
+                status: 'ACTIVE',
+                createdAt: { gte: fortyEightHoursAgo }
+            },
+            orderBy: [
+                { likesCount: 'desc' },
+                { commentsCount: 'desc' }
+            ],
+            take: 3,
+            include: {
+                author: { select: { name: true, profileImage: true } }
+            }
+        });
+
+        return { success: true, posts };
+    } catch (error) {
+        console.error('Trending posts error:', error);
+        return { success: false, posts: [] };
     }
 }
 

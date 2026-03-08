@@ -18,6 +18,13 @@ const TIER_MULTIPLIERS = {
 
 const STREAK_BONUS_POINTS = 5; // Points for maintaining a streak daily
 
+// Platinum: Missions Definition
+const PLATINUM_MISSIONS = [
+    { id: 'm1', title: 'The Explorer', description: 'Complete 3 different types of services', goal: 3, reward: 50, icon: '🚀' },
+    { id: 'm2', title: 'Daily Champ', description: 'Reach a 7-day streak', goal: 7, reward: 100, icon: '🔥' },
+    { id: 'm3', title: 'Top Spender', description: 'Spend over 1000 EGP in one week', goal: 1000, reward: 200, icon: '💰' }
+];
+
 // ===== CORE FUNCTIONS =====
 
 /**
@@ -316,5 +323,77 @@ export async function adminAdjustPoints(userId, points, reason) {
     } catch (error) {
         console.error('Admin adjust error:', error);
         return { error: 'Failed to adjust points.' };
+    }
+}
+
+/**
+ * Platinum Alpha: Gamified Missions Engine
+ */
+export async function getActiveMissions() {
+    try {
+        const user = await getCurrentUser();
+        if (!user) return { success: false, missions: [] };
+
+        // For MVP, we calculate progress dynamically based on existing data
+        const [orders, streak] = await Promise.all([
+            prisma.order.count({ where: { userId: user.id, status: 'DELIVERED' } }),
+            prisma.dailyStreak.findUnique({ where: { userId: user.id } })
+        ]);
+
+        const missions = PLATINUM_MISSIONS.map(m => {
+            let progress = 0;
+            if (m.id === 'm1') progress = Math.min(orders, m.goal);
+            if (m.id === 'm2') progress = Math.min(streak?.currentCount || 0, m.goal);
+            if (m.id === 'm3') progress = 0; // Placeholder for financial aggregate
+
+            return {
+                ...m,
+                progress,
+                isCompleted: progress >= m.goal,
+                percentage: Math.round((progress / m.goal) * 100)
+            };
+        });
+
+        return { success: true, missions };
+    } catch (error) {
+        console.error('Get missions error:', error);
+        return { success: false, missions: [] };
+    }
+}
+
+export async function claimMissionReward(missionId) {
+    try {
+        const user = await getCurrentUser();
+        if (!user) return { error: 'Not authenticated' };
+
+        const mission = PLATINUM_MISSIONS.find(m => m.id === missionId);
+        if (!mission) return { error: 'Mission not found' };
+
+        // Check if already claimed (Transaction check)
+        const existing = await prisma.rewardTransaction.findFirst({
+            where: { userId: user.id, description: { contains: `Mission Reward: ${mission.title}` } }
+        });
+
+        if (existing) return { error: 'Reward already claimed' };
+
+        // Double check completion logic (Simplified for MVP)
+        const missionsResult = await getActiveMissions();
+        const activeMission = missionsResult.missions.find(m => m.id === missionId);
+
+        if (!activeMission?.isCompleted) return { error: 'Mission not yet completed' };
+
+        await prisma.rewardTransaction.create({
+            data: {
+                type: 'EARN',
+                points: mission.reward,
+                description: `Mission Reward: ${mission.title}`,
+                userId: user.id,
+            }
+        });
+
+        return { success: true, reward: mission.reward };
+    } catch (error) {
+        console.error('Claim mission error:', error);
+        return { error: 'Failed to claim reward.' };
     }
 }
