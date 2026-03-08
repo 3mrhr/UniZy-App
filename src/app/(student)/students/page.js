@@ -25,10 +25,12 @@ import {
   Heart,
   ChevronRight,
   Leaf,
-  LayoutDashboard
+  LayoutDashboard,
+  Wallet,
+  Zap
 } from 'lucide-react';
 import { getMyNotifications } from '@/app/actions/notifications';
-import { getCurrentUser } from '@/app/actions/auth';
+import { getHomeOverview } from '@/app/actions/home';
 
 const SERVICES = [
   { id: 'housing', label: 'Housing', arLabel: 'سكن', icon: Home, color: 'from-blue-500 to-indigo-600', href: '/housing' },
@@ -52,23 +54,33 @@ export default function StudentHome() {
   const { locale, dict } = useLanguage();
   const isRTL = locale === 'ar';
   const [unreadCount, setUnreadCount] = useState(0);
-  const [user, setUser] = useState(null);
+  const [homeData, setHomeData] = useState({
+    name: '',
+    walletBalance: 0,
+    rewardPoints: 0,
+    streak: 0,
+    activeActivity: null
+  });
+  const [isLoading, setIsLoading] = useState(true);
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener('scroll', handleScroll);
 
-    const fetchNotifs = async () => {
-      const res = await getMyNotifications();
-      if (res.success) setUnreadCount(res.unreadCount || 0);
+    const fetchData = async () => {
+      setIsLoading(true);
+      const [notifsRes, homeRes] = await Promise.all([
+        getMyNotifications(),
+        getHomeOverview()
+      ]);
+
+      if (notifsRes.success) setUnreadCount(notifsRes.unreadCount || 0);
+      if (homeRes.success) setHomeData(homeRes.data);
+      setIsLoading(false);
     };
-    const fetchUser = async () => {
-      const fetchedUser = await getCurrentUser();
-      setUser(fetchedUser);
-    };
-    fetchNotifs();
-    fetchUser();
+
+    fetchData();
 
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
@@ -85,13 +97,15 @@ export default function StudentHome() {
         <div className="absolute top-0 right-0 left-0 h-[600px] bg-gradient-to-b from-brand-600/10 via-brand-500/5 to-transparent pointer-events-none"></div>
 
         <div className="max-w-4xl mx-auto relative z-10">
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center justify-between mb-10">
             <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 rounded-full bg-brand-500/10 text-[10px] font-black uppercase tracking-widest text-brand-600 dark:text-brand-400 border border-brand-500/20">Active Session</span>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="px-2 py-0.5 rounded-full bg-brand-500/10 text-[10px] font-black uppercase tracking-widest text-brand-600 dark:text-brand-400 border border-brand-500/20">
+                  {homeData.streak > 0 ? `🔥 ${homeData.streak} Day Streak` : 'Active Session'}
+                </span>
               </div>
               <h1 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tighter leading-tight italic">
-                {isRTL ? 'يا هلا،' : 'Hey,'} <span className="text-brand-600 dark:text-brand-400">{user?.name ? user.name.split(' ')[0] : 'Ahmed'}</span>
+                {isRTL ? 'يا هلا،' : 'Hey,'} <span className="text-brand-600 dark:text-brand-400">{homeData.name || 'Ahmed'}</span>
               </h1>
               <p className="text-slate-500 dark:text-slate-400 font-bold text-sm md:text-base">
                 {isRTL ? 'إيه المخطط النهاردة؟' : "What's the plan for today?"}
@@ -99,65 +113,98 @@ export default function StudentHome() {
             </div>
 
             <div className="flex gap-3">
-              <Link href="/notifications" className="hidden sm:flex w-12 h-12 bg-white dark:bg-white/5 shadow-xl shadow-brand-500/5 backdrop-blur-xl rounded-2xl items-center justify-center hover:scale-110 active:scale-95 transition-all group relative border border-white/50 dark:border-white/5">
+              <Link href="/notifications" className="w-12 h-12 bg-white dark:bg-white/5 shadow-xl shadow-brand-500/5 backdrop-blur-xl rounded-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all group relative border border-white/50 dark:border-white/5">
                 <Bell size={20} className="text-slate-600 dark:text-white group-hover:text-brand-600 transition-colors" />
                 {unreadCount > 0 && (
                   <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full border-4 border-white dark:border-[#0D1721] flex items-center justify-center text-[8px] font-black text-white">{unreadCount}</span>
                 )}
               </Link>
-              <Link href="/account" className="w-12 h-12 rounded-2xl overflow-hidden ring-4 ring-white dark:ring-white/5 shadow-2xl hover:scale-110 transition-transform">
-                <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'Ahmed')}&background=2563eb&color=fff&size=48`} alt="Avatar" className="w-full h-full object-cover" />
+              <Link href="/account" className="w-12 h-12 rounded-2xl overflow-hidden ring-4 ring-white dark:ring-white/5 shadow-2xl hover:scale-110 transition-transform bg-brand-600">
+                <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(homeData.name || 'User')}&background=2563eb&color=fff&size=48`} alt="Avatar" className="w-full h-full object-cover" />
               </Link>
             </div>
           </div>
 
-          {/* Quick Stats Bento */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Rewards Card - Glassmorphism Pro */}
-            <div className="relative group overflow-hidden bg-gradient-to-br from-brand-600 to-indigo-700 rounded-[2rem] p-6 shadow-2xl shadow-brand-500/20 text-white transition-all hover:translate-y-[-4px]">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -mr-10 -mt-10 group-hover:bg-white/20 transition-colors"></div>
-              <div className="relative z-10">
+          {/* UniZy Financial & Activity Center */}
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+            {/* Main Wallet - Fin-Tech Pro */}
+            <div className="md:col-span-8 group relative overflow-hidden bg-[#0F172A] rounded-[2.5rem] p-8 shadow-2xl transition-all hover:translate-y-[-4px] border border-white/5">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-brand-600/20 rounded-full blur-[100px] -mr-32 -mt-32"></div>
+
+              <div className="relative z-10 flex flex-col h-full justify-between">
                 <div className="flex items-center justify-between mb-8">
-                  <div className="p-2 bg-white/20 backdrop-blur-md rounded-xl">
-                    <Sparkles size={20} />
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-white/10 backdrop-blur-md rounded-xl flex items-center justify-center text-brand-400">
+                      <Wallet size={20} />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">UniZy Account</p>
+                      <p className="text-sm font-bold text-white">Main Balance</p>
+                    </div>
                   </div>
-                  <span className="text-[10px] font-black uppercase tracking-widest opacity-80">{isRTL ? 'النقاط المتاحة' : 'Points Balance'}</span>
+                  <Link href="/wallet" className="px-4 py-2 bg-white/5 hover:bg-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-white transition-all border border-white/10">
+                    Manage
+                  </Link>
                 </div>
+
                 <div className="flex items-end justify-between">
                   <div>
-                    <p className="text-4xl font-black tracking-tighter">1,250</p>
-                    <p className="text-xs font-bold text-brand-100/60 uppercase tracking-widest">{isRTL ? 'نقطة يونيزي' : 'UniZy Points'}</p>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-sm font-bold text-brand-400 italic">EGP</span>
+                      <p className="text-5xl font-black text-white tracking-tighter tabular-nums leading-none">
+                        {homeData.walletBalance.toLocaleString()}
+                      </p>
+                    </div>
+                    <p className="text-xs font-bold text-gray-500 mt-2 uppercase tracking-widest">Available for spend</p>
                   </div>
-                  <Link href="/rewards/shop" className="px-4 py-2 bg-white text-brand-600 rounded-xl font-black text-xs hover:scale-105 active:scale-95 transition-all">
-                    {isRTL ? 'عرض المتجر' : 'Shop Store'}
-                  </Link>
+
+                  <div className="flex flex-col items-end gap-2 text-right">
+                    <div className="flex items-center gap-2 bg-emerald-500/20 px-3 py-1 rounded-full border border-emerald-500/20">
+                      <Zap size={10} className="text-emerald-400" />
+                      <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">
+                        {homeData.rewardPoints.toLocaleString()} Coins
+                      </span>
+                    </div>
+                    <Link href="/rewards/shop" className="text-brand-400 font-black text-[10px] uppercase tracking-widest hover:text-brand-300 underline decoration-brand-400/30 underline-offset-4">
+                      Redeem in Store
+                    </Link>
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Active Status Card */}
-            <div className="bg-white dark:bg-[#0c1622] rounded-[2rem] p-6 border border-slate-100 dark:border-white/5 shadow-xl shadow-slate-200/50 dark:shadow-none flex flex-col justify-between group hover:border-brand-500/30 transition-all">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-orange-100 dark:bg-orange-500/10 flex items-center justify-center text-orange-600">
-                    <Truck size={20} />
+            {/* Side Status Bento */}
+            <div className="md:col-span-4 space-y-4">
+              {/* Active Status Card */}
+              <div className="h-full bg-white dark:bg-white/5 backdrop-blur-3xl rounded-[2.25rem] p-6 border border-slate-100 dark:border-white/5 shadow-xl transition-all hover:bg-white/10 group cursor-pointer" onClick={() => window.location.href = '/activity'}>
+                {homeData.activeActivity ? (
+                  <div className="flex flex-col h-full justify-between">
+                    <div className="flex items-center justify-between">
+                      <div className="w-10 h-10 rounded-xl bg-brand-500/10 flex items-center justify-center text-brand-600">
+                        {homeData.activeActivity.type === 'ORDER' ? <Package size={20} /> : <Calendar size={20} />}
+                      </div>
+                      <div className="flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-brand-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-brand-500"></span>
+                      </div>
+                    </div>
+                    <div className="mt-4">
+                      <p className="font-black text-slate-900 dark:text-white text-sm">{homeData.activeActivity.title}</p>
+                      <p className="text-[10px] font-black text-brand-600 uppercase tracking-widest mt-1">{homeData.activeActivity.status.replace('_', ' ')}</p>
+                    </div>
+                    <div className="mt-4 pt-4 border-t border-slate-100 dark:border-white/5 flex items-center justify-between">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase">{homeData.activeActivity.time}</span>
+                      <ArrowRight size={14} className="text-brand-600 group-hover:translate-x-1 transition-transform" />
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-black text-slate-900 dark:text-white text-sm">{isRTL ? 'رحلة نشطة' : 'Active Ride'}</p>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Campus Shuttle SC-2</p>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-full text-center py-4">
+                    <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-300 dark:text-slate-600 mb-2">
+                      <LayoutDashboard size={20} />
+                    </div>
+                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest">No Active Sessions</p>
                   </div>
-                </div>
-                <div className="flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-orange-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-500"></span>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 bg-slate-50 dark:bg-white/5 p-3 rounded-2xl">
-                <div className="w-2 h-2 rounded-full bg-orange-500"></div>
-                <p className="text-xs font-black text-slate-600 dark:text-slate-300">
-                  {isRTL ? 'يصل خلال ٣ دقائق' : 'Arriving in 3 mins'}
-                </p>
-                <Link href="/activity" className="ml-auto text-brand-600 font-black text-[10px] uppercase underline decoration-2 underline-offset-4">Track</Link>
+                )}
               </div>
             </div>
           </div>
