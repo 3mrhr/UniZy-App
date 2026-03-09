@@ -40,8 +40,8 @@ export default function ActivityPage() {
             case 'DEALS': return <Tags className="w-5 h-5 text-pink-500" />;
             case 'MEALS': return <Utensils className="w-5 h-5 text-orange-500" />;
             case 'HOUSING': return <HomeIcon className="w-5 h-5 text-blue-500" />;
-            case 'TRANSPORT': return <Clock className="w-5 h-5 text-green-500" />; // Example
-            case 'DELIVERY': return <ShoppingBag className="w-5 h-5 text-yellow-500" />; // Example
+            case 'TRANSPORT': return <Clock className="w-5 h-5 text-green-500" />;
+            case 'DELIVERY': return <ShoppingBag className="w-5 h-5 text-yellow-500" />;
             default: return <Activity className="w-5 h-5 text-gray-400" />;
         }
     };
@@ -91,6 +91,8 @@ export default function ActivityPage() {
         { id: 'MEALS', label: dict?.meals?.title || 'Meals' },
         { id: 'DEALS', label: dict?.deals?.title || 'Deals' },
         { id: 'HOUSING', label: dict?.housing?.title || 'Housing' },
+        { id: 'TRANSPORT', label: dict?.transport?.title || 'Transport' },
+        { id: 'DELIVERY', label: dict?.delivery?.title || 'Delivery' },
     ];
 
     return (
@@ -133,9 +135,20 @@ export default function ActivityPage() {
                         <p className="text-sm text-gray-500 max-w-xs mx-auto mb-6">
                             You haven't made any {filterCategory !== 'ALL' ? filterCategory.toLowerCase() : ''} bookings or orders yet.
                         </p>
-                        <Link href="/hub" className="px-8 py-3 bg-brand-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-brand-700 transition-all shadow-lg shadow-brand-500/20 active:scale-95">
-                            Browse the Hub
-                        </Link>
+                        {(() => {
+                            let ctaLink = "/hub";
+                            let ctaText = "Browse the Hub";
+                            if (filterCategory === 'TRANSPORT') { ctaLink = "/transport"; ctaText = "Book a Ride"; }
+                            else if (filterCategory === 'MEALS' || filterCategory === 'DELIVERY') { ctaLink = "/meals"; ctaText = "Order Food"; }
+                            else if (filterCategory === 'HOUSING') { ctaLink = "/housing"; ctaText = "Find a Home"; }
+                            else if (filterCategory === 'SERVICE' || filterCategory === 'CLEANING') { ctaLink = "/services"; ctaText = "Book a Service"; }
+
+                            return (
+                                <Link href={ctaLink} className="px-8 py-3 bg-brand-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-brand-700 transition-all shadow-lg shadow-brand-500/20 active:scale-95">
+                                    {ctaText}
+                                </Link>
+                            );
+                        })()}
                     </div>
                 ) : (
                     transactions.map((txn) => {
