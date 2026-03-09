@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Wrench, Zap, Hammer, Snowflake, Paintbrush, Settings, Star, Phone, MapPin, ChevronRight, Search, Calendar, Clock, ArrowLeft, CheckCircle, Loader2 } from 'lucide-react';
 import { listProviders } from '@/app/actions/services';
+import { toast } from 'react-hot-toast';
 
 const CATEGORIES = [
     { id: 'all', label: 'All', icon: Settings },
@@ -58,6 +59,7 @@ export default function ServicesPage() {
         setIsBooking(false);
         if (res.success || res.booking) {
             setBooked(true);
+            toast.success('Request Sent!');
             setTimeout(() => {
                 setBookingProvider(null);
                 setBooked(false);
@@ -66,7 +68,7 @@ export default function ServicesPage() {
                 setBookingNotes('');
             }, 3000);
         } else {
-            alert(res.error || 'Failed to submit request.');
+            toast.error(res.error || 'Failed to submit request.');
         }
     };
 

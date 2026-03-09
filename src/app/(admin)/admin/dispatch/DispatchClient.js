@@ -4,6 +4,7 @@ import React, { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { assignDriver, updateDispatchStatus } from '@/app/actions/dispatch';
 import { Car, Package, Bike, AlertTriangle, Edit3 } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 
 export default function DispatchClient({ initialDispatches, totalPages, currentPage, currentModule, currentStatus }) {
     const router = useRouter();
@@ -24,9 +25,9 @@ export default function DispatchClient({ initialDispatches, totalPages, currentP
         startTransition(async () => {
             const res = await assignDriver(dispatchId, driverId);
             if (res.success) {
-                alert('Driver assigned successfully!');
+                toast.success('Driver assigned successfully!');
             } else {
-                alert(res.error || 'Failed to assign driver.');
+                toast.error(res.error || 'Failed to assign driver.');
             }
         });
     };
@@ -43,9 +44,9 @@ export default function DispatchClient({ initialDispatches, totalPages, currentP
         startTransition(async () => {
             const res = await updateDispatchStatus(dispatchId, newStatus.toUpperCase(), reason);
             if (res.success) {
-                alert('Status updated.');
+                toast.success('Status updated.');
             } else {
-                alert(res.error || 'Failed to update status.');
+                toast.error(res.error || 'Failed to update status.');
             }
         });
     };
@@ -68,8 +69,8 @@ export default function DispatchClient({ initialDispatches, totalPages, currentP
                             key={tab.id}
                             onClick={() => handleFilter('module', tab.id)}
                             className={`flex items-center gap-2 px-4 py-3 rounded-xl font-medium text-sm transition-colors whitespace-nowrap ${active
-                                    ? 'bg-brand-600 text-white shadow-md'
-                                    : 'bg-white dark:bg-unizy-dark text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
+                                ? 'bg-brand-600 text-white shadow-md'
+                                : 'bg-white dark:bg-unizy-dark text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
                                 }`}
                         >
                             <Icon className="w-4 h-4" />

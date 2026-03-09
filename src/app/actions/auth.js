@@ -8,6 +8,7 @@ import { logEvent } from './analytics';
 import { rateLimit } from '@/lib/rate-limit';
 import { headers } from 'next/headers';
 import { createNotification } from './notifications';
+import { uploadProfilePicture } from './upload';
 
 async function getClientIp() {
     const headerList = await headers();
@@ -529,5 +530,48 @@ export async function revokeOtherSessions() {
     } catch (error) {
         console.error('Revoke other sessions error:', error);
         return { error: 'Failed to revoke other sessions.' };
+    }
+}
+
+/**
+ * User Profile: Update user information and profile picture.
+ */
+export async function updateUserProfile(data) {
+    try {
+        const user = await getCurrentUser();
+        if (!user) return { error: 'Unauthorized' };
+
+        const updateData = {};
+        if (data.name) updateData.name = data.name;
+        if (data.phone) updateData.phone = data.phone;
+        if (data.university) updateData.university = data.university;
+        if (data.faculty) updateData.faculty = data.faculty;
+        if (data.gender) updateData.gender = data.gender;
+
+        if (data.profileImage && (data.profileImage.startsWith('data:') || data.profileImage.startsWith('blob:'))) {
+            const uploadRes = await uploadProfilePicture(data.profileImage);
+            if (uploadRes.success) {
+                updateData.profileImage = uploadRes.url;
+            } else {
+                return { error: 'Failed to upload profile picture' };
+            }
+        }
+
+        const updatedUser = await prisma.user.update({
+            where: { id: user.id },
+            data: updateData
+        });
+
+        // Sync session
+        const session = await getSession();
+        if (session.user) {
+            session.user.name = updatedUser.name;
+            await session.save();
+        }
+
+        return { success: true, user: updatedUser };
+    } catch (error) {
+        console.error('Update profile error:', error);
+        return { error: 'Failed to update profile.' };
     }
 }

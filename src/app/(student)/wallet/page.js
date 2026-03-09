@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useWalletStore } from '@/store/useWalletStore';
 import { Wallet, ArrowUpRight, History, CreditCard, PlusCircle, AlertCircle, ShoppingBag, X, CheckCircle2 } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 
 
 const formatDateTime = (dateValue) => {
@@ -102,7 +103,7 @@ export default function WalletPage() {
 
     const handleSubmitTopUp = async () => {
         if (!topUpAmount || !senderName || !senderPhone || !proofImage) {
-            alert('Please fill all fields and attach proof of payment.');
+            toast.error('Please fill all fields and attach proof of payment.');
             return;
         }
 
@@ -120,12 +121,13 @@ export default function WalletPage() {
             if (res.success) {
                 setTopUpStep(3);
                 setTopUpStatus('success');
+                toast.success('Request Submitted!');
             } else {
-                alert(res.error || 'Failed to submit request.');
+                toast.error(res.error || 'Failed to submit request.');
             }
         } catch (err) {
             console.error(err);
-            alert('An unexpected error occurred.');
+            toast.error('An unexpected error occurred.');
         } finally {
             setIsSubmitting(false);
         }

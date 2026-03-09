@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useLanguage } from '@/i18n/LanguageProvider';
 import { Search, Tag, MapPin, Star, Clock, Store, Percent, ChevronRight, Settings2 } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 
 const CATEGORIES = [
     { id: 'all', name: 'All Deals', icon: '✨' },
@@ -152,8 +153,8 @@ export default function DealsPage() {
                                     </div>
                                 )}
 
-                                {/* Save Button */}
-                                <button onClick={(e) => { e.preventDefault(); alert('Saved!'); }} className="absolute top-4 right-4 w-10 h-10 bg-white/90 dark:bg-unizy-dark/90 backdrop-blur-md rounded-full flex items-center justify-center text-gray-400 hover:text-red-500 hover:scale-110 active:scale-90 transition-all shadow-xl z-20 border border-white/20">
+                                { /* Save Button */}
+                                <button onClick={(e) => { e.preventDefault(); toast.success('Added to Saved Deals! ❤️'); }} className="absolute top-4 right-4 w-10 h-10 bg-white/90 dark:bg-unizy-dark/90 backdrop-blur-md rounded-full flex items-center justify-center text-gray-400 hover:text-red-500 hover:scale-110 active:scale-90 transition-all shadow-xl z-20 border border-white/20">
                                     ❤️
                                 </button>
 

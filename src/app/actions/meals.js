@@ -6,6 +6,7 @@ import { computeCommissionSnapshot, computePricingSnapshot, generateTxnCode } fr
 import { createOrder } from './orders';
 
 import { computeMerchantScore } from './trust-scoring';
+import { uploadImage } from './upload';
 
 // Fetch active meals, optionally filtered by category (tags) or search text
 export async function getActiveMeals(category = null, searchQuery = '') {
@@ -163,6 +164,14 @@ export async function createMeal(data) {
             merchantId = currentUser.id;
         }
 
+        let imageUrl = data.image || null;
+        if (imageUrl && (imageUrl.startsWith('data:') || imageUrl.startsWith('blob:'))) {
+            const uploadRes = await uploadImage(imageUrl, { folder: 'unizy/meals' });
+            if (uploadRes.success) {
+                imageUrl = uploadRes.url;
+            }
+        }
+
         const newMeal = await prisma.meal.create({
             data: {
                 name: data.name,
@@ -170,7 +179,7 @@ export async function createMeal(data) {
                 description: data.description || null,
                 price: parseFloat(data.price),
                 currency: data.currency || 'EGP',
-                image: data.image || null,
+                image: imageUrl,
                 calories: data.calories || null,
                 prepTime: data.prepTime || null,
                 tags: data.tags || 'daily',

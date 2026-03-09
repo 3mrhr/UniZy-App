@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Power, DollarSign, MapPin, Search } from 'lucide-react';
 import { getPricingRules, createPricingRule, togglePricingRule, getZones } from '@/app/actions/pricing';
+import { toast } from 'react-hot-toast';
 
 export default function PricingManager({ moduleName, title, description, colorClass = "bg-brand-600" }) {
     const [rules, setRules] = useState([]);
@@ -77,9 +78,10 @@ export default function PricingManager({ moduleName, title, description, colorCl
 
         const res = await togglePricingRule(ruleId, !currentState, moduleName);
         if (res.success) {
+            toast.success(`Rule ${currentState ? 'disabled' : 'enabled'} successfully`);
             setRules(rules.map(r => r.id === ruleId ? { ...r, isActive: !currentState } : r));
         } else {
-            alert(res.error || 'Failed to toggle rule');
+            toast.error(res.error || 'Failed to toggle rule');
         }
     };
 

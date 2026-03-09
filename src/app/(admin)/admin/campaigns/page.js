@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Send, Plus, Clock, CheckCircle, Users, Filter, Megaphone } from 'lucide-react';
 import { getCampaigns, createCampaign, sendCampaign } from '@/app/actions/campaigns';
+import { toast } from 'react-hot-toast';
 
 export default function AdminCampaignsPage() {
     const [campaigns, setCampaigns] = useState([]);
@@ -38,12 +39,13 @@ export default function AdminCampaignsPage() {
                 setCampaigns(prev => [res.campaign, ...prev]);
                 setForm({ title: '', message: '', targetRole: '', targetUni: '' });
                 setShowForm(false);
+                toast.success('Campaign created successfully');
             } else {
-                alert(res.error || 'Failed to create campaign');
+                toast.error(res.error || 'Failed to create campaign');
             }
         } catch (error) {
             console.error(error);
-            alert('Failed to save campaign');
+            toast.error('Failed to save campaign');
         }
         setIsSubmitting(false);
     };
@@ -59,11 +61,11 @@ export default function AdminCampaignsPage() {
             const res = await sendCampaign(id);
             if (!res.success) {
                 setCampaigns(prev);
-                alert(res.error || 'Failed to send campaign');
+                toast.error(res.error || 'Failed to send campaign');
             } else {
                 // Update with actual recipient count 
                 setCampaigns(curr => curr.map(c => c.id === id ? { ...c, recipientCount: res.recipientCount } : c));
-                alert(`Campaign sent to ${res.recipientCount} users!`);
+                toast.success(`Campaign sent to ${res.recipientCount} users!`);
             }
         } catch {
             setCampaigns(prev);

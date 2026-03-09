@@ -3,17 +3,26 @@
 import { prisma } from '@/lib/prisma';
 import { getCurrentUser } from './auth';
 import { logAdminAction } from './audit';
+import { uploadImage } from './upload';
 
 export async function createPost({ content, category, imageUrl }) {
     try {
         const user = await getCurrentUser();
         if (!user) return { error: 'Not authenticated' };
 
+        let finalImageUrl = imageUrl || null;
+        if (finalImageUrl && (finalImageUrl.startsWith('data:') || finalImageUrl.startsWith('blob:'))) {
+            const uploadRes = await uploadImage(finalImageUrl, { folder: 'unizy/hub' });
+            if (uploadRes.success) {
+                finalImageUrl = uploadRes.url;
+            }
+        }
+
         const post = await prisma.hubPost.create({
             data: {
                 content,
                 category: category || 'general',
-                imageUrl: imageUrl || null,
+                imageUrl: finalImageUrl,
                 authorId: user.id,
             }
         });

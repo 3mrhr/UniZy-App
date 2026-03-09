@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useLanguage } from '@/i18n/LanguageProvider';
 import ThemeLangControls from '@/components/ThemeLangControls';
+import { toast } from 'react-hot-toast';
 
 export default function DriverClient({ settlements, dbOrders = [], driverName = 'Driver' }) {
     const { dict } = useLanguage();
@@ -54,9 +55,10 @@ export default function DriverClient({ settlements, dbOrders = [], driverName = 
             const { acceptOrder } = await import('@/app/actions/orders');
             const result = await acceptOrder(orderId);
             if (result.ok) {
+                toast.success('Order accepted!');
                 await refreshOrders();
             } else {
-                alert(result.error?.message || 'Failed to accept order');
+                toast.error(result.error?.message || 'Failed to accept order');
             }
         } catch (e) {
             console.error('Accept failed:', e);
@@ -71,9 +73,10 @@ export default function DriverClient({ settlements, dbOrders = [], driverName = 
             const { updateOrderStatus } = await import('@/app/actions/orders');
             const result = await updateOrderStatus(orderId, 'DELIVERED');
             if (result.ok) {
+                toast.success('Delivered!');
                 await refreshOrders();
             } else {
-                alert(result.error?.message || 'Failed to mark as delivered');
+                toast.error(result.error?.message || 'Failed to mark as delivered');
             }
         } catch (e) {
             console.error('Deliver failed:', e);

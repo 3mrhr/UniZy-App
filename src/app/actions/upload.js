@@ -16,6 +16,12 @@ cloudinary.config({
  */
 export async function uploadImage(dataUri, options = {}) {
     try {
+        if (!dataUri) return { error: 'No data provided' };
+
+        // If it's already a Cloudinary URL, don't re-upload
+        if (typeof dataUri === 'string' && dataUri.includes('cloudinary.com')) {
+            return { success: true, url: dataUri, publicId: null };
+        }
         if (!process.env.CLOUDINARY_API_KEY || process.env.CLOUDINARY_API_KEY === 'your_api_key') {
             // Fallback: return the input as-is when Cloudinary isn't configured
             console.warn('Cloudinary not configured — returning input as-is');

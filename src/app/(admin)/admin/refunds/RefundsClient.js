@@ -4,6 +4,7 @@ import React, { useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { updateRefundStatus } from '@/app/actions/refunds';
 import { CheckCircle2, XCircle, Clock, RefreshCw } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 
 export default function RefundsClient({ initialRefunds, totalPages, currentPage, currentStatus }) {
     const router = useRouter();
@@ -20,9 +21,10 @@ export default function RefundsClient({ initialRefunds, totalPages, currentPage,
         startTransition(async () => {
             const res = await updateRefundStatus(id, newStatus);
             if (res.success) {
+                toast.success('Refund updated successfully');
                 router.refresh();
             } else {
-                alert(res.error || 'Failed to update status.');
+                toast.error(res.error || 'Failed to update status.');
             }
         });
     };

@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "./auth";
 import { createNotification } from "./notifications";
+import { uploadVerificationDoc } from "./upload";
 
 /**
  * Request an OTP for a given phone or email.
@@ -121,6 +122,14 @@ export async function uploadVerificationDocument(userId, type, fileUrl) {
     try {
         if (!userId || !type || !fileUrl) throw new Error("Missing required fields.");
 
+        let finalUrl = fileUrl;
+        // If it looks like a data URI or a local blob, upload it
+        if (fileUrl.startsWith('data:') || fileUrl.startsWith('blob:')) {
+            const uploadRes = await uploadVerificationDoc(fileUrl);
+            if (uploadRes.error) throw new Error(uploadRes.error);
+            finalUrl = uploadRes.url;
+        }
+
         // Mark previous documents of this type as REJECTED (obsoleted)
         await prisma.verificationDocument.updateMany({
             where: { userId, type, status: "PENDING" },
@@ -159,7 +168,7 @@ export async function uploadVerificationDocument(userId, type, fileUrl) {
             data: {
                 userId,
                 type,
-                fileUrl,
+                fileUrl: finalUrl,
                 status: "PENDING",
             },
         });

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { ShieldAlert, Search, Edit2, CheckCircle2, XCircle } from 'lucide-react';
 import { getUsers, updateUserRole } from '@/app/actions/admin';
+import { toast } from 'react-hot-toast';
 
 export default function RolesPermissionsPage() {
     const [users, setUsers] = useState([]);
@@ -24,7 +25,7 @@ export default function RolesPermissionsPage() {
             if (res.success) {
                 setUsers(res.data);
             } else {
-                alert(res.error || 'Failed to load users');
+                toast.error(res.error || 'Failed to load users');
             }
             setIsLoading(false);
         };
@@ -40,8 +41,10 @@ export default function RolesPermissionsPage() {
         // Call server action
         const res = await updateUserRole(userId, selectedRole);
         if (!res.success) {
-            alert(res.error || 'Failed to update role');
+            toast.error(res.error || 'Failed to update role');
             setUsers(previousUsers); // Revert on failure
+        } else {
+            toast.success('Role updated successfully');
         }
     };
 

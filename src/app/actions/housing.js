@@ -7,6 +7,7 @@ import { completeReferralIfEligible } from './referrals';
 import { createNotification } from './notifications';
 import { requireUser, requireRole, requireOwnership } from '@/lib/authz';
 import { logAdminAction } from './audit';
+import { uploadListingImage } from './upload';
 
 export async function getHousingListings(filters = {}) {
     try {
@@ -176,6 +177,15 @@ export async function createHousingListing(formData) {
     try {
         const user = await requireRole(['PROVIDER', 'ADMIN_SUPER', 'ADMIN_HOUSING']);
 
+        const rawImages = formData.images || [];
+        const uploadedImages = await Promise.all(rawImages.map(async (img) => {
+            if (img.startsWith('data:') || img.startsWith('blob:')) {
+                const res = await uploadListingImage(img);
+                return res.url;
+            }
+            return img;
+        }));
+
         const newListing = await prisma.housingListing.create({
             data: {
                 title: formData.title,
@@ -183,7 +193,7 @@ export async function createHousingListing(formData) {
                 price: parseFloat(formData.price),
                 type: formData.type,
                 location: formData.location,
-                images: JSON.stringify(formData.images || []),
+                images: JSON.stringify(uploadedImages.filter(Boolean)),
                 amenities: JSON.stringify(formData.amenities || []),
                 contact: formData.contact || user.phone || '',
                 providerId: user.id,

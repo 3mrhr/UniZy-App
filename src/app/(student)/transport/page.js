@@ -7,6 +7,7 @@ import { useLanguage } from '@/i18n/LanguageProvider';
 import { useRouter } from 'next/navigation';
 import { requestTrip } from '@/app/actions/transport';
 import SOSButton from '@/components/SOSButton';
+import { toast } from 'react-hot-toast';
 
 export default function TransportPage() {
     const { dict } = useLanguage();
@@ -49,7 +50,10 @@ export default function TransportPage() {
     }, [destination, pickup]);
 
     const handleBook = async () => {
-        if (!destination) return alert('Please enter a destination');
+        if (!destination) {
+            toast.error('Please enter a destination');
+            return;
+        }
         setIsBooking(true);
         const selected = vehicles.find(v => v.id === selectedVehicle);
         const priceNum = parseFloat(selected.price.replace('EGP ', ''));
@@ -68,9 +72,10 @@ export default function TransportPage() {
 
         setIsBooking(false);
         if (result.success) {
+            toast.success('Booking confirmed!');
             router.push(`/activity/tracking/${result.trip.id}`);
         } else {
-            alert(result.error || 'Failed to book');
+            toast.error(result.error || 'Failed to book');
         }
     };
 

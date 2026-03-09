@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Calendar, CheckCircle, Clock, User, Wrench, ArrowLeft, Phone } from 'lucide-react';
 import Link from 'next/link';
 import { getAdminServiceBookings, updateServiceBookingStatus } from '@/app/actions/services';
+import { toast } from 'react-hot-toast';
 
 const STATUS_COLORS = {
     PENDING: 'bg-orange-100 dark:bg-orange-900/20 text-orange-600',
@@ -40,8 +41,9 @@ export default function AdminServiceBookingsPage() {
             const res = await updateServiceBookingStatus(id, 'CONFIRMED');
             if (!res.success) {
                 setBookings(prev);
-                alert(res.error || 'Failed to confirm booking');
+                toast.error(res.error || 'Failed to confirm booking');
             } else {
+                toast.success('Booking confirmed');
                 setStats(s => ({ ...s, pendingBookings: Math.max(0, s.pendingBookings - 1) }));
             }
         } catch { setBookings(prev); }
@@ -54,8 +56,9 @@ export default function AdminServiceBookingsPage() {
             const res = await updateServiceBookingStatus(id, 'COMPLETED');
             if (!res.success) {
                 setBookings(prev);
-                alert(res.error || 'Failed to complete booking');
+                toast.error(res.error || 'Failed to complete booking');
             } else {
+                toast.success('Booking completed');
                 setStats(s => ({ ...s, completedBookings: s.completedBookings + 1 }));
             }
         } catch { setBookings(prev); }

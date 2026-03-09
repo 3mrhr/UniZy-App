@@ -66,12 +66,12 @@ The current codebase represents an MVP with core flows implemented and some feat
 ## Technology Stack
 
 - **Framework:** Next.js (App Router)
-- **UI:** React + Tailwind CSS
+- **UI:** React + Vanilla CSS (Premium Design)
 - **State Management:** Zustand
-- **Database:** PostgreSQL
+- **Database:** Supabase (PostgreSQL)
 - **ORM:** Prisma
 - **Session/Auth:** iron-session
-- **Media Uploads:** Cloudinary (optional)
+- **Media Uploads:** Cloudinary (Full Integration)
 
 ---
 
@@ -113,14 +113,23 @@ Before running the project, ensure you have:
 Create a `.env` file at the repository root:
 
 ```env
-# Required
-DATABASE_URL="postgresql://USER:PASSWORD@localhost:5432/unizy_dev"
-SESSION_SECRET="replace-with-a-long-random-string"
+# Database (Supabase)
+DATABASE_URL="postgresql://postgres.[PROJECT-ID]:[PASSWORD]@aws-1-eu-west-2.pooler.supabase.com:5432/postgres?sslmode=require"
 
-# Optional (required only for image uploads)
-CLOUDINARY_CLOUD_NAME=""
-CLOUDINARY_API_KEY=""
-CLOUDINARY_API_SECRET=""
+# Session
+SESSION_SECRET="your-long-random-secret"
+
+# Cloudinary Storage
+CLOUDINARY_CLOUD_NAME="your_cloud_name"
+CLOUDINARY_API_KEY="your_api_key"
+CLOUDINARY_API_SECRET="your_api_secret"
+CLOUDINARY_URL="cloudinary://[API_KEY]:[API_SECRET]@[CLOUD_NAME]"
+
+# External APIs
+RESEND_API_KEY="re_..."
+NEXT_PUBLIC_SUPABASE_URL="https://[PROJECT-ID].supabase.co"
+NEXT_PUBLIC_SUPABASE_ANON_KEY="your_anon_key"
+SUPABASE_SERVICE_ROLE_KEY="your_service_role_key"
 ```
 
 > Keep secrets out of source control. Use environment-specific values for local, staging, and production deployments.
@@ -217,12 +226,12 @@ Default seeded password:
 
 - `unizy2026`
 
-Example seeded users (subject to seed script evolution):
+Example seeded users (password: `unizy2026`):
 
-- Admin: `admin@unizy.com`
-- Driver: `driver1@unizy.com`
-- Provider: `provider1@unizy.com`
-- Merchant: `merchant_pizza@unizy.com`
+- Admin: `admin@unizy.app`
+- Students: `student1@unizy.app` ... `student10@unizy.app`
+- Providers: `provider1@unizy.app`
+- Merchants: `merchant1@unizy.app`
 
 ---
 

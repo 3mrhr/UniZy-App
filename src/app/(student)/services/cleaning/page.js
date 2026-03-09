@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Sparkles, Clock, Calendar, CheckCircle, Star, Tag, ArrowRight, Loader2, MapPin } from 'lucide-react';
 import { listPackages, bookCleaning } from '@/app/actions/cleaning';
+import { toast } from 'react-hot-toast';
 
 const FREQ_LABELS = { ONE_TIME: 'One-time', WEEKLY: 'Weekly', BI_WEEKLY: 'Bi-weekly', MONTHLY: 'Monthly' };
 const FREQ_COLORS = { ONE_TIME: 'bg-blue-100 text-blue-600', WEEKLY: 'bg-green-100 text-green-600', BI_WEEKLY: 'bg-purple-100 text-purple-600', MONTHLY: 'bg-amber-100 text-amber-600' };
@@ -41,6 +42,7 @@ export default function CleaningPage() {
 
             if (res.success) {
                 setBooked(true);
+                toast.success('Request Sent!');
                 setTimeout(() => {
                     setSelectedPkg(null);
                     setBooked(false);
@@ -50,11 +52,11 @@ export default function CleaningPage() {
                     setBookingDescription('');
                 }, 3000);
             } else {
-                alert(res.error || 'Failed to book');
+                toast.error(res.error || 'Failed to book');
             }
         } catch (e) {
             console.error(e);
-            alert('An error occurred');
+            toast.error('An error occurred');
         }
     };
 

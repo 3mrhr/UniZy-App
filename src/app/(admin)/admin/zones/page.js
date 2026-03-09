@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { MapPin, Plus, Power, Search, LayoutDashboard } from 'lucide-react';
 import { getZones, createZone, toggleZone } from '@/app/actions/pricing';
+import { toast } from 'react-hot-toast';
 
 export default function ZonesManagementPage() {
     const [zones, setZones] = useState([]);
@@ -49,9 +50,10 @@ export default function ZonesManagementPage() {
 
         const res = await toggleZone(zoneId, !currentState);
         if (res.success) {
+            toast.success(`Zone ${currentState ? 'disabled' : 'enabled'}`);
             setZones(zones.map(z => z.id === zoneId ? { ...z, isActive: !currentState } : z));
         } else {
-            alert(res.error || 'Failed to toggle zone status');
+            toast.error(res.error || 'Failed to toggle zone status');
         }
     };
 
@@ -172,8 +174,8 @@ export default function ZonesManagementPage() {
                                     </p>}
                                 </div>
                                 <span className={`px-2.5 py-1 text-[10px] font-black uppercase rounded-full tracking-wider ${zone.isActive
-                                        ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30'
-                                        : 'bg-red-50 text-red-600 dark:bg-red-900/30'
+                                    ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30'
+                                    : 'bg-red-50 text-red-600 dark:bg-red-900/30'
                                     }`}>
                                     {zone.isActive ? 'Active' : 'Disabled'}
                                 </span>
@@ -184,8 +186,8 @@ export default function ZonesManagementPage() {
                                 <button
                                     onClick={() => handleToggleZone(zone.id, zone.isActive)}
                                     className={`p-2 rounded-lg transition-colors group ${zone.isActive
-                                            ? 'bg-red-50 hover:bg-red-100 text-red-500 dark:bg-red-900/10 dark:hover:bg-red-900/30'
-                                            : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-500 dark:bg-emerald-900/10 dark:hover:bg-emerald-900/30'
+                                        ? 'bg-red-50 hover:bg-red-100 text-red-500 dark:bg-red-900/10 dark:hover:bg-red-900/30'
+                                        : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-500 dark:bg-emerald-900/10 dark:hover:bg-emerald-900/30'
                                         }`}
                                     title={zone.isActive ? 'Disable Zone' : 'Enable Zone'}
                                 >

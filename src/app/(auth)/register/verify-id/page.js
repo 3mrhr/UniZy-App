@@ -17,7 +17,11 @@ export default function VerifyIDPage() {
     const handleUpload = (e) => {
         const file = e.target.files[0];
         if (file) {
-            setIdPhoto(URL.createObjectURL(file));
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setIdPhoto(reader.result);
+            };
+            reader.readAsDataURL(file);
         }
     };
 
@@ -29,10 +33,8 @@ export default function VerifyIDPage() {
             const user = await getCurrentUser();
             if (!user) throw new Error("Please log in first");
 
-            // Mock Cloudinary URL for the MVP since Cloudinary isn't configured yet
-            const mockFileUrl = "https://images.unsplash.com/photo-1544813545-4827b64fcacb?w=400&q=80";
-
-            const res = await uploadVerificationDocument(user.id, "STUDENT_ID", mockFileUrl);
+            // Pass the base64/blob URL directly to the action which now handles Cloudinary
+            const res = await uploadVerificationDocument(user.id, "STUDENT_ID", idPhoto);
 
             if (res.success) {
                 setIsComplete(true);

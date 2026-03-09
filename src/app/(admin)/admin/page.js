@@ -11,6 +11,7 @@ import { getDashboardAnalytics } from '@/app/actions/analytics';
 import { getSystemModules, toggleSystemModule } from '@/app/actions/settings';
 import { getAuditLogs } from '@/app/actions/audit';
 import { useRouter } from 'next/navigation';
+import { toast } from 'react-hot-toast';
 
 const RECENT_ALERTS = [
     { id: 1, type: 'MODERATION', title: 'New Listing Flagged', description: 'Listing "Modern Studio nr Campus" flagged for inaccurate pics.', time: '2 mins ago', severity: 'HIGH' },
@@ -66,9 +67,11 @@ export default function SuperadminOverview() {
 
         const res = await toggleSystemModule(moduleName, newState);
         if (!res.success) {
-            alert(res.error || 'Failed to toggle module');
+            toast.error(res.error || 'Failed to toggle module');
             // Revert
             setModules(prev => ({ ...prev, [moduleName]: currentState }));
+        } else {
+            toast.success(`Module ${moduleName} ${newState ? 'enabled' : 'disabled'}`);
         }
         setIsToggling(false);
     };

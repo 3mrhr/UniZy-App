@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Sparkles, Calendar, CheckCircle, Clock, User, Package, AlertTriangle } from 'lucide-react';
 import { getAdminCleaningStats, updateCleaningBookingStatus } from '@/app/actions/cleaning';
+import { toast } from 'react-hot-toast';
 
 const STATUS_COLORS = {
     PENDING: 'bg-orange-100 dark:bg-orange-900/20 text-orange-600',
@@ -39,8 +40,9 @@ export default function AdminCleaningPage() {
             const res = await updateCleaningBookingStatus(id, 'CONFIRMED');
             if (!res.success) {
                 setBookings(prev);
-                alert(res.error || 'Failed to confirm booking');
+                toast.error(res.error || 'Failed to confirm booking');
             } else {
+                toast.success('Booking confirmed');
                 setStats(s => ({ ...s, pendingBookings: Math.max(0, s.pendingBookings - 1) }));
             }
         } catch { setBookings(prev); }

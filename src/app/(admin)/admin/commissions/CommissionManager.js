@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Power, MapPin, Percent, TrendingUp, Search } from 'lucide-react';
 import { getCommissionRules, createCommissionRule, toggleCommissionRule } from '@/app/actions/commissions';
 import { getZones } from '@/app/actions/pricing';
+import { toast } from 'react-hot-toast';
 
 export default function CommissionManager({ moduleName, title, description, colorClass = "bg-brand-600" }) {
     const [rules, setRules] = useState([]);
@@ -108,9 +109,10 @@ export default function CommissionManager({ moduleName, title, description, colo
 
         const res = await toggleCommissionRule(ruleId, !currentState, moduleName);
         if (res.success) {
+            toast.success(`Rule ${currentState ? 'disabled' : 'enabled'}`);
             setRules(rules.map(r => r.id === ruleId ? { ...r, isActive: !currentState } : r));
         } else {
-            alert(res.error || 'Failed to toggle rule');
+            toast.error(res.error || 'Failed to toggle rule');
         }
     };
 

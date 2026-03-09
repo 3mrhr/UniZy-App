@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useLanguage } from '@/i18n/LanguageProvider';
 import ThemeLangControls from '@/components/ThemeLangControls';
+import { toast } from 'react-hot-toast';
 import Image from 'next/image';
 import { DollarSign } from 'lucide-react';
 import Link from 'next/link';
@@ -22,9 +23,10 @@ export default function ProviderClient({ settlements, dbListings = [], dbLeads =
             const { updateHousingRequestStatus } = await import('@/app/actions/housing');
             const res = await updateHousingRequestStatus(leadId, newStatus);
             if (res.success) {
+                toast.success(`Lead ${newStatus.toLowerCase()}!`);
                 setLeads(prev => prev.map(l => l.id === leadId ? { ...l, status: newStatus } : l));
             } else {
-                alert(res.error || 'Failed to update lead');
+                toast.error(res.error || 'Failed to update lead');
             }
         } catch (e) {
             console.error(e);
@@ -46,12 +48,12 @@ export default function ProviderClient({ settlements, dbListings = [], dbLeads =
 
             const res = await createHousingListing(payload);
             if (res.success || res.ok) {
-                alert('Property listed successfully! (Pending approval)');
+                toast.success('Property listed! (Pending approval)');
                 setIsModalOpen(false);
                 setFormData({ title: '', description: '', price: '', type: 'Apartment', location: '', amenities: '' });
                 // Note: It will require page refresh to see pending properties depending on server query
             } else {
-                alert(res.error?.message || res.error || 'Failed to create listing');
+                toast.error(res.error?.message || res.error || 'Failed to create listing');
             }
         } catch (error) {
             console.error(error);

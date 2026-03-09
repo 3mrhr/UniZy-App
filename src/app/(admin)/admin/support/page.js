@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { AlertCircle, Search, MessageSquare, Clock, CheckCircle2, ChevronRight } from 'lucide-react';
 import { getAdminTickets, updateTicketStatus } from '@/app/actions/support';
+import { toast } from 'react-hot-toast';
 
 export default function AdminSupportPage() {
     const [tickets, setTickets] = useState([]);
@@ -43,7 +44,9 @@ export default function AdminSupportPage() {
             const res = await updateTicketStatus(id, 'RESOLVED');
             if (!res.success) {
                 setTickets(prev);
-                alert(res.error || 'Failed to resolve ticket');
+                toast.error(res.error || 'Failed to resolve ticket');
+            } else {
+                toast.success('Ticket resolved');
             }
         } catch { setTickets(prev); }
     };

@@ -4,6 +4,7 @@ import React, { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { processPayout } from '@/app/actions/finance';
 import { Clock, CreditCard } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 
 export default function PayoutsClient({ initialSettlements, totalPages, currentPage }) {
     const router = useRouter();
@@ -18,10 +19,10 @@ export default function PayoutsClient({ initialSettlements, totalPages, currentP
         startTransition(async () => {
             const res = await processPayout(settlementId, method.toUpperCase(), reference);
             if (res.success) {
-                alert('Payout processed successfully!');
+                toast.success('Payout processed successfully!');
                 router.refresh();
             } else {
-                alert(res.error || 'Failed to process payout.');
+                toast.error(res.error || 'Failed to process payout.');
             }
         });
     };
