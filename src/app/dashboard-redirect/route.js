@@ -12,26 +12,39 @@ export async function GET(request) {
     }
 
     // Role-based redirection
-    if (user.role === 'STUDENT') {
+    const role = user.role;
+
+    // GUEST -> Food/Delivery Entry
+    if (role === 'GUEST') {
+        return NextResponse.redirect(new URL('/meals', request.url));
+    }
+
+    // STUDENT -> Student Hub
+    if (role === 'STUDENT') {
         return NextResponse.redirect(new URL('/students', request.url));
     }
 
-    if (user.role.startsWith('ADMIN_')) {
+    // ADMINS -> Admin Panel
+    if (role.startsWith('ADMIN_')) {
         return NextResponse.redirect(new URL('/admin', request.url));
     }
 
-    if (user.role === 'DRIVER') {
-        return NextResponse.redirect(new URL('/driver', request.url));
-    }
-
-    if (user.role === 'MERCHANT') {
-        return NextResponse.redirect(new URL('/merchant', request.url));
-    }
-
-    if (user.role === 'PROVIDER') {
+    // SUPPLY-SIDE PARTNERS (Unified Portal)
+    const providerRoles = ['HOUSE_OWNER', 'SERVICE_PROVIDER', 'CLEANER'];
+    if (providerRoles.includes(role)) {
         return NextResponse.redirect(new URL('/provider', request.url));
     }
 
-    // Fallback to home if role is unknown
+    // MERCHANT -> Merchant Portal
+    if (role === 'MERCHANT') {
+        return NextResponse.redirect(new URL('/merchant', request.url));
+    }
+
+    // DRIVER -> Driver Portal
+    if (role === 'DRIVER') {
+        return NextResponse.redirect(new URL('/driver', request.url));
+    }
+
+    // Fallback to home if role is unknown or GUEST default
     return NextResponse.redirect(new URL('/', request.url));
 }

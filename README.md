@@ -30,11 +30,12 @@ This repository contains the UniZy web application built with **Next.js App Rout
 
 UniZy is designed as a campus-first “super app” experience with role-specific portals:
 
-- **Student**: discover and use services.
-- **Merchant**: manage menus and order operations.
-- **Provider**: manage housing/services inventory and requests.
-- **Driver**: handle availability and logistics workflows.
-- **Admin**: monitor platform operations and moderation queues.
+- **Student**: Discover and use services.
+- **Merchant**: Manage menus and order operations.
+- **Supply-Side Partners**: Integrated portal for House Owners, Cleaners, and Service Providers.
+- **Driver**: Handle availability and logistics workflows.
+- **Admin**: 10 specialized oversight roles (Finance, Support, Ops, Moderator, Meals, Driver, Housing, Cleaner, Service Provider, and Super Admin).
+- **Guest**: Browse-only experience for housing; limited delivery ordering.
 
 The current codebase represents an MVP with core flows implemented and some features intentionally deferred for future phases.
 
@@ -222,16 +223,16 @@ After seeding, log in via:
 
 - `/login`
 
-Default seeded password:
+Example seeded users (password: `Test1234!`):
 
-- `unizy2026`
-
-Example seeded users (password: `unizy2026`):
-
-- Admin: `admin@unizy.app`
-- Students: `student1@unizy.app` ... `student10@unizy.app`
-- Providers: `provider1@unizy.app`
-- Merchants: `merchant1@unizy.app`
+- **Super Admin**: `admin@unizy.app` (God mode)
+- **Finance Admin**: `finance@unizy.app` (Wallet/Rewards control)
+- **Support Admin**: `support@unizy.app` (ID Verification control)
+- **Students**: `student1@unizy.app` ... `student10@unizy.app`
+- **Merchants**: `merchant1@unizy.app` ... `merchant5@unizy.app`
+- **Drivers**: `driver1@unizy.app` ... `driver5@unizy.app`
+- **Partners**: Consolidated login for Cleaners, Service Providers, and House Owners.
+- **Guests**: Limited browse/delivery access without registration.
 
 ---
 

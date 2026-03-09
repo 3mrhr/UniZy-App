@@ -22,6 +22,7 @@ export async function requireRole(allowedRoles) {
     }
 
     if (!user.role || !allowedRoles.includes(user.role)) {
+        console.warn(`RBAC Denial: User ${user.id} (${user.role}) attempted restricted action. Required: ${allowedRoles.join(', ')}`);
         throw new Error(`Forbidden: Requires one of roles: ${allowedRoles.join(', ')}`);
     }
     return user;

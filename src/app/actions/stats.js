@@ -54,10 +54,10 @@ export async function getAdminDashboardStats() {
         totalUsers: userStats.reduce((acc, curr) => acc + curr._count, 0),
         totalStudents: userStats.find((s) => s.role === "STUDENT")?._count || 0,
         totalDrivers: userStats.find((s) => s.role === "DRIVER")?._count || 0,
-        totalMerchants:
-          userStats.find((s) => s.role === "MERCHANT")?._count || 0,
-        totalProviders:
-          userStats.find((s) => s.role === "PROVIDER")?._count || 0,
+        totalMerchants: userStats.find((s) => s.role === "MERCHANT")?._count || 0,
+        totalCleaners: userStats.find((s) => s.role === "CLEANER")?._count || 0,
+        totalServiceProviders: userStats.find((s) => s.role === "SERVICE_PROVIDER")?._count || 0,
+        totalHouseOwners: userStats.find((s) => s.role === "HOUSE_OWNER")?._count || 0,
         // Orders & Transactions
         totalOrders: orderStats.reduce((acc, curr) => acc + curr._count, 0),
         pendingOrders:

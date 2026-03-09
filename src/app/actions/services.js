@@ -58,8 +58,7 @@ export async function listProviders({ category } = {}) {
 
 export async function bookService({ providerId, date, timeSlot, notes }) {
     try {
-        const user = await getCurrentUser();
-        if (!user) return { error: 'Not authenticated' };
+        const user = await requireRole(['STUDENT']);
 
         if (!notes || notes.trim().length < 5) {
             return { error: 'Please provide a brief description of the issue so our team can help.' };

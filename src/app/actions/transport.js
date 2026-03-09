@@ -345,7 +345,7 @@ export async function getShuttleStations() {
 
 export async function adminCreateShuttle(data) {
     try {
-        await requireRole(['ADMIN_TRANSPORT', 'ADMIN']);
+        await requireRole(['ADMIN_DRIVER', 'ADMIN_SUPER']);
         const bus = await prisma.shuttleBus.create({ data });
         revalidatePath('/admin/transport');
         return success(bus);
@@ -356,7 +356,7 @@ export async function adminCreateShuttle(data) {
 
 export async function adminUpdateShuttleLocation(id, lat, lng) {
     try {
-        await requireRole(['ADMIN_TRANSPORT', 'ADMIN']);
+        await requireRole(['ADMIN_DRIVER', 'ADMIN_SUPER']);
         const bus = await prisma.shuttleBus.update({
             where: { id },
             data: { lat, lng, lastUpdated: new Date() }
@@ -370,7 +370,7 @@ export async function adminUpdateShuttleLocation(id, lat, lng) {
 
 export async function adminDeleteShuttle(id) {
     try {
-        await requireRole(['ADMIN_TRANSPORT', 'ADMIN']);
+        await requireRole(['ADMIN_DRIVER', 'ADMIN_SUPER']);
         await prisma.shuttleBus.delete({ where: { id } });
         revalidatePath('/admin/transport');
         return success();

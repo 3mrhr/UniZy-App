@@ -13,7 +13,7 @@ import { authorizePayment, capturePayment } from './payments';
 
 export async function getAvailableOrders(status = 'READY') {
     try {
-        const user = await requireRole(['COURIER', 'DRIVER']);
+        const user = await requireRole(['DRIVER']);
         if (!user.isOnline) return success([]);
 
         const orders = await prisma.order.findMany({
@@ -42,7 +42,12 @@ export async function getAvailableOrders(status = 'READY') {
 
 export async function createOrder(service, details, clientTotal, promoCodeStr = null, lineItems = []) {
     try {
-        const user = await requireRole(['STUDENT']);
+        const user = await requireRole(['STUDENT', 'GUEST']);
+
+        // GUEST logic: strictly only allowed for DELIVERY
+        if (user.role === 'GUEST' && service !== 'DELIVERY') {
+            return failure('FORBIDDEN', 'Guests must sign up to use this service.');
+        }
 
         // If lineItems are provided (e.g. DELIVERY / Meals), we calculate securely.
         // If not (e.g. TRANSPORT), we fallback to clientTotal for now
@@ -362,7 +367,7 @@ export async function createOrder(service, details, clientTotal, promoCodeStr = 
 
 export async function getStudentOrders() {
     try {
-        const user = await requireRole(['STUDENT']);
+        const user = await requireRole(['STUDENT', 'GUEST']);
 
         const orders = await prisma.order.findMany({
             where: {
@@ -423,7 +428,7 @@ export async function getDriverOrders() {
 
 export async function acceptOrder(orderId) {
     try {
-        const user = await requireRole(['COURIER', 'DRIVER']);
+        const user = await requireRole(['DRIVER']);
         if (!user.isOnline) return failure('OFFLINE', 'You must be online to accept orders.');
 
         // Conditional update: only accept if status is READY and no driver assigned (prevents double-accept)
@@ -466,7 +471,7 @@ const DRIVER_TRANSITIONS = {
 
 export async function updateOrderStatus(orderId, newStatus, otp = null) {
     try {
-        const user = await requireRole(['DRIVER', 'COURIER', 'ADMIN_DELIVERY', 'ADMIN_SUPER']);
+        const user = await requireRole(['DRIVER', 'ADMIN_OPERATIONS', 'ADMIN_SUPER']);
 
         // Verify ownership: driver can only update their own orders
         const existingOrder = await prisma.order.findUnique({ where: { id: orderId } });

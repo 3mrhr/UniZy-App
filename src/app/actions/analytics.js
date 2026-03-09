@@ -17,7 +17,9 @@ export async function getDashboardAnalytics() {
             prisma.user.count({ where: { role: 'STUDENT' } }),
             prisma.user.count({ where: { role: 'DRIVER' } }),
             prisma.user.count({ where: { role: 'MERCHANT' } }),
-            prisma.user.count({ where: { role: 'PROVIDER' } }),
+            prisma.user.count({ where: { role: 'SERVICE_PROVIDER' } }),
+            prisma.user.count({ where: { role: 'CLEANER' } }),
+            prisma.user.count({ where: { role: 'HOUSE_OWNER' } }),
             prisma.order.findMany({
                 select: { id: true, status: true, total: true, service: true, createdAt: true }
             }),
@@ -47,7 +49,9 @@ export async function getDashboardAnalytics() {
         const totalStudents = results[0];
         const totalDrivers = results[1];
         const totalMerchants = results[2];
-        const totalProviders = results[3];
+        const totalServiceProviders = results[3];
+        const totalCleaners = results[4];
+        const totalHouseOwners = results[5];
         const orders = results[4];
         const totalTransactions = results[5];
         const txnRevenue = results[6];
@@ -87,7 +91,14 @@ export async function getDashboardAnalytics() {
                 revenue,
                 commission,
                 orders: { total: totalOrders, pending: pendingOrders, active: activeOrders, completed: completedOrders },
-                users: { students: totalStudents, drivers: totalDrivers, merchants: totalMerchants, providers: totalProviders },
+                users: {
+                    students: totalStudents,
+                    drivers: totalDrivers,
+                    merchants: totalMerchants,
+                    serviceProviders: totalServiceProviders,
+                    cleaners: totalCleaners,
+                    houseOwners: totalHouseOwners
+                },
                 breakdown: {
                     delivery: deliveryOrders,
                     transport: transportOrders,

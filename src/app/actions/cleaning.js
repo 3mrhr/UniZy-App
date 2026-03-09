@@ -32,8 +32,7 @@ export async function listPackages() {
 
 export async function bookCleaning({ packageId, date, timeSlot, address, notes }) {
     try {
-        const user = await getCurrentUser();
-        if (!user) return { error: 'Not authenticated' };
+        const user = await requireRole(['STUDENT']);
 
         // Fetch package to get the correct price
         const pkg = await prisma.cleaningPackage.findUnique({ where: { id: packageId } });

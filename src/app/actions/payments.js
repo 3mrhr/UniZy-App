@@ -16,7 +16,7 @@ export async function getPayments(filters = {}) {
 
         // Check if user has finance or superadmin privileges
         const isSuperAdmin = user?.role === "ADMIN_SUPER";
-        const hasFinanceScope = user?.role === "ADMIN_COMMERCE" || user?.role === "ADMIN_TRANSPORT" || user?.role === "ADMIN_DELIVERY" || user?.role === "ADMIN_HOUSING";
+        const hasFinanceScope = user?.role === "ADMIN_FINANCE" || user?.role === "ADMIN_MERCHANT" || user?.role === "ADMIN_DRIVER" || user?.role === "ADMIN_OPERATIONS" || user?.role === "ADMIN_HOUSING";
 
         if (!user || (!isSuperAdmin && !hasFinanceScope)) {
             return { error: "Unauthorized. Requires admin privileges." };
@@ -115,7 +115,7 @@ export async function updatePaymentStatus(id, newStatus, reason = null) {
 
         // Check if user has finance or superadmin privileges
         const isSuperAdmin = user?.role === "ADMIN_SUPER";
-        const hasFinanceScope = user?.role === "ADMIN_COMMERCE" || user?.role === "ADMIN_TRANSPORT" || user?.role === "ADMIN_DELIVERY" || user?.role === "ADMIN_HOUSING";
+        const hasFinanceScope = user?.role === "ADMIN_FINANCE" || user?.role === "ADMIN_MERCHANT" || user?.role === "ADMIN_DRIVER" || user?.role === "ADMIN_OPERATIONS" || user?.role === "ADMIN_HOUSING";
 
         if (!user || (!isSuperAdmin && !hasFinanceScope)) {
             return { error: "Unauthorized. Requires finance privileges." };

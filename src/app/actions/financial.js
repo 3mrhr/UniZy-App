@@ -10,7 +10,7 @@ import { prisma } from '@/lib/prisma';
  * Returns an immutable snapshot object to be stored on the Transaction record.
  *
  * @param {string} module - e.g. "TRANSPORT", "DELIVERY", "DEALS", "MEALS", "SERVICE", "CLEANING", "HOUSING"
- * @param {string} providerType - e.g. "DRIVER", "MERCHANT", "LANDLORD", "CLEANER", "PROVIDER"
+ * @param {string} providerType - e.g. "DRIVER", "MERCHANT", "HOUSE_OWNER", "CLEANER", "SERVICE_PROVIDER"
  * @param {number} amount - The transaction amount (after promo discount applied to customer)
  * @param {number} [promoDiscount=0] - How much was discounted by promo
  * @param {string|null} [zoneId=null] - Optional zone for zone-specific rules
@@ -56,7 +56,7 @@ export async function computeCommissionSnapshot(module, providerType, amount, pr
                 } else if (subsidy.whoPaysDiscount === 'SPLIT') {
                     promoSubsidyAmount = Math.round((promoDiscount / 2) * 100) / 100;
                 }
-                // If 'PROVIDER', promoSubsidyAmount stays 0
+                // If 'SERVICE_PROVIDER', promoSubsidyAmount stays 0
             } catch {
                 // Invalid JSON — ignore subsidy
             }

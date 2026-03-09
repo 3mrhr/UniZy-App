@@ -111,7 +111,7 @@ export async function getServicePnL(moduleName) {
 export async function getProviderEarningsSnapshot() {
     try {
         const user = await getCurrentUser();
-        if (!user || !['MERCHANT', 'DRIVER', 'COURIER'].includes(user.role)) {
+        if (!user || !['MERCHANT', 'DRIVER', 'CLEANER', 'SERVICE_PROVIDER', 'HOUSE_OWNER'].includes(user.role)) {
             return { error: 'Unauthorized. Provider role required.' };
         }
 

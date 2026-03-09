@@ -18,71 +18,111 @@ const ADMIN_ROLES = {
             { label: 'Verifications', icon: ShieldAlert, href: '/admin/verifications' },
             { label: 'Helpdesk', icon: Users, href: '/admin/support' },
             { label: 'Hub Moderation', icon: Tag, href: '/admin/hub' },
-            { label: 'Campaigns', icon: ShoppingBag, href: '/admin/campaigns' },
             { label: 'Delivery', icon: Truck, href: '/admin/delivery' },
             { label: 'Transport', icon: ShoppingBag, href: '/admin/transport' },
             { label: 'Housing', icon: Home, href: '/admin/housing' },
             { label: 'Commerce', icon: Tag, href: '/admin/commerce' },
             { label: 'Home Services', icon: Settings, href: '/admin/services' },
-            { label: 'Transactions', icon: ShoppingBag, href: '/admin/transactions' },
             { label: 'Payments', icon: CreditCard, href: '/admin/payments' },
-            { label: 'Global Pricing', icon: DollarSign, href: '/admin/pricing' },
-            { label: 'Revenue & Commissions', icon: Percent, href: '/admin/commissions' },
-            { label: 'Zones Map', icon: MapPin, href: '/admin/zones' },
-            { label: 'Roles & Permissions', icon: Users, href: '/admin/roles-permissions' },
-            { label: 'Permission Scopes', icon: ShieldAlert, href: '/admin/roles-permissions/scopes' },
+            { label: 'Pricing', icon: DollarSign, href: '/admin/pricing' },
+            { label: 'Commissions', icon: Percent, href: '/admin/commissions' },
             { label: 'Staff Management', icon: Users, href: '/admin/staff' },
-            { label: 'Audit Logs', icon: Users, href: '/admin/audit-logs' },
-            { label: 'Finance', icon: ShoppingBag, href: '/admin/finance' },
-            { label: 'Data Hub', icon: Database, href: '/admin/data' },
+            { label: 'Audit Logs', icon: Database, href: '/admin/audit-logs' },
+            { label: 'Finance Hub', icon: DollarSign, href: '/admin/finance' },
         ]
     },
-    ADMIN_DELIVERY: {
-        label: 'Delivery Admin',
+    ADMIN_FINANCE: {
+        label: 'Finance Admin',
+        color: 'bg-emerald-600',
+        links: [
+            { label: 'Finance Overview', icon: LayoutDashboard, href: '/admin/finance' },
+            { label: 'Payments', icon: CreditCard, href: '/admin/payments' },
+            { label: 'Transactions', icon: Database, href: '/admin/transactions' },
+            { label: 'Pricing Rules', icon: DollarSign, href: '/admin/pricing' },
+            { label: 'Commissions', icon: Percent, href: '/admin/commissions' },
+            { label: 'Wallet & Rewards', icon: DollarSign, href: '/admin/finance/wallets' },
+            { label: 'Refunds', icon: ShieldAlert, href: '/admin/refunds' },
+        ]
+    },
+    ADMIN_OPERATIONS: {
+        label: 'Ops Admin',
         color: 'bg-orange-600',
         links: [
-            { label: 'Overview', icon: LayoutDashboard, href: '/admin/delivery' },
-            { label: 'Vendors', icon: Users, href: '/admin/delivery/vendors' },
-            { label: 'Live Orders', icon: Truck, href: '/admin/delivery/orders' },
-            { label: 'Pricing & Fees', icon: DollarSign, href: '/admin/delivery/pricing' },
-            { label: 'Commissions', icon: Percent, href: '/admin/delivery/commissions' },
-            { label: 'Analytics', icon: ShieldAlert, href: '/admin/delivery/analytics' },
+            { label: 'Ops Overview', icon: LayoutDashboard, href: '/admin' },
+            { label: 'Live Delivery', icon: Truck, href: '/admin/delivery' },
+            { label: 'Live Transport', icon: ShoppingBag, href: '/admin/transport' },
+            { label: 'Dispatch Control', icon: Users, href: '/admin/dispatch' },
+            { label: 'Zones Map', icon: MapPin, href: '/admin/zones' },
+            { label: 'Audit Logs', icon: Database, href: '/admin/audit-logs' },
         ]
     },
-    ADMIN_TRANSPORT: {
-        label: 'Transport Admin',
+    ADMIN_MERCHANT: {
+        label: 'Merchant Admin',
+        color: 'bg-purple-600',
+        links: [
+            { label: 'Merchant Hub', icon: LayoutDashboard, href: '/admin/commerce/merchants' },
+            { label: 'Store Approvals', icon: ShieldAlert, href: '/admin/verifications' },
+            { label: 'Commerce Stats', icon: LayoutDashboard, href: '/admin/commerce' },
+            { label: 'Commissions', icon: Percent, href: '/admin/commissions' },
+        ]
+    },
+    ADMIN_DRIVER: {
+        label: 'Logistics Admin',
         color: 'bg-blue-600',
         links: [
-            { label: 'Overview', icon: LayoutDashboard, href: '/admin/transport' },
-            { label: 'Fleet', icon: ShoppingBag, href: '/admin/transport/fleet' },
-            { label: 'Live Rides', icon: Users, href: '/admin/transport/rides' },
-            { label: 'Pricing & Fares', icon: DollarSign, href: '/admin/transport/pricing' },
-            { label: 'Commissions', icon: Percent, href: '/admin/transport/commissions' },
-            { label: 'Analytics', icon: ShieldAlert, href: '/admin/transport/analytics' },
+            { label: 'Fleet Overview', icon: Truck, href: '/admin/transport' },
+            { label: 'Driver Vetting', icon: ShieldAlert, href: '/admin/verifications' },
+            { label: 'Live Rides', icon: MapPin, href: '/admin/transport/rides' },
+            { label: 'SLA Monitoring', icon: LayoutDashboard, href: '/admin/sla' },
         ]
     },
     ADMIN_HOUSING: {
         label: 'Housing Admin',
-        color: 'bg-emerald-600',
+        color: 'bg-cyan-600',
         links: [
-            { label: 'Overview', icon: LayoutDashboard, href: '/admin/housing' },
-            { label: 'Verifications', icon: ShieldAlert, href: '/admin/housing/verifications' },
-            { label: 'Listings', icon: Home, href: '/admin/housing/listings' },
-            { label: 'Pricing & Fees', icon: DollarSign, href: '/admin/housing/pricing' },
-            { label: 'Commissions', icon: Percent, href: '/admin/housing/commissions' },
-            { label: 'Analytics', icon: Users, href: '/admin/housing/analytics' },
+            { label: 'Housing Hub', icon: Home, href: '/admin/housing' },
+            { label: 'Moderation', icon: ShieldAlert, href: '/admin/listings-moderation' },
+            { label: 'Leads Analytics', icon: Users, href: '/admin/housing/analytics' },
+            { label: 'Pricing', icon: DollarSign, href: '/admin/housing/pricing' },
         ]
     },
-    ADMIN_COMMERCE: {
-        label: 'Commerce Admin',
-        color: 'bg-purple-600',
+    ADMIN_SUPPORT: {
+        label: 'Support Admin',
+        color: 'bg-pink-600',
         links: [
-            { label: 'Overview', icon: LayoutDashboard, href: '/admin/commerce' },
-            { label: 'Deals', icon: Tag, href: '/admin/commerce/deals' },
-            { label: 'Meals', icon: Utensils, href: '/admin/commerce/meals' },
-            { label: 'Merchants', icon: Users, href: '/admin/commerce/merchants' },
-            { label: 'Pricing Rules', icon: DollarSign, href: '/admin/commerce/pricing' },
-            { label: 'Commissions', icon: Percent, href: '/admin/commerce/commissions' },
+            { label: 'Tickets', icon: Users, href: '/admin/support' },
+            { label: 'User Verification', icon: ShieldAlert, href: '/admin/verifications' },
+            { label: 'Audit Search', icon: Database, href: '/admin/audit-logs' },
+            { label: 'SLA Breaches', icon: ShieldAlert, href: '/admin/sla' },
+        ]
+    },
+    ADMIN_MODERATOR: {
+        label: 'Moderator',
+        color: 'bg-slate-700',
+        links: [
+            { label: 'Hub Moderation', icon: Tag, href: '/admin/hub' },
+            { label: 'Lisitngs Audit', icon: Home, href: '/admin/listings-moderation' },
+            { label: 'User Reports', icon: ShieldAlert, href: '/admin/reports' },
+            { label: 'Campaigns', icon: ShoppingBag, href: '/admin/campaigns' },
+        ]
+    },
+    ADMIN_MEALS: {
+        label: 'Meals Admin',
+        color: 'bg-red-500',
+        links: [
+            { label: 'Meals Hub', icon: Utensils, href: '/admin/commerce/meals' },
+            { label: 'Deals & Promos', icon: Tag, href: '/admin/commerce/deals' },
+            { label: 'Pricing rules', icon: DollarSign, href: '/admin/pricing' },
+            { label: 'Menu Audits', icon: ShieldAlert, href: '/admin/commerce/merchants' },
+        ]
+    },
+    ADMIN_CLEANER: {
+        label: 'Cleaning Admin',
+        color: 'bg-teal-500',
+        links: [
+            { label: 'Cleaning Hub', icon: Settings, href: '/admin/cleaning' },
+            { label: 'Bookings', icon: Users, href: '/admin/cleaning/bookings' },
+            { label: 'Pricing', icon: DollarSign, href: '/admin/pricing' },
         ]
     }
 };

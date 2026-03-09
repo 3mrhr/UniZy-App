@@ -11,7 +11,8 @@ export const metadata = {
 
 export default async function ProviderPage() {
     const user = await getCurrentUser();
-    if (!user || user.role !== 'PROVIDER') {
+    const allowedRoles = ['HOUSE_OWNER', 'CLEANER', 'SERVICE_PROVIDER'];
+    if (!user || !allowedRoles.includes(user.role)) {
         redirect('/login');
     }
 
@@ -27,5 +28,5 @@ export default async function ProviderPage() {
     const listings = listingsRes.success ? listingsRes.listings : [];
     const leads = leadsRes.success ? leadsRes.requests : [];
 
-    return <ProviderClient settlements={settlements} dbListings={listings} dbLeads={leads} />;
+    return <ProviderClient user={user} settlements={settlements} dbListings={listings} dbLeads={leads} />;
 }

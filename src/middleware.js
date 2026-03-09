@@ -84,16 +84,36 @@ export async function middleware(request) {
         }
     }
 
-    // Protect /students routes
-    const studentRoutes = [
+    // Protect /students and service routes
+    const serviceRootRoutes = [
         '/students', '/housing', '/transport', '/delivery',
         '/deals', '/meals', '/hub', '/services',
-        '/rewards', '/activity'
+        '/rewards', '/activity', '/cleaning'
     ];
 
-    if (studentRoutes.some((route) => pathname.startsWith(route))) {
-        if (user.role !== 'STUDENT') {
-            return NextResponse.redirect(new URL('/login', request.url));
+    if (serviceRootRoutes.some((route) => pathname.startsWith(route))) {
+        // GUEST allowed routes: Delivery, Deals, Housing browse
+        const guestAllowed = [
+            '/delivery', '/meals', '/deals', '/housing'
+        ];
+
+        // Specific sub-routes blocked for GUEST
+        const guestBlockedSubroutes = [
+            '/housing/requests', '/activity', '/rewards'
+        ];
+
+        const isGuestAllowedPath = guestAllowed.some(r => pathname.startsWith(r));
+        const isGuestBlockedSubPath = guestBlockedSubroutes.some(r => pathname.startsWith(r));
+
+        if (user.role === 'GUEST') {
+            if (!isGuestAllowedPath || isGuestBlockedSubPath) {
+                return NextResponse.redirect(new URL('/login', request.url));
+            }
+        } else if (user.role !== 'STUDENT') {
+            // Other non-student roles shouldn't be here unless they are ADMIN
+            if (!user.role.startsWith('ADMIN_')) {
+                return NextResponse.redirect(new URL('/login', request.url));
+            }
         }
     }
 

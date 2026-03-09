@@ -8,7 +8,15 @@ import Image from 'next/image';
 import { DollarSign } from 'lucide-react';
 import Link from 'next/link';
 
-export default function ProviderClient({ settlements, dbListings = [], dbLeads = [] }) {
+export default function ProviderClient({ user, settlements, dbListings = [], dbLeads = [] }) {
+    const role = user?.role || 'HOUSE_OWNER';
+
+    // Dynamic Branding
+    const branding = {
+        HOUSE_OWNER: { label: 'Housing Hub', icon: '🏠', badge: 'Verified House Owner' },
+        CLEANER: { label: 'Cleaning Partner', icon: '🧹', badge: 'Verified Cleaning Specialist' },
+        SERVICE_PROVIDER: { label: 'Services Portal', icon: '🛠️', badge: 'Verified Service Provider' }
+    }[role] || { label: 'Partner Portal', icon: '🤝', badge: 'Verified Partner' };
     const { dict } = useLanguage();
     const [leads, setLeads] = useState(dbLeads);
     const [isUpdating, setIsUpdating] = useState(null);
@@ -68,12 +76,12 @@ export default function ProviderClient({ settlements, dbListings = [], dbLeads =
             <header className="bg-white dark:bg-unizy-dark px-6 py-6 shadow-sm border-b border-gray-100 dark:border-white/5 flex justify-between items-center sticky top-0 z-50">
                 <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold shadow-lg shadow-indigo-500/20 text-lg">
-                        H
+                        {branding.icon}
                     </div>
                     <div>
-                        <h1 className="text-lg font-black text-gray-900 dark:text-white leading-none">Housing Hub</h1>
+                        <h1 className="text-lg font-black text-gray-900 dark:text-white leading-none">{branding.label}</h1>
                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">
-                            Verified Provider
+                            {branding.badge}
                         </p>
                     </div>
                 </div>

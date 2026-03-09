@@ -98,7 +98,7 @@ export async function getHousingListingById(id) {
 
 export async function getProviderListings() {
     try {
-        const user = await requireRole(['PROVIDER']);
+        const user = await requireRole(['HOUSE_OWNER']);
 
         const listings = await prisma.housingListing.findMany({
             where: { providerId: user.id },
@@ -113,7 +113,7 @@ export async function getProviderListings() {
 
 export async function getProviderLeads() {
     try {
-        const user = await requireRole(['PROVIDER']);
+        const user = await requireRole(['HOUSE_OWNER']);
 
         // Fetch requests for listings owned by this provider
         const requests = await prisma.housingRequest.findMany({
@@ -137,7 +137,7 @@ export async function getProviderLeads() {
 
 export async function updateHousingRequestStatus(requestId, newStatus) {
     try {
-        const user = await requireRole(['PROVIDER']);
+        const user = await requireRole(['HOUSE_OWNER']);
 
         // Check ownership
         const request = await prisma.housingRequest.findUnique({
@@ -175,7 +175,7 @@ export async function updateHousingRequestStatus(requestId, newStatus) {
 
 export async function createHousingListing(formData) {
     try {
-        const user = await requireRole(['PROVIDER', 'ADMIN_SUPER', 'ADMIN_HOUSING']);
+        const user = await requireRole(['HOUSE_OWNER', 'ADMIN_SUPER', 'ADMIN_HOUSING']);
 
         const rawImages = formData.images || [];
         const uploadedImages = await Promise.all(rawImages.map(async (img) => {
@@ -285,7 +285,7 @@ export async function rejectListing(id, adminId, reason = "Violates guidelines")
 
 export async function toggleSavedHousing(listingId) {
     try {
-        const user = await requireUser();
+        const user = await requireRole(['STUDENT']);
 
         const existing = await prisma.savedHousing.findUnique({
             where: {

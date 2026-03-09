@@ -76,23 +76,44 @@ const MERCHANT_NAMES = [
 async function main() {
     console.log('🌱 Starting UniZy seed...');
 
-    // ── Admin ──
-    const admin = await prisma.user.upsert({
-        where: { email: 'admin@unizy.app' },
-        update: {},
-        create: {
-            name: 'Admin User',
-            email: 'admin@unizy.app',
-            password: DEFAULT_PASS,
-            phone: '+201000000000',
-            role: 'ADMIN_SUPER',
-            isVerified: true,
-            verificationStatus: 'VERIFIED',
-            university: 'Assiut University',
-            scopes: 'ADMIN_SUPER',
-        },
-    });
-    console.log(`✅ Admin: ${admin.email}`);
+    // ── Admins (11 Total) ──
+    const adminRoles = [
+        { role: 'ADMIN_SUPER', email: 'admin.super@unizy.app', name: 'Super Admin', scopes: ['ALL'] },
+        { role: 'ADMIN_FINANCE', email: 'admin.finance@unizy.app', name: 'Finance Controller', scopes: ['FINANCE'] },
+        { role: 'ADMIN_SUPPORT', email: 'admin.support@unizy.app', name: 'Support Lead', scopes: ['SUPPORT'] },
+        { role: 'ADMIN_MODERATOR', email: 'admin.mod@unizy.app', name: 'Content Moderator', scopes: ['MODERATION'] },
+        { role: 'ADMIN_MERCHANT', email: 'admin.merchant@unizy.app', name: 'Merchant Manager', scopes: ['MERCHANT'] },
+        { role: 'ADMIN_DRIVER', email: 'admin.driver@unizy.app', name: 'Logistics Manager', scopes: ['DRIVER'] },
+        { role: 'ADMIN_HOUSING', email: 'admin.housing@unizy.app', name: 'Housing Manager', scopes: ['HOUSING'] },
+        { role: 'ADMIN_CLEANER', email: 'admin.cleaner@unizy.app', name: 'Cleaning Manager', scopes: ['CLEANER'] },
+        { role: 'ADMIN_OPERATIONS', email: 'admin.ops@unizy.app', name: 'Operations Lead', scopes: ['OPERATIONS'] },
+        { role: 'ADMIN_SERVICE_PROVIDER', email: 'admin.services@unizy.app', name: 'Services Manager', scopes: ['SERVICES'] },
+        { role: 'ADMIN_MEALS', email: 'admin.meals@unizy.app', name: 'Meals Manager', scopes: ['MEALS'] },
+    ];
+
+    const ADMIN_PASS = hash('UnizyAdmin2026!');
+
+    for (const adm of adminRoles) {
+        await prisma.user.upsert({
+            where: { email: adm.email },
+            update: {
+                role: adm.role,
+                name: adm.name,
+                scopes: adm.scopes,
+            },
+            create: {
+                name: adm.name,
+                email: adm.email,
+                password: ADMIN_PASS,
+                role: adm.role,
+                isVerified: true,
+                verificationStatus: 'VERIFIED',
+                university: 'Assiut University',
+                scopes: adm.scopes,
+            },
+        });
+        console.log(`✅ Admin: ${adm.email} (${adm.role})`);
+    }
 
     // ── Students (10) ──
     const studentNames = [
@@ -165,15 +186,26 @@ async function main() {
     const providerNames = ['Emaar Res', 'Student Living', 'Campus Suites'];
     const providers = [];
     for (let i = 0; i < 3; i++) {
+        const email = `houseowner${i + 1}@unizy.app`;
+        const oldEmail = `provider${i + 1}@unizy.app`;
+
+        // Check if old provider exists and update its email
+        const existing = await prisma.user.findFirst({
+            where: { OR: [{ email }, { email: oldEmail }] }
+        });
+
         const p = await prisma.user.upsert({
-            where: { email: `provider${i + 1}@unizy.app` },
-            update: {},
+            where: { email: existing?.email || email },
+            update: {
+                role: 'HOUSE_OWNER',
+                email: email, // Ensure it becomes houseowner
+            },
             create: {
                 name: providerNames[i],
-                email: `provider${i + 1}@unizy.app`,
+                email: email,
                 password: DEFAULT_PASS,
                 phone: `+20400000${String(i + 1).padStart(4, '0')}`,
-                role: 'PROVIDER',
+                role: 'HOUSE_OWNER',
                 isVerified: true,
                 verificationStatus: 'VERIFIED',
             },
@@ -198,7 +230,7 @@ async function main() {
             });
         }
     }
-    console.log(`✅ ${providers.length} Housing Providers + 15 Listings created`);
+    console.log(`✅ ${providers.length} House Owners + 15 Listings created`);
 
     // ── Drivers (5) ──
     const driverNames = ['Mohamed Fahmy', 'Ali Hassan', 'Mostafa Amr', 'Karim El-Said', 'Hamza Nabil'];
@@ -286,12 +318,12 @@ async function main() {
     console.log(`✅ ${orderStates.length} Sample Orders created`);
 
     console.log('\n🎉 Seed complete!');
-    console.log('\n📋 Login credentials (all use password: Test1234!):');
-    console.log('   Admin:     admin@unizy.app');
-    console.log('   Students:  student1@unizy.app ... student10@unizy.app');
-    console.log('   Merchants: merchant1@unizy.app ... merchant5@unizy.app');
-    console.log('   Drivers:   driver1@unizy.app ... driver5@unizy.app');
-    console.log('   Providers: provider1@unizy.app ... provider3@unizy.app');
+    console.log('\n📋 Login credentials:');
+    console.log('   Admins:     admin.super@unizy.app, admin.finance@unizy.app, etc. (Password: UnizyAdmin2026!)');
+    console.log('   Students:   student1@unizy.app ... student10@unizy.app (Password: Test1234!)');
+    console.log('   Merchants:  merchant1@unizy.app ... merchant5@unizy.app (Password: Test1234!)');
+    console.log('   Drivers:    driver1@unizy.app ... driver5@unizy.app (Password: Test1234!)');
+    console.log('   Partners:   houseowner1@unizy.app ... houseowner3@unizy.app (Password: Test1234!)');
 }
 
 main()

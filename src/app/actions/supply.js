@@ -11,7 +11,7 @@ import { revalidatePath } from 'next/cache';
 export async function toggleSupplyOnlineStatus() {
     try {
         const user = await getCurrentUser();
-        if (!user || !['MERCHANT', 'DRIVER', 'COURIER'].includes(user.role)) {
+        if (!user || !['MERCHANT', 'DRIVER', 'CLEANER', 'SERVICE_PROVIDER', 'HOUSE_OWNER'].includes(user.role)) {
             return { error: 'Unauthorized. Supplier role required.' };
         }
 
@@ -50,7 +50,7 @@ export async function getProviderAvailabilityStats() {
         const stats = await prisma.user.groupBy({
             by: ['role', 'isOnline'],
             where: {
-                role: { in: ['MERCHANT', 'DRIVER', 'COURIER'] }
+                role: { in: ['MERCHANT', 'DRIVER', 'CLEANER', 'SERVICE_PROVIDER', 'HOUSE_OWNER'] }
             },
             _count: { _all: true }
         });
@@ -59,7 +59,9 @@ export async function getProviderAvailabilityStats() {
         const formatted = {
             MERCHANT: { online: 0, offline: 0 },
             DRIVER: { online: 0, offline: 0 },
-            COURIER: { online: 0, offline: 0 }
+            CLEANER: { online: 0, offline: 0 },
+            SERVICE_PROVIDER: { online: 0, offline: 0 },
+            HOUSE_OWNER: { online: 0, offline: 0 }
         };
 
         stats.forEach(s => {

@@ -56,7 +56,7 @@ export async function getProviderPerformance(limit = 20) {
         if (!admin || !admin.role?.startsWith('ADMIN')) return { error: 'Unauthorized' };
 
         const providers = await prisma.user.findMany({
-            where: { role: { in: ['DRIVER', 'MERCHANT', 'PROVIDER'] } },
+            where: { role: { in: ['DRIVER', 'MERCHANT', 'CLEANER', 'SERVICE_PROVIDER', 'HOUSE_OWNER'] } },
             select: { id: true, name: true, role: true },
             take: limit,
         });
