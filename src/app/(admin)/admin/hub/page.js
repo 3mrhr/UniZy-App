@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Shield, Trash2, CheckCircle, AlertTriangle, MessageSquare, Flag, Eye, Ghost, Medal, Star, Trophy, Crown } from 'lucide-react';
 import { getModQueue, approvePost, deletePost, shadowBanUser } from '@/app/actions/hub';
+import toast from 'react-hot-toast';
 
 export default function AdminHubModeration() {
     const [flaggedPosts, setFlaggedPosts] = useState([]);
@@ -32,9 +33,14 @@ export default function AdminHubModeration() {
             const res = await approvePost(id);
             if (!res.success) {
                 setFlaggedPosts(prevPosts);
-                alert(res.error || 'Failed to approve post');
+                toast.error(res.error || 'Failed to approve post');
+            } else {
+                toast.success('Post approved');
             }
-        } catch { setFlaggedPosts(prevPosts); }
+        } catch {
+            setFlaggedPosts(prevPosts);
+            toast.error('Connection error');
+        }
     };
 
     const handleShadowBan = async (userId) => {
@@ -42,11 +48,13 @@ export default function AdminHubModeration() {
         try {
             const res = await shadowBanUser(userId);
             if (res.success) {
-                alert('User shadow banned successfully.');
+                toast.success('User shadow banned successfully.');
             } else {
-                alert(res.error || 'Failed to shadow ban');
+                toast.error(res.error || 'Failed to shadow ban');
             }
-        } catch { alert('Something went wrong'); }
+        } catch {
+            toast.error('Something went wrong');
+        }
     };
 
     const TIER_ICONS = {

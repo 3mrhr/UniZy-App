@@ -5,6 +5,8 @@ import { getCurrentUser } from './auth';
 import { computeCommissionSnapshot, computePricingSnapshot, generateTxnCode } from './financial';
 import { createOrder } from './orders';
 
+import { computeMerchantScore } from './trust-scoring';
+
 // Fetch active meals, optionally filtered by category (tags) or search text
 export async function getActiveMeals(category = null, searchQuery = '') {
     try {
@@ -43,11 +45,12 @@ export async function getActiveMeals(category = null, searchQuery = '') {
             storeOpen: true
         };
 
-        let meals = await prisma.meal.findMany({
+        let rawMeals = await prisma.meal.findMany({
             where: whereClause,
             include: {
                 merchant: {
                     select: {
+                        id: true,
                         name: true,
                         storeOpen: true
                     }
@@ -65,10 +68,23 @@ export async function getActiveMeals(category = null, searchQuery = '') {
             ]
         });
 
+        // Inject Trust Scores for Merchants
+        const meals = await Promise.all(rawMeals.map(async (meal) => {
+            const trustResult = await computeMerchantScore(meal.merchantId);
+            return {
+                ...meal,
+                merchant: {
+                    ...meal.merchant,
+                    trustScore: trustResult.success ? trustResult.score : 0
+                }
+            };
+        }));
+
         // Relevance Scoring Logic
+        let processedMeals = meals;
         if (searchQuery && searchQuery.trim() !== '') {
             const query = searchQuery.toLowerCase().trim();
-            meals = meals.map(meal => {
+            processedMeals = meals.map(meal => {
                 let score = 0;
                 const name = meal.name.toLowerCase();
                 const arName = (meal.arName || '').toLowerCase();
@@ -92,12 +108,12 @@ export async function getActiveMeals(category = null, searchQuery = '') {
             });
 
             // Re-sort by score
-            meals.sort((a, b) => b._score - a._score);
+            processedMeals.sort((a, b) => b._score - a._score);
             // Filter out zero score matches if meaningful
-            meals = meals.filter(m => m._score > 0);
+            processedMeals = processedMeals.filter(m => m._score > 0);
         }
 
-        return { success: true, meals };
+        return { success: true, meals: processedMeals };
     } catch (error) {
         console.error("Error fetching active meals:", error);
         return { success: false, error: "Failed to fetch meals" };

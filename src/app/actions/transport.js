@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { requireRole, requireOwnership } from '@/lib/authz';
 import { revalidatePath } from 'next/cache';
 import { createNotification } from './notifications';
+import { completeReferralIfEligible } from './referrals';
 import { generateTxnCode, computeCommissionSnapshot, computePricingSnapshot } from './financial';
 import { logEvent } from './analytics';
 import { logAdminAction } from './audit';
@@ -261,6 +262,13 @@ async function completeTrip(tripId, driverId) {
 
         return updatedTrip;
     });
+
+    // 3. Referral Graduation: Award points if this is their first completed ride
+    try {
+        await completeReferralIfEligible(result.userId);
+    } catch (e) {
+        console.error('Referral graduation failed (non-blocking):', e);
+    }
 
     try {
         await logEvent('RIDE_COMPLETED', result.id, { driverId, amount: result.finalPrice });

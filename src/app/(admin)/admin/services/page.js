@@ -5,6 +5,7 @@ import Link from 'next/link';
 import React, { useState, useEffect } from 'react';
 import { Shield, CheckCircle, XCircle, Wrench, Star, Phone, MapPin, Users } from 'lucide-react';
 import { getAdminProviders, approveProvider, rejectProvider } from '@/app/actions/services';
+import toast from 'react-hot-toast';
 
 export default function AdminServicesPage() {
     const [providers, setProviders] = useState([]);
@@ -35,11 +36,15 @@ export default function AdminServicesPage() {
             const res = await approveProvider(id);
             if (!res.success) {
                 setProviders(prev);
-                alert(res.error || 'Failed to approve');
+                toast.error(res.error || 'Failed to approve');
             } else {
+                toast.success('Provider approved successfully');
                 setStats(s => ({ ...s, verified: s.verified + 1, pending: Math.max(0, s.pending - 1) }));
             }
-        } catch { setProviders(prev); }
+        } catch {
+            setProviders(prev);
+            toast.error('Connection error');
+        }
     };
 
     const handleReject = async (id) => {
@@ -50,11 +55,15 @@ export default function AdminServicesPage() {
             const res = await rejectProvider(id);
             if (!res.success) {
                 setProviders(prev);
-                alert(res.error || 'Failed to reject');
+                toast.error(res.error || 'Failed to reject');
             } else {
+                toast.success('Provider rejected and removed');
                 setStats(s => ({ ...s, total: Math.max(0, s.total - 1), pending: Math.max(0, s.pending - 1) }));
             }
-        } catch { setProviders(prev); }
+        } catch {
+            setProviders(prev);
+            toast.error('Connection error');
+        }
     };
 
     return (

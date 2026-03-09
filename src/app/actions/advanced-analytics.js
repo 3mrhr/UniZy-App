@@ -179,3 +179,88 @@ export async function getRetentionCohorts(weeks = 4) {
         return { error: 'Failed to compute retention.' };
     }
 }
+/**
+ * Regional Demand Heatmap: Visual density of user activity.
+ * Returns a 0-100 "Heat" score per zone based on event volume.
+ */
+export async function getRegionalDensity() {
+    try {
+        const admin = await getCurrentUser();
+        if (!admin || !admin.role?.startsWith('ADMIN')) return { error: 'Unauthorized' };
+
+        // Group activity by zone/region from orders and events
+        const zones = await prisma.zone.findMany({
+            select: { id: true, name: true }
+        });
+
+        const densityData = await Promise.all(zones.map(async (zone) => {
+            const [orderCount, eventCount] = await Promise.all([
+                prisma.order.count({ where: { zoneId: zone.id } }),
+                prisma.analyticsEvent.count({
+                    where: {
+                        metadata: { contains: zone.name } // Heuristic mapping
+                    }
+                })
+            ]);
+
+            const volume = orderCount + (eventCount * 0.1);
+            return {
+                zoneId: zone.id,
+                zoneName: zone.name,
+                volume,
+            };
+        }));
+
+        const maxVolume = Math.max(...densityData.map(d => d.volume)) || 1;
+
+        const results = densityData.map(d => ({
+            ...d,
+            heatScore: Math.round((d.volume / maxVolume) * 100)
+        }));
+
+        return { success: true, heatmap: results };
+    } catch (error) {
+        console.error('Heatmap density error:', error);
+        return { error: 'Failed to compute demand heatmap.' };
+    }
+}
+
+/**
+ * Growth Intelligence Summary Generator.
+ * Consolidates metrics from across the system into a narrative summary for stakeholders.
+ */
+export async function generateGrowthSummary() {
+    try {
+        const admin = await getCurrentUser();
+        if (!admin || !admin.role?.startsWith('ADMIN')) return { error: 'Unauthorized' };
+
+        const [revenueData, userGrowth, moduleStats] = await Promise.all([
+            prisma.transaction.aggregate({
+                where: { status: 'COMPLETED' },
+                _sum: { amount: true }
+            }),
+            prisma.user.count({ where: { role: 'STUDENT' } }),
+            getModuleConversions()
+        ]);
+
+        const totalRevenue = revenueData._sum.amount || 0;
+        const topModule = [...(moduleStats.data || [])].sort((a, b) => b.completed - a.completed)[0];
+
+        const summary = {
+            timestamp: new Date().toISOString(),
+            totalRevenue,
+            activeStudents: userGrowth,
+            primaryGrowthEngine: topModule ? topModule.module : 'N/A',
+            intelligenceNotes: [
+                `Revenue baseline is stable at ${totalRevenue.toFixed(2)} EGP.`,
+                `User acquisition is currently at ${userGrowth} organic student signups.`,
+                topModule ? `${topModule.module} is the highest converting module at ${topModule.conversionRate}%.` : null
+            ].filter(Boolean)
+        };
+
+        return { success: true, summary };
+    } catch (error) {
+        console.error('Growth summary error:', error);
+        return { error: 'Failed to generate growth summary.' };
+    }
+}

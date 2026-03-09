@@ -190,11 +190,19 @@ export default function TrackingPage({ params }) {
                                 <div>
                                     <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Your Courier</div>
                                     <h3 className="text-xl font-black text-gray-900 dark:text-white tracking-tight">{order.driver.name}</h3>
-                                    <div className="flex items-center gap-2 text-[10px] font-bold text-yellow-500 uppercase italic">
-                                        <div className="flex gap-0.5">
-                                            {[1, 2, 3, 4, 5].map(i => <ShieldCheck key={i} size={8} fill="currentColor" />)}
+                                    <div className="flex flex-col gap-1.5">
+                                        <div className="flex items-center gap-2 text-[10px] font-bold text-emerald-500 uppercase italic">
+                                            <ShieldCheck size={10} fill="currentColor" />
+                                            Verified Logistics Partner
                                         </div>
-                                        Verified Logistics Partner
+                                        {order.driverTrustScore && (
+                                            <div className="flex items-center gap-2">
+                                                <div className="h-1 w-24 bg-gray-100 dark:bg-white/5 rounded-full overflow-hidden">
+                                                    <div className="h-full bg-brand-500 rounded-full" style={{ width: `${order.driverTrustScore}%` }} />
+                                                </div>
+                                                <span className="text-[9px] font-black text-brand-500 uppercase">{order.driverTrustScore}% Reliability</span>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>

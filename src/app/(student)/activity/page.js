@@ -130,9 +130,12 @@ export default function ActivityPage() {
                     <div className="p-8 text-center bg-white dark:bg-[#1E293B] rounded-2xl border border-gray-100 dark:border-gray-800 flex flex-col items-center">
                         <Activity className="w-12 h-12 text-gray-300 dark:text-gray-700 mb-3" />
                         <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">{t.noOrders || 'No activity found'}</h3>
-                        <p className="text-sm text-gray-500 max-w-xs mx-auto">
+                        <p className="text-sm text-gray-500 max-w-xs mx-auto mb-6">
                             You haven't made any {filterCategory !== 'ALL' ? filterCategory.toLowerCase() : ''} bookings or orders yet.
                         </p>
+                        <Link href="/hub" className="px-8 py-3 bg-brand-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-brand-700 transition-all shadow-lg shadow-brand-500/20 active:scale-95">
+                            Browse the Hub
+                        </Link>
                     </div>
                 ) : (
                     transactions.map((txn) => {

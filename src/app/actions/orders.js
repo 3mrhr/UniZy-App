@@ -542,6 +542,13 @@ export async function updateOrderStatus(orderId, newStatus, otp = null) {
                     if (!captureRes.success) {
                         throw new Error(`Elite Ledger Capture Failed: ${captureRes.error}`);
                     }
+
+                    // 3. Referral Graduation: Award points if this is their first completed order
+                    try {
+                        await completeReferralIfEligible(order.userId);
+                    } catch (e) {
+                        console.error('Referral graduation failed (non-blocking):', e);
+                    }
                 }
             }
 
@@ -770,6 +777,8 @@ export async function triggerSOS(orderId) {
     }
 }
 
+import { computeDriverScore } from './trust-scoring';
+
 export async function pollOrderStatus(requestId) {
     try {
         const user = await requireRole(['STUDENT']);
@@ -786,7 +795,20 @@ export async function pollOrderStatus(requestId) {
 
         if (order) {
             requireOwnership(order.userId, user.id);
-            return success({ order });
+
+            // Inject Driver Trust Score if driver is assigned
+            let driverTrustScore = 0;
+            if (order.driverId) {
+                const scoreResult = await computeDriverScore(order.driverId);
+                if (scoreResult.success) driverTrustScore = scoreResult.score;
+            }
+
+            return success({
+                order: {
+                    ...order,
+                    driverTrustScore
+                }
+            });
         }
 
         // 2. Try fetching from CustomDeliveryRequest

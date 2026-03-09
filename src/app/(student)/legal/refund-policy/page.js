@@ -1,9 +1,10 @@
-import Link from 'next/link';
 import { ArrowLeft, RefreshCcw, CheckCircle } from 'lucide-react';
+import MobileHeader from '@/components/MobileHeader';
 
 export default function RefundPolicyPage() {
     return (
         <main className="min-h-screen bg-gray-50 dark:bg-unizy-navy pb-32 transition-colors">
+            <MobileHeader />
             {/* Header */}
             <div className="bg-gradient-to-br from-brand-600 to-indigo-700 px-6 pt-12 pb-20 relative overflow-hidden">
                 <div className="max-w-3xl mx-auto relative z-10">

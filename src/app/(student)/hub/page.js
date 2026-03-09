@@ -4,8 +4,7 @@ import React, { useState, useEffect, useTransition, useCallback, Suspense } from
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useLanguage } from '@/i18n/LanguageProvider';
-import { Users, Megaphone, Edit3, MessageCircle, Heart, Share2, MoreHorizontal, Image as ImageIcon, Flag, Loader2, X, Search, Utensils, Home, Tag, Sparkles } from 'lucide-react';
-import { getPosts, createPost, flagPost, toggleLike, addComment, getNotices, getRoommateMatches, getTrendingPosts } from '@/app/actions/hub';
+import { Users, Megaphone, Edit3, MessageCircle, Heart, Share2, MoreHorizontal, Image as ImageIcon, Flag, Loader2, X, Search, Utensils, Home, Tag, Sparkles, TrendingUp, Medal, Star, Trophy, Crown, Gift, MapPin } from 'lucide-react';
 import { globalSearch } from '@/app/actions/search';
 import { getCurrentUser } from '@/app/actions/auth';
 import ReportButton from '@/components/ReportButton';
@@ -218,13 +217,21 @@ function HubContent() {
                     {searchQuery.length >= 2 && (
                         <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-unizy-dark rounded-3xl border border-gray-100 dark:border-white/10 shadow-2xl p-2 z-50">
                             {searchResults.length > 0 ? searchResults.map(res => (
-                                <Link key={res.id} href={res.url} className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-white/5 rounded-2xl transition-colors">
-                                    <div className="w-8 h-8 rounded-lg bg-brand-500/10 flex items-center justify-center">
-                                        {res.type === 'meal' ? <Utensils className="w-4 h-4 text-orange-500" /> : <Home className="w-4 h-4 text-blue-500" />}
-                                    </div>
-                                    <span className="text-sm font-bold text-gray-900 dark:text-white">{res.title}</span>
                                 </Link>
-                            )) : <p className="p-4 text-sm text-gray-500 text-center">No results found</p>}
+                            )) : (
+                                <div className="p-8 text-center flex flex-col items-center gap-3">
+                                    <div className="w-12 h-12 rounded-full bg-gray-50 dark:bg-white/5 flex items-center justify-center">
+                                        <AlertCircle className="w-6 h-6 text-gray-400" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-black text-gray-900 dark:text-white">No results found</p>
+                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Try a different keyword or suggest a service</p>
+                                    </div>
+                                    <Link href="/support" className="mt-2 text-[10px] font-black text-brand-500 uppercase tracking-widest hover:underline">
+                                        Suggest a Service →
+                                    </Link>
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
@@ -232,199 +239,199 @@ function HubContent() {
 
             <ServiceBentoGrid />
 
-            {/* Trending Pulse (Platinum) */}
-            {
-                activeTab === 'feed' && trending.length > 0 && (
-                    <div className="relative z-10 mb-8 overflow-hidden rounded-[2rem] bg-gradient-to-br from-unizy-navy to-black border border-white/10 p-6 shadow-2xl">
-                        <div className="flex items-center gap-2 mb-4">
-                            <TrendingUp className="w-5 h-5 text-brand-400" />
-                            <h3 className="text-sm font-black text-white uppercase tracking-widest">Trending Pulse</h3>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                            {trending.map((t, idx) => (
-                                <div key={t.id} className="bg-white/5 border border-white/5 p-4 rounded-2xl flex flex-col justify-between">
-                                    <p className="text-xs font-medium text-gray-300 line-clamp-2 mb-3">"{t.content}"</p>
-                                    <div className="flex items-center gap-2">
-                                        <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(t.author?.name || 'U')}&background=random`} className="w-5 h-5 rounded-full" />
-                                        <span className="text-[10px] font-black text-gray-500 uppercase">{t.author?.name}</span>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )
-            }
-
-            {/* Feed View */}
-            {
-                activeTab === 'feed' && (
-                    <div className="relative z-10 space-y-6">
-                        <div className="bg-white/40 dark:bg-unizy-dark/40 backdrop-blur-xl p-6 rounded-3xl border border-white/60 dark:border-white/10 shadow-glass">
-                            <textarea
-                                value={postText}
-                                onChange={(e) => setPostText(e.target.value)}
-                                placeholder="Share something with your campus..."
-                                className="w-full bg-transparent border-0 focus:ring-0 text-sm font-medium text-gray-900 dark:text-white resize-none"
-                                rows={3}
-                            />
-                            <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-100 dark:border-white/5">
-                                <select value={postCategory} onChange={(e) => setPostCategory(e.target.value)} className="bg-transparent text-xs font-bold text-gray-400 outline-none border-0">
-                                    {CATEGORY_OPTIONS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-                                </select>
-                                <button onClick={handlePost} disabled={!postText.trim() || isPending} className="px-6 py-2.5 bg-brand-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg shadow-brand-500/20">
-                                    {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Post'}
-                                </button>
+            {/* Trending Pulse (Platinum) */ }
+    {
+        activeTab === 'feed' && trending.length > 0 && (
+            <div className="relative z-10 mb-8 overflow-hidden rounded-[2rem] bg-gradient-to-br from-unizy-navy to-black border border-white/10 p-6 shadow-2xl">
+                <div className="flex items-center gap-2 mb-4">
+                    <TrendingUp className="w-5 h-5 text-brand-400" />
+                    <h3 className="text-sm font-black text-white uppercase tracking-widest">Trending Pulse</h3>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    {trending.map((t, idx) => (
+                        <div key={t.id} className="bg-white/5 border border-white/5 p-4 rounded-2xl flex flex-col justify-between">
+                            <p className="text-xs font-medium text-gray-300 line-clamp-2 mb-3">"{t.content}"</p>
+                            <div className="flex items-center gap-2">
+                                <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(t.author?.name || 'U')}&background=random`} className="w-5 h-5 rounded-full" />
+                                <span className="text-[10px] font-black text-gray-500 uppercase">{t.author?.name}</span>
                             </div>
                         </div>
+                    ))}
+                </div>
+            </div>
+        )
+    }
 
-                        {loading ? (
-                            <div className="py-20 flex justify-center"><Loader2 className="w-10 h-10 animate-spin text-brand-500" /></div>
-                        ) : posts.map(post => (
-                            <div key={post.id} className={`bg-white/40 dark:bg-unizy-dark/40 backdrop-blur-xl p-6 rounded-3xl border border-white/60 dark:border-white/10 shadow-glass transition-all hover:border-brand-500/30 ${TAG_COLORS[post.category] ? 'border-l-4' : ''}`}>
-                                <div className="flex justify-between mb-4">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-full bg-brand-500/10 overflow-hidden border border-brand-500/20">
-                                            <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(post.author?.name || 'U')}&background=random`} alt="" className="w-full h-full object-cover" />
-                                        </div>
-                                        <div>
-                                            <div className="flex items-center gap-1.5">
-                                                <h4 className="text-sm font-black text-gray-900 dark:text-white">{post.author?.name}</h4>
-                                                {post.author?.tier && post.author.tier !== 'BRONZE' && (() => {
-                                                    const TierIcon = TIER_ICONS[post.author.tier].icon;
-                                                    return <TierIcon className={`w-3 h-3 ${TIER_ICONS[post.author.tier].color}`} />;
-                                                })()}
-                                                <span className={`text-[8px] px-1.5 py-0.5 rounded-md font-black uppercase tracking-tighter ${TAG_COLORS[post.category] || 'bg-gray-100 dark:bg-white/5 text-gray-500'}`}>
-                                                    {post.category}
-                                                </span>
-                                            </div>
-                                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{timeAgo(post.createdAt)}</p>
-                                        </div>
+    {/* Feed View */ }
+    {
+        activeTab === 'feed' && (
+            <div className="relative z-10 space-y-6">
+                <div className="bg-white/40 dark:bg-unizy-dark/40 backdrop-blur-xl p-6 rounded-3xl border border-white/60 dark:border-white/10 shadow-glass">
+                    <textarea
+                        value={postText}
+                        onChange={(e) => setPostText(e.target.value)}
+                        placeholder="Share something with your campus..."
+                        className="w-full bg-transparent border-0 focus:ring-0 text-sm font-medium text-gray-900 dark:text-white resize-none"
+                        rows={3}
+                    />
+                    <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-100 dark:border-white/5">
+                        <select value={postCategory} onChange={(e) => setPostCategory(e.target.value)} className="bg-transparent text-xs font-bold text-gray-400 outline-none border-0">
+                            {CATEGORY_OPTIONS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                        </select>
+                        <button onClick={handlePost} disabled={!postText.trim() || isPending} className="px-6 py-2.5 bg-brand-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg shadow-brand-500/20">
+                            {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Post'}
+                        </button>
+                    </div>
+                </div>
+
+                {loading ? (
+                    <div className="py-20 flex justify-center"><Loader2 className="w-10 h-10 animate-spin text-brand-500" /></div>
+                ) : posts.map(post => (
+                    <div key={post.id} className={`bg-white/40 dark:bg-unizy-dark/40 backdrop-blur-xl p-6 rounded-3xl border border-white/60 dark:border-white/10 shadow-glass transition-all hover:border-brand-500/30 ${TAG_COLORS[post.category] ? 'border-l-4' : ''}`}>
+                        <div className="flex justify-between mb-4">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-brand-500/10 overflow-hidden border border-brand-500/20">
+                                    <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(post.author?.name || 'U')}&background=random`} alt="" className="w-full h-full object-cover" />
+                                </div>
+                                <div>
+                                    <div className="flex items-center gap-1.5">
+                                        <h4 className="text-sm font-black text-gray-900 dark:text-white">{post.author?.name}</h4>
+                                        {post.author?.tier && post.author.tier !== 'BRONZE' && (() => {
+                                            const TierIcon = TIER_ICONS[post.author.tier].icon;
+                                            return <TierIcon className={`w-3 h-3 ${TIER_ICONS[post.author.tier].color}`} />;
+                                        })()}
+                                        <span className={`text-[8px] px-1.5 py-0.5 rounded-md font-black uppercase tracking-tighter ${TAG_COLORS[post.category] || 'bg-gray-100 dark:bg-white/5 text-gray-500'}`}>
+                                            {post.category}
+                                        </span>
                                     </div>
-                                    <ReportButton type="HUB_POST" targetId={post.id} targetUserId={post.authorId} />
+                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{timeAgo(post.createdAt)}</p>
                                 </div>
-                                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-6">{post.content}</p>
+                            </div>
+                            <ReportButton type="HUB_POST" targetId={post.id} targetUserId={post.authorId} />
+                        </div>
+                        <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-6">{post.content}</p>
 
-                                {/* Reactions */}
-                                <div className="flex items-center gap-6 pt-4 border-t border-gray-100 dark:border-white/5">
-                                    <button onClick={() => handleLike(post.id)} className={`flex items-center gap-1.5 text-xs font-black transition-transform active:scale-125 ${post.isLiked ? 'text-rose-500' : 'text-gray-400'}`}>
-                                        <Heart className={`w-4 h-4 ${post.isLiked ? 'fill-current' : ''}`} /> {post.likes}
-                                    </button>
-                                    <button onClick={() => setCommentingId(commentingId === post.id ? null : post.id)} className="flex items-center gap-1.5 text-xs font-black text-gray-400">
-                                        <MessageCircle className="w-4 h-4" /> {post.commentsCount}
+                        {/* Reactions */}
+                        <div className="flex items-center gap-6 pt-4 border-t border-gray-100 dark:border-white/5">
+                            <button onClick={() => handleLike(post.id)} className={`flex items-center gap-1.5 text-xs font-black transition-transform active:scale-125 ${post.isLiked ? 'text-rose-500' : 'text-gray-400'}`}>
+                                <Heart className={`w-4 h-4 ${post.isLiked ? 'fill-current' : ''}`} /> {post.likes}
+                            </button>
+                            <button onClick={() => setCommentingId(commentingId === post.id ? null : post.id)} className="flex items-center gap-1.5 text-xs font-black text-gray-400">
+                                <MessageCircle className="w-4 h-4" /> {post.commentsCount}
+                            </button>
+                        </div>
+
+                        {/* Threaded Comments (Platinum UI) */}
+                        {commentingId === post.id && (
+                            <div className="mt-6 space-y-4 animate-in slide-in-from-top-2 duration-300">
+                                <div className="flex gap-2 mb-4">
+                                    <input
+                                        value={commentText}
+                                        onChange={(e) => setCommentText(e.target.value)}
+                                        placeholder="Join the conversation..."
+                                        className="flex-1 bg-gray-50 dark:bg-white/5 border-none rounded-xl px-4 py-3 text-xs font-bold outline-none ring-1 ring-inset ring-gray-100 dark:ring-white/5 focus:ring-brand-500 transition-all"
+                                    />
+                                    <button
+                                        onClick={() => handleComment(post.id)}
+                                        className="px-6 py-3 bg-brand-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-brand-700 transition-all shadow-lg shadow-brand-500/20 active:scale-95"
+                                    >
+                                        Reply
                                     </button>
                                 </div>
 
-                                {/* Threaded Comments (Platinum UI) */}
-                                {commentingId === post.id && (
-                                    <div className="mt-6 space-y-4 animate-in slide-in-from-top-2 duration-300">
-                                        <div className="flex gap-2 mb-4">
-                                            <input
-                                                value={commentText}
-                                                onChange={(e) => setCommentText(e.target.value)}
-                                                placeholder="Join the conversation..."
-                                                className="flex-1 bg-gray-50 dark:bg-white/5 border-none rounded-xl px-4 py-3 text-xs font-bold outline-none ring-1 ring-inset ring-gray-100 dark:ring-white/5 focus:ring-brand-500 transition-all"
-                                            />
-                                            <button
-                                                onClick={() => handleComment(post.id)}
-                                                className="px-6 py-3 bg-brand-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-brand-700 transition-all shadow-lg shadow-brand-500/20 active:scale-95"
-                                            >
-                                                Reply
-                                            </button>
-                                        </div>
-
-                                        {post.comments?.map(comment => (
-                                            <div key={comment.id} className="pl-4 border-l-2 border-gray-100 dark:border-white/5 space-y-3">
-                                                <div className="flex items-start gap-2">
-                                                    <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(comment.author?.name || 'U')}&background=random`} className="w-6 h-6 rounded-full mt-0.5" />
-                                                    <div className="flex-1 bg-gray-50/50 dark:bg-white/5 rounded-2xl p-3">
-                                                        <div className="flex items-center gap-2 mb-1">
-                                                            <span className="text-[10px] font-black text-gray-900 dark:text-white">{comment.author?.name}</span>
-                                                            <span className="text-[8px] font-bold text-gray-400 uppercase">{timeAgo(comment.createdAt)}</span>
-                                                        </div>
-                                                        <p className="text-[11px] font-medium text-gray-700 dark:text-gray-300">{comment.content}</p>
-                                                    </div>
+                                {post.comments?.map(comment => (
+                                    <div key={comment.id} className="pl-4 border-l-2 border-gray-100 dark:border-white/5 space-y-3">
+                                        <div className="flex items-start gap-2">
+                                            <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(comment.author?.name || 'U')}&background=random`} className="w-6 h-6 rounded-full mt-0.5" />
+                                            <div className="flex-1 bg-gray-50/50 dark:bg-white/5 rounded-2xl p-3">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <span className="text-[10px] font-black text-gray-900 dark:text-white">{comment.author?.name}</span>
+                                                    <span className="text-[8px] font-bold text-gray-400 uppercase">{timeAgo(comment.createdAt)}</span>
                                                 </div>
+                                                <p className="text-[11px] font-medium text-gray-700 dark:text-gray-300">{comment.content}</p>
+                                            </div>
+                                        </div>
 
-                                                {/* Nested Replies */}
-                                                {comment.replies?.map(reply => (
-                                                    <div key={reply.id} className="pl-6 flex items-start gap-2">
-                                                        <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(reply.author?.name || 'U')}&background=random`} className="w-5 h-5 rounded-full mt-0.5" />
-                                                        <div className="flex-1 bg-gray-100/30 dark:bg-white/5 rounded-xl p-2.5">
-                                                            <div className="flex items-center gap-2 mb-1">
-                                                                <span className="text-[9px] font-black text-gray-900 dark:text-white">{reply.author?.name}</span>
-                                                            </div>
-                                                            <p className="text-[10px] font-medium text-gray-600 dark:text-gray-400">{reply.content}</p>
-                                                        </div>
+                                        {/* Nested Replies */}
+                                        {comment.replies?.map(reply => (
+                                            <div key={reply.id} className="pl-6 flex items-start gap-2">
+                                                <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(reply.author?.name || 'U')}&background=random`} className="w-5 h-5 rounded-full mt-0.5" />
+                                                <div className="flex-1 bg-gray-100/30 dark:bg-white/5 rounded-xl p-2.5">
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <span className="text-[9px] font-black text-gray-900 dark:text-white">{reply.author?.name}</span>
                                                     </div>
-                                                ))}
+                                                    <p className="text-[10px] font-medium text-gray-600 dark:text-gray-400">{reply.content}</p>
+                                                </div>
                                             </div>
                                         ))}
                                     </div>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                )
-            }
-
-            {/* Roommate View */}
-            {
-                activeTab === 'roommates' && (
-                    <div className="relative z-10 animate-fade-in space-y-6">
-                        <div className="bg-brand-600 rounded-[2.5rem] p-10 text-white text-center shadow-xl shadow-brand-500/20 overflow-hidden relative">
-                            <Sparkles className="absolute top-4 right-4 w-6 h-6 opacity-20" />
-                            <h2 className="text-3xl font-black tracking-tighter mb-2">Roommate Radar</h2>
-                            <p className="text-brand-100 font-medium opacity-80">Finding peers with 90%+ compatibility based on your habits.</p>
-                        </div>
-
-                        {roommatesLoading ? (
-                            <div className="py-20 flex justify-center"><Loader2 className="w-10 h-10 animate-spin text-brand-500" /></div>
-                        ) : roommates.length > 0 ? roommates.map(req => (
-                            <div key={req.id} className="bg-white/40 dark:bg-unizy-dark/40 backdrop-blur-xl p-6 rounded-[2rem] border border-white/60 dark:border-white/10 shadow-glass flex items-center gap-6">
-                                <div className="relative w-20 h-20 flex-shrink-0 flex items-center justify-center">
-                                    <div className="absolute inset-0 rounded-full border-4 border-gray-100 dark:border-white/5" />
-                                    <div className="absolute inset-0 rounded-full border-4 border-brand-500" style={{ clipPath: `inset(0 ${100 - req.matchScore}% 0 0)` }} />
-                                    <span className="text-lg font-black text-gray-900 dark:text-white">{req.matchScore}%</span>
-                                </div>
-                                <div className="flex-1">
-                                    <h4 className="text-lg font-black text-gray-900 dark:text-white">{req.user.name}</h4>
-                                    <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">{req.area} • {req.budget} EGP</p>
-                                    <div className="flex gap-2">
-                                        {['cleanliness', 'study'].map(tag => (
-                                            <span key={tag} className="px-2 py-1 bg-brand-500/10 text-brand-600 dark:text-brand-400 text-[8px] font-black uppercase tracking-widest rounded-lg">{req[tag]}</span>
-                                        ))}
-                                    </div>
-                                </div>
-                                <button className="px-6 py-3 bg-brand-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-brand-500/20 active:scale-95 transition-all">Handshake</button>
-                            </div>
-                        )) : (
-                            <div className="py-20 text-center">
-                                <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                                <p className="text-gray-500 font-black uppercase tracking-widest">No matches found</p>
+                                ))}
                             </div>
                         )}
                     </div>
-                )
-            }
+                ))}
+            </div>
+        )
+    }
 
-            {/* Notices View */}
-            {
-                activeTab === 'notices' && (
-                    <div className="relative z-10 animate-fade-in space-y-4">
-                        {noticesLoading ? (
-                            <div className="py-20 flex justify-center"><Loader2 className="w-10 h-10 animate-spin text-brand-500" /></div>
-                        ) : notices.map(notice => (
-                            <div key={notice.id} className="bg-white/40 dark:bg-unizy-dark/40 backdrop-blur-xl p-6 rounded-[2rem] border border-white/60 dark:border-white/10 shadow-glass border-l-4 border-l-brand-500">
-                                <h3 className="text-lg font-black text-gray-900 dark:text-white mb-2">{notice.title}</h3>
-                                <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-4">{notice.message}</p>
-                                <div className="flex items-center gap-2 text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                                    <Megaphone className="w-3 h-3" /> {notice.university}
-                                </div>
+    {/* Roommate View */ }
+    {
+        activeTab === 'roommates' && (
+            <div className="relative z-10 animate-fade-in space-y-6">
+                <div className="bg-brand-600 rounded-[2.5rem] p-10 text-white text-center shadow-xl shadow-brand-500/20 overflow-hidden relative">
+                    <Sparkles className="absolute top-4 right-4 w-6 h-6 opacity-20" />
+                    <h2 className="text-3xl font-black tracking-tighter mb-2">Roommate Radar</h2>
+                    <p className="text-brand-100 font-medium opacity-80">Finding peers with 90%+ compatibility based on your habits.</p>
+                </div>
+
+                {roommatesLoading ? (
+                    <div className="py-20 flex justify-center"><Loader2 className="w-10 h-10 animate-spin text-brand-500" /></div>
+                ) : roommates.length > 0 ? roommates.map(req => (
+                    <div key={req.id} className="bg-white/40 dark:bg-unizy-dark/40 backdrop-blur-xl p-6 rounded-[2rem] border border-white/60 dark:border-white/10 shadow-glass flex items-center gap-6">
+                        <div className="relative w-20 h-20 flex-shrink-0 flex items-center justify-center">
+                            <div className="absolute inset-0 rounded-full border-4 border-gray-100 dark:border-white/5" />
+                            <div className="absolute inset-0 rounded-full border-4 border-brand-500" style={{ clipPath: `inset(0 ${100 - req.matchScore}% 0 0)` }} />
+                            <span className="text-lg font-black text-gray-900 dark:text-white">{req.matchScore}%</span>
+                        </div>
+                        <div className="flex-1">
+                            <h4 className="text-lg font-black text-gray-900 dark:text-white">{req.user.name}</h4>
+                            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">{req.area} • {req.budget} EGP</p>
+                            <div className="flex gap-2">
+                                {['cleanliness', 'study'].map(tag => (
+                                    <span key={tag} className="px-2 py-1 bg-brand-500/10 text-brand-600 dark:text-brand-400 text-[8px] font-black uppercase tracking-widest rounded-lg">{req[tag]}</span>
+                                ))}
                             </div>
-                        ))}
+                        </div>
+                        <button className="px-6 py-3 bg-brand-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-brand-500/20 active:scale-95 transition-all">Handshake</button>
                     </div>
-                )
-            }
+                )) : (
+                    <div className="py-20 text-center">
+                        <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                        <p className="text-gray-500 font-black uppercase tracking-widest">No matches found</p>
+                    </div>
+                )}
+            </div>
+        )
+    }
+
+    {/* Notices View */ }
+    {
+        activeTab === 'notices' && (
+            <div className="relative z-10 animate-fade-in space-y-4">
+                {noticesLoading ? (
+                    <div className="py-20 flex justify-center"><Loader2 className="w-10 h-10 animate-spin text-brand-500" /></div>
+                ) : notices.map(notice => (
+                    <div key={notice.id} className="bg-white/40 dark:bg-unizy-dark/40 backdrop-blur-xl p-6 rounded-[2rem] border border-white/60 dark:border-white/10 shadow-glass border-l-4 border-l-brand-500">
+                        <h3 className="text-lg font-black text-gray-900 dark:text-white mb-2">{notice.title}</h3>
+                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-4">{notice.message}</p>
+                        <div className="flex items-center gap-2 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                            <Megaphone className="w-3 h-3" /> {notice.university}
+                        </div>
+                    </div>
+                ))}
+            </div>
+        )
+    }
         </main >
     );
 }

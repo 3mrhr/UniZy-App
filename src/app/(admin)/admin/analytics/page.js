@@ -3,24 +3,75 @@
 import React, { useState, useEffect } from 'react';
 import {
     BarChart3, TrendingUp, Users, ShoppingBag,
-    Download, PieChart, Activity, Truck, Settings, ShieldAlert, Tag
+    Download, PieChart, Activity, Truck, Settings, ShieldAlert, Tag, Map as MapIcon, Loader2
 } from 'lucide-react';
 import { getDashboardAnalytics } from '@/app/actions/analytics';
+import { getRegionalDensity } from '@/app/actions/advanced-analytics';
+
+// Visual Heatmap Component
+function DemandHeatmap({ data }) {
+    if (!data || data.length === 0) return null;
+    return (
+        <div className="bg-white dark:bg-unizy-dark p-8 rounded-[2.5rem] border border-gray-100 dark:border-white/5 shadow-xl">
+            <div className="flex items-center gap-3 mb-8">
+                <MapIcon className="text-brand-500" size={24} />
+                <h3 className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-tight">Geospatial Demand Heatmap</h3>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
+                {data.map((zone) => {
+                    const intensity = Math.min(zone.heatScore * 10, 100);
+                    const color = intensity > 80 ? 'bg-rose-500' : intensity > 50 ? 'bg-orange-500' : 'bg-brand-500';
+                    return (
+                        <div key={zone.zone} className="relative group">
+                            <div className={`h-28 rounded-3xl ${color} transition-all group-hover:scale-105 shadow-lg`} style={{ opacity: Math.max(0.2, intensity / 100) }} />
+                            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                                <span className="text-sm font-black text-white drop-shadow-md">{zone.zone}</span>
+                                <span className="text-[10px] font-bold text-white/80 uppercase">{zone.heatScore.toFixed(1)} Pulse</span>
+                            </div>
+                            <div className="mt-3 text-center">
+                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{zone.orderCount} Orders</p>
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+            <div className="mt-8 pt-6 border-t border-gray-50 dark:border-white/5 flex justify-between items-center text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                <span>Legend:</span>
+                <div className="flex gap-4">
+                    <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-brand-500" /> Low</span>
+                    <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-orange-500" /> High</span>
+                    <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-rose-500" /> Surge</span>
+                </div>
+            </div>
+        </div>
+    );
+}
 
 export default function AnalyticsPage() {
     const [data, setData] = useState(null);
+    const [heatmap, setHeatmap] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        const fetchAnalytics = async () => {
+        const fetchAll = async () => {
             setIsLoading(true);
-            const res = await getDashboardAnalytics();
-            if (res.success && res.stats) {
-                setData(res.stats);
+            try {
+                const [res, heatRes] = await Promise.all([
+                    getDashboardAnalytics(),
+                    getRegionalDensity()
+                ]);
+                if (res.success && res.stats) {
+                    setData(res.stats);
+                }
+                if (heatRes.success) {
+                    setHeatmap(heatRes.data);
+                }
+            } catch (error) {
+                console.error("Fetch analytics error:", error);
             }
             setIsLoading(false);
         };
-        fetchAnalytics();
+        fetchAll();
     }, []);
 
     if (isLoading) {

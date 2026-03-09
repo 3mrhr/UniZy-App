@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Users, Shield, Plus, MoreHorizontal, Check, X, Search } from 'lucide-react';
 import { getUsers, updateUserRole } from '@/app/actions/admin';
+import toast from 'react-hot-toast';
 
 export default function StaffManagementPage() {
     const [users, setUsers] = useState([]);
@@ -60,8 +61,9 @@ export default function StaffManagementPage() {
                 u.id === userId ? { ...u, role: selectedRole, scopes: JSON.stringify(selectedScopes) } : u
             ));
             setEditingUser(null);
+            toast.success('Staff permissions updated');
         } else {
-            alert(res.error || 'Failed to update user');
+            toast.error(res.error || 'Failed to update user');
         }
         setIsSaving(false);
     };

@@ -162,7 +162,7 @@ export async function getTicketDetails(id) {
 /**
  * Add a message/reply to a ticket
  */
-export async function sendTicketMessage({ ticketId, content, isAdmin = false }) {
+export async function sendTicketMessage({ ticketId, content, isAdmin = false, data = {} }) {
     try {
         const user = await getCurrentUser();
         if (!user) return { success: false, error: 'Unauthorized.' };
@@ -185,7 +185,7 @@ export async function sendTicketMessage({ ticketId, content, isAdmin = false }) 
                 content,
                 senderId: user.id,
                 isAdmin: isStaff && isAdmin, // Only allow isAdmin true if actor really is staff
-                isInternal: isStaff && arguments[0].isInternal === true // Only allow isInternal if staff
+                isInternal: isStaff && data?.isInternal === true // Use data parameter instead of arguments
             }
         });
 

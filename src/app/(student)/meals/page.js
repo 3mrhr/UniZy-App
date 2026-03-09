@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/i18n/LanguageProvider';
-import { Clock, Info, Search, Star, UtensilsCrossed, CalendarDays, Wallet, ChefHat, Heart, ChevronRight, Leaf, X } from 'lucide-react';
+import { Clock, Info, Search, Star, UtensilsCrossed, CalendarDays, Wallet, ChefHat, Heart, ChevronRight, Leaf, X, ShieldCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getActiveMeals, getActiveSubscription, getMealPlans, orderMeal, purchaseSubscription } from '@/app/actions/meals';
 
@@ -227,12 +227,33 @@ export default function MealsPage() {
                     [...Array(6)].map((_, i) => <div key={i} className="glass-frosted rounded-[2.5rem] h-96 animate-pulse" />)
                 ) : meals.map(meal => (
                     <div key={meal.id} className="glass-frosted rounded-[2.5rem] overflow-hidden group hover:scale-[1.02] transition-all duration-500 relative">
-                        <div className="h-60 overflow-hidden bg-gray-100">
+                        <div className="h-60 overflow-hidden bg-gray-100 relative">
                             {meal.image ? <img src={meal.image} className="w-full h-full object-cover group-hover:scale-110 duration-1000" /> : <div className="h-full flex items-center justify-center"><UtensilsCrossed className="w-16 h-16 text-gray-200" /></div>}
+
+                            {/* Trust Badge (Platinum) */}
+                            {meal.merchant?.trustScore >= 90 && (
+                                <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-xl border border-blue-500/20 animate-in fade-in slide-in-from-left-2 duration-700">
+                                    <ShieldCheck className="w-3.5 h-3.5 text-blue-500" fill="currentColor" />
+                                    <span className="text-[10px] font-black text-gray-900 uppercase tracking-tighter">Platinum Trusted</span>
+                                </div>
+                            )}
+                            {meal.merchant?.trustScore >= 80 && meal.merchant?.trustScore < 90 && (
+                                <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-xl border border-orange-500/20">
+                                    <Star className="w-3.5 h-3.5 text-orange-500" fill="currentColor" />
+                                    <span className="text-[10px] font-black text-gray-900 uppercase tracking-tighter">Top Rated</span>
+                                </div>
+                            )}
                         </div>
                         <div className="p-7">
                             <h3 className="font-black text-xl mb-2">{meal.name}</h3>
-                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{meal.merchant?.name}</p>
+                            <div className="flex items-center gap-2">
+                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{meal.merchant?.name}</p>
+                                {meal.merchant?.trustScore > 0 && (
+                                    <span className="text-[9px] font-black text-orange-500 bg-orange-500/10 px-1.5 py-0.5 rounded-md">
+                                        {meal.merchant.trustScore}% Trust
+                                    </span>
+                                )}
+                            </div>
                             <div className="flex items-center justify-between mt-6">
                                 <div className="flex flex-col">
                                     <span className="text-2xl font-black">{meal.price} {meal.currency}</span>
