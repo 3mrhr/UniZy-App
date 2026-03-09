@@ -204,6 +204,7 @@ export async function approveCustomPrice(requestId) {
 export async function acceptCustomDelivery(requestId) {
     try {
         const user = await requireRole(['COURIER']);
+        if (!user.isOnline) return failure('OFFLINE', 'You must be online to accept deliveries.');
 
         const updated = await prisma.customDeliveryRequest.updateMany({
             where: {
@@ -328,7 +329,8 @@ export async function getCourierActiveTasks() {
  */
 export async function getAvailableCustomRequests() {
     try {
-        await requireRole(['COURIER']);
+        const user = await requireRole(['COURIER']);
+        if (!user.isOnline) return success([]);
 
         const requests = await prisma.customDeliveryRequest.findMany({
             where: {

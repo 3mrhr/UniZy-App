@@ -24,8 +24,8 @@ export default function ClientLayout({ children }) {
     // Show bottom nav for student-facing pages
     const showBottomNav = !isPublicPage && !isAuthPage && !isSpecialPortal && !pathname.startsWith('/legal');
 
-    // Header should show on student pages and public pages
-    const showHeader = !isAuthPage && !isSpecialPortal;
+    // Header should show on student pages and other public pages, but NOT the landing page (which has its own)
+    const showHeader = !isAuthPage && !isSpecialPortal && !isPublicPage;
 
     return (
         <>

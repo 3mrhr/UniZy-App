@@ -10,8 +10,10 @@ import {
 } from '@/app/actions/delivery';
 import { getDriverOrders, acceptOrder, updateOrderStatus } from '@/app/actions/orders';
 import { getAvailableTrips, acceptTrip, updateTripStatus } from '@/app/actions/transport';
-import { Package, Bike, Clock, MapPin, CheckCircle, XCircle, DollarSign, Zap, Power, ChevronRight, MessageCircle } from 'lucide-react';
+import { Package, Bike, Clock, MapPin, CheckCircle, XCircle, DollarSign, Zap, Power, ChevronRight, MessageCircle, Star } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { toggleSupplyOnlineStatus } from '@/app/actions/supply';
+import { getProviderEarningsSnapshot } from '@/app/actions/fin-ops';
 
 export default function CourierDashboard() {
     const [isOnline, setIsOnline] = useState(false);
@@ -24,20 +26,23 @@ export default function CourierDashboard() {
     const [otpInput, setOtpInput] = useState('');
 
     const [rideTasks, setRideTasks] = useState([]);
+    const [earnings, setEarnings] = useState(null);
 
     const fetchData = async () => {
         setIsLoading(true);
-        const [availCustom, availMerchant, availTrips, activeRes] = await Promise.all([
+        const [availCustom, availMerchant, availTrips, activeRes, earningsRes] = await Promise.all([
             getAvailableCustomRequests(),
             getDriverOrders(),
             getAvailableTrips(),
-            getCourierActiveTasks()
+            getCourierActiveTasks(),
+            getProviderEarningsSnapshot()
         ]);
 
         setCustomTasks(availCustom.data || []);
         setMerchantTasks(availMerchant.data || []);
         setRideTasks(availTrips || []); // transport actions return raw array currently
         setActiveTasks(activeRes.data || []);
+        if (earningsRes.success) setEarnings(earningsRes.stats);
         setIsLoading(false);
     };
 
@@ -125,7 +130,16 @@ export default function CourierDashboard() {
                     </div>
 
                     <button
-                        onClick={() => setIsOnline(!isOnline)}
+                        onClick={async () => {
+                            const res = await toggleSupplyOnlineStatus();
+                            if (res.success) {
+                                setIsOnline(res.isOnline);
+                                if (res.isOnline) fetchData();
+                                toast.success(res.isOnline ? "You are now ONLINE 🟢" : "You are now OFFLINE 🔴");
+                            } else {
+                                toast.error(res.error || "Failed to toggle status");
+                            }
+                        }}
                         className={`flex items-center gap-3 px-8 py-4 rounded-[1.5rem] font-black text-sm uppercase tracking-widest transition-all ${isOnline ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400 shadow-lg shadow-emerald-500/20' : 'bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-unizy-navy dark:text-gray-400'}`}
                     >
                         <Power size={18} className={isOnline ? 'animate-pulse' : ''} />
@@ -136,12 +150,11 @@ export default function CourierDashboard() {
 
             <main className="max-w-4xl mx-auto px-6 mt-10">
 
-                {/* Stats Grid */}
                 <div className="grid grid-cols-3 gap-4 mb-10">
                     {[
-                        { label: 'Today', value: '12', icon: <Package size={16} />, color: 'brand' },
-                        { label: 'Earned', value: '450 EGP', icon: <DollarSign size={16} />, color: 'emerald' },
-                        { label: 'Rating', value: '4.9', icon: <StarIcon size={16} />, color: 'yellow' }
+                        { label: 'Balance', value: `${earnings?.currentBalance || 0} EGP`, icon: <DollarSign size={16} />, color: 'brand' },
+                        { label: 'Today (Net)', value: `${earnings?.todayNet || 0} EGP`, icon: <Zap size={16} />, color: 'emerald' },
+                        { label: 'Rating', value: '4.9', icon: <Star size={16} />, color: 'yellow' }
                     ].map(stat => (
                         <div key={stat.label} className="bg-white dark:bg-unizy-dark p-6 rounded-[2rem] border border-gray-100 dark:border-white/5 shadow-sm">
                             <div className={`w-8 h-8 rounded-xl bg-${stat.color}-50 dark:bg-${stat.color}-900/20 flex items-center justify-center text-${stat.color}-600 mb-3`}>

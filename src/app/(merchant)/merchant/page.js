@@ -46,6 +46,7 @@ export default async function MerchantPage() {
         storeAddress: user.storeAddress || '',
         storeDescription: user.storeDescription || '',
         storeOpen: user.storeOpen,
+        isOnline: user.isOnline,
     };
 
     return <MerchantClient merchantData={merchantData} />;

@@ -315,7 +315,13 @@ export const en = {
         earnPointsDesc: "Earn 10% of every order total as reward points.",
         redeemDesc: "1 Point = 1 EGP discount on your next order.",
         noTransactions: "No reward transactions yet",
+        noTransactions: "No reward transactions yet",
         startEarning: "Place an order to start earning points!",
+        missions: {
+            m1: { title: "The Explorer", desc: "Complete 3 different types of services" },
+            m2: { title: "Daily Champ", desc: "Reach a 7-day streak" },
+            m3: { title: "Top Spender", desc: "Spend over 1000 EGP in one week" }
+        }
     },
     activity: {
         title: "Activity",

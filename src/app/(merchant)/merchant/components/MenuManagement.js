@@ -1,6 +1,6 @@
 import Link from 'next/link';
 
-export default function MenuManagement({ menuItems, toggleAvailability, deals, totalRevenue, settlements, setIsSettingsOpen }) {
+export default function MenuManagement({ menuItems, toggleAvailability, deals, totalRevenue, todayNet, settlements, setIsSettingsOpen }) {
     return (
         <div className="lg:col-span-1 flex flex-col gap-6 animate-fade-in delay-200">
             <div className="bg-white dark:bg-unizy-dark p-8 rounded-[2.5rem] shadow-sm border border-gray-100 dark:border-white/5">
@@ -28,6 +28,13 @@ export default function MenuManagement({ menuItems, toggleAvailability, deals, t
                 </button>
             </div>
 
+            <div className="bg-gradient-to-br from-emerald-500 to-teal-600 p-8 rounded-[2.5rem] shadow-xl shadow-emerald-500/20 text-white relative overflow-hidden group">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-1000"></div>
+                <p className="text-emerald-100 text-[10px] font-black uppercase tracking-widest mb-2">Today (Net)</p>
+                <h3 className="text-3xl font-black mb-1">EGP {todayNet}</h3>
+                <p className="text-emerald-100/60 text-[10px] font-bold">Updated real-time from ledger</p>
+            </div>
+
             <div className="bg-white dark:bg-unizy-dark p-8 rounded-[2.5rem] shadow-sm border border-gray-100 dark:border-white/5 animate-fade-in delay-300">
                 <div className="flex justify-between items-center mb-6">
                     <h3 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-widest">Active Deals</h3>
@@ -48,7 +55,7 @@ export default function MenuManagement({ menuItems, toggleAvailability, deals, t
 
             <div className="bg-gradient-to-br from-rose-500 to-pink-600 p-8 rounded-[2.5rem] shadow-xl shadow-rose-500/20 text-white relative overflow-hidden group">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-1000"></div>
-                <p className="text-rose-100 text-[10px] font-black uppercase tracking-widest mb-2">Total Earnings</p>
+                <p className="text-rose-100 text-[10px] font-black uppercase tracking-widest mb-2">Account Balance</p>
                 <h3 className="text-3xl font-black mb-4">EGP {totalRevenue}</h3>
                 <div className="flex items-baseline gap-2">
                     <span className="text-rose-200 text-xs font-bold">{settlements.length} Settlements</span>

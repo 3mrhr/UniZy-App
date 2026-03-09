@@ -84,3 +84,56 @@ export async function updateMerchantSettings(data) {
         return { error: 'Failed to update store settings.' };
     }
 }
+
+/**
+ * Toggle Meal Availability (Instant Sold Out)
+ * Allows merchants to quickly kill a dish during a rush.
+ */
+export async function toggleMealAvailability(mealId) {
+    try {
+        const user = await requireRole(['MERCHANT']);
+
+        const meal = await prisma.meal.findUnique({ where: { id: mealId } });
+        if (!meal || meal.merchantId !== user.id) return { error: 'Unauthorized.' };
+
+        const updated = await prisma.meal.update({
+            where: { id: mealId },
+            data: { isSoldOut: !meal.isSoldOut }
+        });
+
+        revalidatePath('/merchant');
+        revalidatePath('/merchant/menu');
+        revalidatePath('/meals'); // Revalidate student view
+
+        return { success: true, isSoldOut: updated.isSoldOut };
+    } catch (error) {
+        return { error: 'Failed to toggle availability.' };
+    }
+}
+
+/**
+ * Bulk Update Inventory
+ * For multi-item stock management.
+ */
+export async function bulkUpdateInventory(updates) {
+    try {
+        const user = await requireRole(['MERCHANT']);
+
+        const results = await prisma.$transaction(
+            updates.map(update => prisma.meal.updateMany({
+                where: { id: update.id, merchantId: user.id },
+                data: {
+                    stockCount: update.stockCount !== undefined ? parseInt(update.stockCount, 10) : undefined,
+                    isSoldOut: update.isSoldOut !== undefined ? update.isSoldOut : undefined
+                }
+            }))
+        );
+
+        revalidatePath('/merchant');
+        revalidatePath('/merchant/menu');
+
+        return { success: true, count: results.length };
+    } catch (error) {
+        return { error: 'Failed to bulk update inventory.' };
+    }
+}

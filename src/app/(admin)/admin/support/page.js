@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { AlertCircle, Search, MessageSquare, Clock, CheckCircle2, ChevronRight } from 'lucide-react';
 import { getAdminTickets, updateTicketStatus } from '@/app/actions/support';
 
@@ -59,6 +60,17 @@ export default function AdminSupportPage() {
     const unresolvedCount = tickets.filter(t => t.status !== 'RESOLVED').length;
     const resolvedTotal = tickets.filter(t => t.status === 'RESOLVED').length;
 
+    const getSLABadge = (updatedAt) => {
+        const diff = Date.now() - new Date(updatedAt).getTime();
+        const mins = Math.floor(diff / 60000);
+
+        if (mins < 30) return <span className="text-[10px] font-black text-green-500 bg-green-50 dark:bg-green-900/20 px-2 py-0.5 rounded">SLA: {mins}m</span>;
+        if (mins < 120) return <span className="text-[10px] font-black text-amber-500 bg-amber-50 dark:bg-amber-900/20 px-2 py-0.5 rounded">SLA: {mins}m</span>;
+        return <span className="text-[10px] font-black text-red-500 bg-red-50 dark:bg-red-950/20 px-2 py-0.5 rounded animate-pulse">SLA BREACH ({mins}m)</span>;
+    };
+
+    const sosTickets = tickets.filter(t => t.category === 'TRANSPORT_SOS' && t.status !== 'RESOLVED');
+
     return (
         <div className="flex flex-col gap-6">
             <div className="flex justify-between items-end">
@@ -67,6 +79,32 @@ export default function AdminSupportPage() {
                     <p className="text-slate-500 dark:text-slate-400 text-sm">Manage and resolve student inquiries and issues.</p>
                 </div>
             </div>
+
+            {/* Emergency SOS War Room Section */}
+            {sosTickets.length > 0 && (
+                <div className="bg-red-500 dark:bg-red-600 p-6 rounded-3xl shadow-xl shadow-red-500/20 border-b-4 border-red-700 animate-in fade-in slide-in-from-top duration-500">
+                    <div className="flex items-center gap-3 mb-4">
+                        <div className="bg-white p-2 rounded-xl animate-pulse">
+                            <AlertCircle className="w-6 h-6 text-red-600" />
+                        </div>
+                        <div>
+                            <h2 className="text-white font-black text-lg leading-none uppercase tracking-tighter">Active Emergencies (SOS)</h2>
+                            <p className="text-white/80 text-xs font-bold mt-1">Found {sosTickets.length} critical alerts requiring immediate dispatch intervention.</p>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {sosTickets.map(ticket => (
+                            <Link key={ticket.id} href={`/admin/support/${ticket.id}`} className="bg-white/10 hover:bg-white/20 p-4 rounded-2xl border border-white/20 transition-all flex justify-between items-center group">
+                                <div className="truncate pr-4">
+                                    <p className="text-white font-black text-sm truncate">{ticket.subject}</p>
+                                    <p className="text-white/60 text-[10px] font-bold mt-0.5">{ticket.user?.name} • {new Date(ticket.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                                </div>
+                                <ChevronRight className="w-5 h-5 text-white/50 group-hover:text-white transition-colors" />
+                            </Link>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {/* Metrics */}
             <div className="grid grid-cols-4 gap-6">
@@ -125,7 +163,7 @@ export default function AdminSupportPage() {
                             {isLoading ? (
                                 <tr><td colSpan={6} className="p-8 text-center text-slate-500 font-bold">Loading tickets...</td></tr>
                             ) : filteredTickets.map((ticket) => (
-                                <tr key={ticket.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors group cursor-pointer">
+                                <tr key={ticket.id} onClick={() => window.location.href = `/admin/support/${ticket.id}`} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors group cursor-pointer">
                                     <td className="p-4 whitespace-nowrap">
                                         <p className="font-bold text-slate-900 dark:text-white text-sm">#{ticket.id.slice(-6).toUpperCase()}</p>
                                         <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5"><Clock className="w-3 h-3" /> {new Date(ticket.createdAt).toLocaleDateString()}</p>
@@ -139,7 +177,10 @@ export default function AdminSupportPage() {
                                     <td className="p-4">
                                         <div className="flex items-center gap-2">
                                             {ticket.priority === 'HIGH' && <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />}
-                                            <p className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate max-w-xs">{ticket.subject}</p>
+                                            <div className="flex flex-col">
+                                                <p className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate max-w-xs">{ticket.subject}</p>
+                                                {getSLABadge(ticket.updatedAt)}
+                                            </div>
                                         </div>
                                     </td>
                                     <td className="p-4 text-center whitespace-nowrap">
@@ -147,7 +188,13 @@ export default function AdminSupportPage() {
                                     </td>
                                     <td className="p-4 text-right">
                                         {ticket.status !== 'RESOLVED' && (
-                                            <button onClick={() => handleResolve(ticket.id)} className="text-[var(--unizy-primary)] font-bold text-sm bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-blue-100">
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleResolve(ticket.id);
+                                                }}
+                                                className="text-[var(--unizy-primary)] font-bold text-sm bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-blue-100"
+                                            >
                                                 Resolve
                                             </button>
                                         )}

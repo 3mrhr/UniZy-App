@@ -77,13 +77,13 @@ export async function getAvailableTrips() {
     try {
         const user = await requireRole(['DRIVER']);
 
+        // Elite status: Only online drivers see new requests
+        const availableQuery = user.isOnline
+            ? { OR: [{ status: 'REQUESTED', driverId: null }, { driverId: user.id, status: { in: ['ACCEPTED', 'ARRIVED', 'IN_PROGRESS'] } }] }
+            : { driverId: user.id, status: { in: ['ACCEPTED', 'ARRIVED', 'IN_PROGRESS'] } };
+
         const trips = await prisma.transportTrip.findMany({
-            where: {
-                OR: [
-                    { status: 'REQUESTED', driverId: null },
-                    { driverId: user.id, status: { in: ['ACCEPTED', 'ARRIVED', 'IN_PROGRESS'] } }
-                ]
-            },
+            where: availableQuery,
             include: {
                 user: { select: { name: true, phone: true } }
             },
@@ -100,6 +100,7 @@ export async function getAvailableTrips() {
 export async function acceptTrip(tripId) {
     try {
         const user = await requireRole(['DRIVER']);
+        if (!user.isOnline) return failure('OFFLINE', 'You must be online to accept trips.');
 
         // Atomic lock
         const updated = await prisma.transportTrip.updateMany({

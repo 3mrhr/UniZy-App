@@ -250,8 +250,8 @@ export default function RewardsPage() {
                                     <div className="flex gap-4">
                                         <div className="text-3xl grayscale group-hover:grayscale-0 transition-all">{mission.icon}</div>
                                         <div>
-                                            <h4 className="font-black text-gray-900 dark:text-white">{mission.title}</h4>
-                                            <p className="text-xs font-medium text-gray-400">{mission.description}</p>
+                                            <h4 className="font-black text-gray-900 dark:text-white">{t(`rewards.missions.${mission.id}.title`)}</h4>
+                                            <p className="text-xs font-medium text-gray-400">{t(`rewards.missions.${mission.id}.desc`)}</p>
                                         </div>
                                     </div>
                                     <div className="text-right">

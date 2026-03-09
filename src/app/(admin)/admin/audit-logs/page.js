@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { ShieldAlert, Search, Filter, History, User } from 'lucide-react';
+import { ShieldAlert, Search, Filter, History, User, X } from 'lucide-react';
 import { getAuditLogs } from '@/app/actions/audit';
 
 export default function AuditLogsPage() {
@@ -36,6 +36,8 @@ export default function AuditLogsPage() {
             hour: '2-digit', minute: '2-digit', second: '2-digit'
         });
     };
+
+    const [selectedLog, setSelectedLog] = useState(null);
 
     return (
         <div className="space-y-6">
@@ -104,20 +106,24 @@ export default function AuditLogsPage() {
                                 </tr>
                             ) : (
                                 displayLogs.map((log) => (
-                                    <tr key={log.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/20 transition-colors">
+                                    <tr
+                                        key={log.id}
+                                        onClick={() => setSelectedLog(log)}
+                                        className="hover:bg-gray-50/50 dark:hover:bg-gray-800/20 transition-colors cursor-pointer group"
+                                    >
                                         <td className="p-4 text-sm text-gray-500 font-mono">
                                             {formatDate(log.createdAt)}
                                         </td>
                                         <td className="p-4">
-                                            <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-black tracking-wider bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300">
+                                            <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-black tracking-wider bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300 group-hover:bg-brand-50 group-hover:text-brand-600 transition-colors">
                                                 {log.action}
                                             </span>
                                         </td>
                                         <td className="p-4">
                                             <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-bold uppercase ${log.module === 'USERS' ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30' :
-                                                    log.module === 'FINANCE' ? 'bg-green-50 text-green-600 dark:bg-green-900/30' :
-                                                        log.module === 'HUB' ? 'bg-pink-50 text-pink-600 dark:bg-pink-900/30' :
-                                                            'bg-gray-50 text-gray-600 dark:bg-gray-800'
+                                                log.module === 'FINANCE' ? 'bg-green-50 text-green-600 dark:bg-green-900/30' :
+                                                    log.module === 'HUB' ? 'bg-pink-50 text-pink-600 dark:bg-pink-900/30' :
+                                                        'bg-gray-50 text-gray-600 dark:bg-gray-800'
                                                 }`}>
                                                 {log.module}
                                             </span>
@@ -145,7 +151,7 @@ export default function AuditLogsPage() {
                                                     </span>
                                                 )}
                                                 {log.details && (
-                                                    <span className="text-xs text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-500/10 px-2 py-1 rounded line-clamp-2" title={log.details}>
+                                                    <span className="text-xs text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-500/10 px-2 py-1 rounded line-clamp-2 font-mono" title={log.details}>
                                                         {log.details}
                                                     </span>
                                                 )}
@@ -158,6 +164,68 @@ export default function AuditLogsPage() {
                     </table>
                 </div>
             </div>
+
+            {/* JSON Detail Modal */}
+            {selectedLog && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-white dark:bg-[#1E293B] w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="p-6 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center">
+                            <div>
+                                <h3 className="text-lg font-black text-gray-900 dark:text-white uppercase tracking-tighter flex items-center gap-2">
+                                    <ShieldAlert className="w-5 h-5 text-brand-600" />
+                                    Audit Detail Inspector
+                                </h3>
+                                <p className="text-xs text-gray-500 mt-0.5">Reference ID: {selectedLog.id}</p>
+                            </div>
+                            <button
+                                onClick={() => setSelectedLog(null)}
+                                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors"
+                            >
+                                <X className="w-6 h-6 text-gray-400" />
+                            </button>
+                        </div>
+                        <div className="p-8 overflow-y-auto max-h-[70vh]">
+                            <div className="grid grid-cols-2 gap-8 mb-8">
+                                <div className="space-y-4">
+                                    <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-2xl">
+                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Action Type</p>
+                                        <p className="text-sm font-black text-brand-600 truncate">{selectedLog.action}</p>
+                                    </div>
+                                    <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-2xl">
+                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Module</p>
+                                        <p className="text-sm font-black text-gray-900 dark:text-white truncate">{selectedLog.module}</p>
+                                    </div>
+                                </div>
+                                <div className="space-y-4">
+                                    <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-2xl">
+                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Admin Actor</p>
+                                        <p className="text-sm font-black text-gray-900 dark:text-white truncate">{selectedLog.admin.name}</p>
+                                    </div>
+                                    <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-2xl">
+                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Timestamp</p>
+                                        <p className="text-sm font-black text-gray-900 dark:text-white truncate">{formatDate(selectedLog.createdAt)}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="bg-gray-900 rounded-2xl p-6 relative">
+                                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-4">JSON Body (Raw Context)</p>
+                                <pre className="text-xs text-green-400 font-mono whitespace-pre-wrap break-all leading-relaxed">
+                                    {selectedLog.details ? JSON.stringify(JSON.parse(selectedLog.details), null, 4) : '// No additional details provided'}
+                                </pre>
+                            </div>
+                        </div>
+                        <div className="p-6 bg-gray-50 dark:bg-gray-800/30 border-t border-gray-100 dark:border-gray-800 flex justify-end">
+                            <button
+                                onClick={() => setSelectedLog(null)}
+                                className="px-6 py-2.5 bg-brand-600 text-white font-black text-xs uppercase tracking-widest rounded-xl hover:bg-brand-700 transition-colors shadow-lg shadow-brand-500/20"
+                            >
+                                Close Inspector
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

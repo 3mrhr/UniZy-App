@@ -21,6 +21,7 @@
     "better-sqlite3": "^11.3.0",
     "cloudinary": "^2.9.0",
     "date-fns": "^4.1.0",
+    "framer-motion": "^12.35.1",
     "iron-session": "^8.0.4",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.575.0",

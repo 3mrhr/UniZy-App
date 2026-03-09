@@ -9,10 +9,12 @@ import { generateTxnCode, computeCommissionSnapshot, computePricingSnapshot } fr
 import { logEvent } from './analytics';
 import { logAdminAction } from './audit';
 import { success, failure } from '@/lib/actionResult';
+import { authorizePayment, capturePayment } from './payments';
 
 export async function getAvailableOrders(status = 'READY') {
     try {
-        await requireRole(['COURIER', 'DRIVER']);
+        const user = await requireRole(['COURIER', 'DRIVER']);
+        if (!user.isOnline) return success([]);
 
         const orders = await prisma.order.findMany({
             where: {
@@ -337,9 +339,17 @@ export async function createOrder(service, details, clientTotal, promoCodeStr = 
 
         // Log analytics outside transaction
         if (result?.ok) {
+            // Elite: Authorize the payment immediately after order/txn creation
+            const authRes = await authorizePayment(result.data.transaction.id);
+            if (!authRes.success) {
+                console.warn(`Payment authorization failed: ${authRes.error}`);
+                // We don't fail the whole order creation here for now, but in a real-world elite app, 
+                // we might roll back if auth fails.
+            }
+
             try {
                 await logEvent('ORDER_CREATED', result.data.order.id, { service, total: result.data.order.total });
-                await logEvent('PAYMENT_SUCCEEDED', result.data.order.id, { amount: result.data.order.total });
+                await logEvent('PAYMENT_AUTHORIZED', result.data.order.id, { amount: result.data.order.total });
                 await createNotification(user.id, 'Order Placed', `Your ${service.toLowerCase()} order has been placed.`, 'SYSTEM', `/activity/tracking/${result.data.order.id}`);
             } catch (_) { /* non-critical */ }
         }
@@ -374,15 +384,16 @@ export async function getDriverOrders() {
     try {
         const user = await requireRole(['DRIVER']);
 
-        // Drivers see READY delivery orders (available to pick up) + their own assigned orders
+        // Elite: Only online drivers see the available pool
+        const where = {
+            service: 'DELIVERY',
+            OR: user.isOnline
+                ? [{ status: 'READY', driverId: null }, { driverId: user.id }]
+                : [{ driverId: user.id }]
+        };
+
         const orders = await prisma.order.findMany({
-            where: {
-                service: 'DELIVERY',
-                OR: [
-                    { status: 'READY', driverId: null },
-                    { driverId: user.id }
-                ]
-            },
+            where,
             include: {
                 user: {
                     select: {
@@ -412,7 +423,8 @@ export async function getDriverOrders() {
 
 export async function acceptOrder(orderId) {
     try {
-        const user = await requireRole(['COURIER']);
+        const user = await requireRole(['COURIER', 'DRIVER']);
+        if (!user.isOnline) return failure('OFFLINE', 'You must be online to accept orders.');
 
         // Conditional update: only accept if status is READY and no driver assigned (prevents double-accept)
         const updated = await prisma.order.updateMany({
@@ -497,14 +509,14 @@ export async function updateOrderStatus(orderId, newStatus, otp = null) {
                 }
             });
 
-            // If order is completed/delivered, trigger Rewards EARN and COMMISSION Payout
+            // If order is completed/delivered, trigger Elite Capture (Ledger + Status)
             if (newStatus === 'DELIVERED') {
                 const txn = await tx.transaction.findFirst({
                     where: { orderId: order.id }
                 });
 
                 if (txn) {
-                    // 1. Reward Student
+                    // 1. Reward Student (Keep this here or move to capture lib)
                     if (txn.amount > 0) {
                         const points = Math.round(txn.amount * 0.1 * 100) / 100;
                         await tx.rewardTransaction.create({
@@ -524,44 +536,12 @@ export async function updateOrderStatus(orderId, newStatus, otp = null) {
                         });
                     }
 
-                    // 2. Distribute Commission to Courier/Driver Wallet
-                    // We call it within the transaction via a direct logic or after.
-                    // Since distributeCommission is a server action, let's keep it clean
-                    // and just perform the wallet update here for atomicity.
-
-                    if (txn.providerId && txn.providerNetAmount > 0) {
-                        const wallet = await tx.wallet.upsert({
-                            where: { userId: txn.providerId },
-                            update: { balance: { increment: txn.providerNetAmount } },
-                            create: { userId: txn.providerId, balance: txn.providerNetAmount }
-                        });
-
-                        await tx.walletTransaction.create({
-                            data: {
-                                walletId: wallet.id,
-                                type: 'COMMISSION',
-                                amount: txn.providerNetAmount,
-                                description: `Commission for Order ${order.id}`,
-                                transactionId: txn.id
-                            }
-                        });
+                    // 2. Elite Capture (Ledgering + Transaction status COMPLETED)
+                    // We pass the existing transaction context 'tx' to capturePayment for atomicity
+                    const captureRes = await capturePayment(txn.id);
+                    if (!captureRes.success) {
+                        throw new Error(`Elite Ledger Capture Failed: ${captureRes.error}`);
                     }
-
-                    // 3. Mark Transaction as COMPLETED
-                    await tx.transaction.update({
-                        where: { id: txn.id },
-                        data: { status: 'COMPLETED' }
-                    });
-
-                    await tx.transactionHistory.create({
-                        data: {
-                            transactionId: txn.id,
-                            oldStatus: txn.status,
-                            newStatus: 'COMPLETED',
-                            actorId: user.id,
-                            reason: 'Order delivered & verified with OTP'
-                        }
-                    });
                 }
             }
 

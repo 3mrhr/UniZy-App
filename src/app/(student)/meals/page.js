@@ -294,7 +294,12 @@ export default function MealsPage() {
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {availablePlans.map(plan => (
-                                <div key={plan.id} className="glass-frosted p-8 rounded-[2rem] border-2 border-transparent hover:border-emerald-500/20 transition-all flex flex-col h-full">
+                                <div key={plan.id} className={`glass-frosted p-8 rounded-[2rem] border-2 transition-all flex flex-col h-full relative ${plan.name.toLowerCase().includes('premium') ? 'border-orange-500/50 shadow-2xl shadow-orange-500/10' : 'border-transparent hover:border-emerald-500/20'}`}>
+                                    {plan.name.toLowerCase().includes('premium') && (
+                                        <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-orange-500 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg">
+                                            Best Value
+                                        </div>
+                                    )}
                                     <div className="flex items-center justify-between mb-6">
                                         <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center"><CalendarDays className="text-emerald-500" /></div>
                                         <span className="text-[10px] font-black uppercase text-emerald-500 tracking-tighter bg-emerald-500/10 px-3 py-1 rounded-full">{plan.frequency}</span>

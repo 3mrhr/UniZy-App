@@ -161,7 +161,9 @@ export default function ActivityPage() {
                                             </p>
                                             <span className="text-xs font-bold text-gray-900 dark:text-white flex items-center">
                                                 {txn.amount > 0 ? `${txn.amount} ${txn.currency}` : 'Quote Request'}
-                                                <ChevronRight className="w-4 h-4 ml-1 text-gray-300 group-hover:text-brand-500 transition-colors" />
+                                                {['DELIVERY', 'TRANSPORT', 'CLEANING'].includes(txn.type) && (txn.order?.status !== 'COMPLETED' && txn.status !== 'COMPLETED') && (
+                                                    <ChevronRight className="w-4 h-4 ml-1 text-gray-300 group-hover:text-brand-500 transition-colors" />
+                                                )}
                                             </span>
                                         </div>
                                     </div>

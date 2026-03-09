@@ -9,9 +9,12 @@ export default function MerchantHeader({ merchantName, storeOpen }) {
                 </div>
                 <div>
                     <h1 className="text-lg font-black text-gray-900 dark:text-white leading-none">Merchant Hub</h1>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">
-                        {merchantName} • {storeOpen ? 'Open' : 'Closed'}
-                    </p>
+                    <button
+                        onClick={onToggleStatus}
+                        className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1 hover:text-brand-500 transition-colors"
+                    >
+                        {merchantName} • <span className={storeOpen ? 'text-emerald-500' : 'text-rose-500'}>{storeOpen ? 'Open' : 'Closed'}</span>
+                    </button>
                 </div>
             </div>
             <ThemeLangControls />

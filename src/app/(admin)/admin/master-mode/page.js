@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useTransition } from 'react';
 import {
-    Search, ShieldAlert, Trash2, Edit3, UserSlash,
+    Search, ShieldAlert, Trash2, Edit3, UserX,
     CheckCircle, XCircle, Loader2, Database, ExternalLink,
     Filter, MoreVertical, ShieldCheck, Mail, MapPin, Calendar
 } from 'lucide-react';
@@ -108,9 +108,9 @@ export default function MasterModePage() {
 
                             {/* Entity Icon */}
                             <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 shadow-lg ${res.type === 'user' ? 'bg-indigo-500/20 text-indigo-400' :
-                                    res.type === 'meal' ? 'bg-orange-500/20 text-orange-400' :
-                                        res.type === 'housing' ? 'bg-emerald-500/20 text-emerald-400' :
-                                            'bg-gray-500/20 text-gray-400'
+                                res.type === 'meal' ? 'bg-orange-500/20 text-orange-400' :
+                                    res.type === 'housing' ? 'bg-emerald-500/20 text-emerald-400' :
+                                        'bg-gray-500/20 text-gray-400'
                                 }`}>
                                 {res.type === 'user' ? <ShieldCheck /> : <Database />}
                             </div>
@@ -132,7 +132,7 @@ export default function MasterModePage() {
                                 </button>
                                 {res.type === 'hub_post' && (
                                     <button onClick={() => handleShadowBan(res.authorId)} className="p-3 bg-white/5 hover:bg-orange-600 rounded-xl transition-all" title="Shadow Ban Author">
-                                        <UserSlash size={16} />
+                                        <UserX size={16} />
                                     </button>
                                 )}
                                 <button onClick={() => handleDelete(res.type, res.id)} className="p-3 bg-white/5 hover:bg-red-600 rounded-xl transition-all" title="Delete Entity">

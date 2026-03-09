@@ -10,8 +10,11 @@ import SettingsModal from './components/SettingsModal';
 import RedemptionVerifier from './components/RedemptionVerifier';
 
 export default function MerchantClient({ merchantData }) {
-    const { settlements, dbOrders = [], dbMeals = [], dbDeals = [], merchantName = 'Merchant Hub', storeAddress = '', storeDescription = '', storeOpen = false } = merchantData;
+    const { settlements, dbOrders = [], dbMeals = [], dbDeals = [], merchantName = 'Merchant Hub', storeAddress = '', storeDescription = '', storeOpen = false, isOnline: initialOnline } = merchantData;
     const { dict } = useLanguage();
+
+    const [isOnline, setIsOnline] = useState(initialOnline);
+    const [earnings, setEarnings] = useState(null);
 
     const totalRevenue = settlements.reduce((sum, s) => sum + s.netAmount, 0);
 
@@ -41,7 +44,7 @@ export default function MerchantClient({ merchantData }) {
         dbMeals.map(m => ({
             id: m.id,
             name: m.name,
-            available: m.status === 'ACTIVE',
+            available: !m.isSoldOut,
         }))
     );
 
@@ -81,8 +84,12 @@ export default function MerchantClient({ merchantData }) {
         setIsUpdating(null);
     };
 
-    const toggleAvailability = (id) => {
-        setMenuItems(menuItems.map(m => m.id === id ? { ...m, available: !m.available } : m));
+    const toggleAvailability = async (id) => {
+        const { toggleMealAvailability } = await import('@/app/actions/merchant');
+        const res = await toggleMealAvailability(id);
+        if (res.success) {
+            setMenuItems(menuItems.map(m => m.id === id ? { ...m, available: !res.isSoldOut } : m));
+        }
     };
 
     const handleUpdateSettings = async (e) => {
@@ -103,13 +110,21 @@ export default function MerchantClient({ merchantData }) {
         setIsUpdating(null);
     };
 
-    // Refresh orders every 15 seconds
-    const refreshOrders = useCallback(async () => {
+    // Refresh orders and earnings
+    const refreshData = useCallback(async () => {
         try {
-            const { getMerchantOrders } = await import('@/app/actions/orders');
-            const result = await getMerchantOrders();
-            if (result?.success && result.orders) {
-                setOrders(result.orders.map(o => {
+            const [{ getMerchantOrders }, { getProviderEarningsSnapshot }] = await Promise.all([
+                import('@/app/actions/orders'),
+                import('@/app/actions/fin-ops')
+            ]);
+
+            const [ordersRes, earningsRes] = await Promise.all([
+                getMerchantOrders(),
+                getProviderEarningsSnapshot()
+            ]);
+
+            if (ordersRes?.success && ordersRes.orders) {
+                setOrders(ordersRes.orders.map(o => {
                     const itemNames = o.orderItems?.map(i => `${i.nameSnapshot} x${i.qty}`).join(', ') || 'Order';
                     return {
                         id: o.id,
@@ -121,13 +136,18 @@ export default function MerchantClient({ merchantData }) {
                     };
                 }));
             }
+
+            if (earningsRes.success) {
+                setEarnings(earningsRes.stats);
+            }
         } catch (_) { /* silent refresh failure */ }
     }, []);
 
     useEffect(() => {
-        const interval = setInterval(refreshOrders, 15000);
+        refreshData();
+        const interval = setInterval(refreshData, 15000);
         return () => clearInterval(interval);
-    }, [refreshOrders]);
+    }, [refreshData]);
 
     // Group orders by display status for kanban
     const kanbanColumns = [
@@ -141,7 +161,12 @@ export default function MerchantClient({ merchantData }) {
         <div className="min-h-screen bg-rose-50 dark:bg-unizy-navy transition-colors pb-24">
             <MerchantHeader
                 merchantName={merchantName}
-                storeOpen={storeOpen}
+                storeOpen={isOnline}
+                onToggleStatus={async () => {
+                    const { toggleSupplyOnlineStatus } = await import('@/app/actions/supply');
+                    const res = await toggleSupplyOnlineStatus();
+                    if (res.success) setIsOnline(res.isOnline);
+                }}
             />
 
             <main className="px-6 py-8 max-w-7xl mx-auto w-full grid lg:grid-cols-3 gap-8">
@@ -160,7 +185,8 @@ export default function MerchantClient({ merchantData }) {
                         menuItems={menuItems}
                         toggleAvailability={toggleAvailability}
                         deals={deals}
-                        totalRevenue={totalRevenue}
+                        totalRevenue={earnings?.currentBalance || 0}
+                        todayNet={earnings?.todayNet || 0}
                         settlements={settlements}
                         setIsSettingsOpen={setIsSettingsOpen}
                     />

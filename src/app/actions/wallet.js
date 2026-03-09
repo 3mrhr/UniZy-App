@@ -3,6 +3,7 @@
 import { prisma } from '@/lib/prisma';
 import { requireUser, requireRole, requireOwnership } from '@/lib/authz';
 import { createNotification } from './notifications';
+import { recordLedgerEntry, LedgerAccount } from '@/lib/ledger';
 
 /**
  * Get or create a wallet for the current user.
@@ -62,7 +63,7 @@ export async function creditWallet(userId, amount, description, transactionId = 
             });
         }
 
-        // Create wallet transaction and update balance atomically
+        // Create wallet transaction and update balance atomically with Ledger entry
         const result = await prisma.$transaction(async (tx) => {
             const walletTxn = await tx.walletTransaction.create({
                 data: {
@@ -72,6 +73,16 @@ export async function creditWallet(userId, amount, description, transactionId = 
                     walletId: wallet.id,
                     transactionId,
                 },
+            });
+
+            // 1. Elite Ledger: Record the movement (UNIZY_ESCROW -> USER_WALLET)
+            await recordLedgerEntry({
+                amount,
+                debitAccount: LedgerAccount.UNIZY_ESCROW,
+                creditAccount: LedgerAccount.USER_WALLET,
+                description: `Refund credit: ${description}`,
+                transactionId,
+                tx
             });
 
             const updatedWallet = await tx.wallet.update({
@@ -118,6 +129,16 @@ export async function spendFromWallet(userId, amount, description, transactionId
                     walletId: wallet.id,
                     transactionId,
                 },
+            });
+
+            // 1. Elite Ledger: Record the movement (USER_WALLET -> UNIZY_ESCROW)
+            await recordLedgerEntry({
+                amount,
+                debitAccount: LedgerAccount.USER_WALLET,
+                creditAccount: LedgerAccount.UNIZY_ESCROW,
+                description: `Payment spend: ${description}`,
+                transactionId,
+                tx
             });
 
             const updatedWallet = await tx.wallet.update({
@@ -172,6 +193,15 @@ export async function topUpWallet(userId, amount, description = 'Wallet top-up')
                     description,
                     walletId: wallet.id,
                 },
+            });
+
+            // 1. Elite Ledger: Record the movement (SYSTEM_CASH/GATEWAY -> USER_WALLET)
+            await recordLedgerEntry({
+                amount,
+                debitAccount: LedgerAccount.SYSTEM_CASH, // Assuming standard entry for now
+                creditAccount: LedgerAccount.USER_WALLET,
+                description: `Top-up: ${description}`,
+                tx
             });
 
             const updatedWallet = await tx.wallet.update({

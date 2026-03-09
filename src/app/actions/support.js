@@ -147,6 +147,11 @@ export async function getTicketDetails(id) {
             return { success: false, error: 'Unauthorized.' };
         }
 
+        // Filter internal messages if the requester is the student
+        if (!isStaff && ticket.messages) {
+            ticket.messages = ticket.messages.filter(m => !m.isInternal);
+        }
+
         return { success: true, ticket };
     } catch (error) {
         console.error('Error fetching ticket details:', error);
@@ -179,7 +184,8 @@ export async function sendTicketMessage({ ticketId, content, isAdmin = false }) 
                 ticketId,
                 content,
                 senderId: user.id,
-                isAdmin: isStaff && isAdmin // Only allow isAdmin true if actor really is staff
+                isAdmin: isStaff && isAdmin, // Only allow isAdmin true if actor really is staff
+                isInternal: isStaff && arguments[0].isInternal === true // Only allow isInternal if staff
             }
         });
 

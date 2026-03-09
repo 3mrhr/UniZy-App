@@ -8,12 +8,12 @@ import { logAdminAction } from './audit';
 const POINTS_PER_EGP = 0.1; // 1 EGP = 0.1 reward points (Base)
 const POINTS_EXPIRY_MONTHS = 6; // Points expire after 6 months
 
-// Tier Multipliers (Platinum Level)
-const TIER_MULTIPLIERS = {
-    BRONZE: 1.0,
-    SILVER: 1.2,
-    GOLD: 1.5,
-    PLATINUM: 2.0
+// Tier Configuration (Elite Sync)
+export const TIER_CONFIG = {
+    BRONZE: { multiplier: 1.0, threshold: 0, label: 'Bronze' },
+    SILVER: { multiplier: 1.2, threshold: 500, label: 'Silver' },
+    GOLD: { multiplier: 1.5, threshold: 1500, label: 'Gold' },
+    PLATINUM: { multiplier: 2.0, threshold: 5000, label: 'Platinum' }
 };
 
 const STREAK_BONUS_POINTS = 5; // Points for maintaining a streak daily
@@ -71,43 +71,116 @@ export async function getRewardBalance(userId = null) {
 
 /**
  * Earn reward points from a completed payment.
- * Called when Payment.status → PAID.
+ * Elite Sync: Provisioned at AUTHORIZE, finalized at CAPTURE.
  * @param {string} userId
- * @param {number} amountPaid - EGP amount
- * @param {string} transactionId - Reference to the financial transaction
+ * @param {number} amountPaid
+ * @param {string} transactionId
+ * @param {string} mode - 'PROVISION' or 'FINALIZE'
  */
-export async function earnRewardPoints(userId, amountPaid, transactionId) {
+export async function earnRewardPoints(userId, amountPaid, transactionId, mode = 'FINALIZE') {
     try {
-        // Fetch user tier for multiplier
         const user = await prisma.user.findUnique({
             where: { id: userId },
             select: { tier: true }
         });
 
-        const multiplier = TIER_MULTIPLIERS[user?.tier] || 1.0;
+        const multiplier = TIER_CONFIG[user?.tier]?.multiplier || 1.0;
         const basePoints = amountPaid * POINTS_PER_EGP;
         const points = Math.round(basePoints * multiplier * 100) / 100;
 
         if (points <= 0) return { success: true, points: 0 };
 
-        const expiresAt = new Date();
-        expiresAt.setMonth(expiresAt.getMonth() + POINTS_EXPIRY_MONTHS);
+        if (mode === 'PROVISION') {
+            // Check if already provisioned for this txn
+            const existing = await prisma.rewardTransaction.findFirst({
+                where: { transactionId, type: 'EARN', description: { contains: '(Provisioned)' } }
+            });
+            if (existing) return { success: true, points: existing.points };
 
-        await prisma.rewardTransaction.create({
-            data: {
-                type: 'EARN',
-                points,
-                description: `Earned from payment of ${amountPaid} EGP (${user?.tier || 'BRONZE'} Tier x${multiplier})`,
-                userId,
-                transactionId,
-                expiresAt,
-            },
+            await prisma.rewardTransaction.create({
+                data: {
+                    type: 'EARN',
+                    points,
+                    description: `Provisioned rewards for Txn ${transactionId} (Provisioned)`,
+                    userId,
+                    transactionId,
+                    expired: true, // Hide from balance until finalized
+                },
+            });
+            return { success: true, points };
+        }
+
+        // Finalize mode: Mark as active and update description
+        const provisioned = await prisma.rewardTransaction.findFirst({
+            where: { transactionId, type: 'EARN', description: { contains: '(Provisioned)' } }
         });
 
-        return { success: true, points };
+        if (provisioned) {
+            const expiresAt = new Date();
+            expiresAt.setMonth(expiresAt.getMonth() + POINTS_EXPIRY_MONTHS);
+
+            await prisma.rewardTransaction.update({
+                where: { id: provisioned.id },
+                data: {
+                    expired: false,
+                    description: `Earned from payment of ${amountPaid} EGP (${user?.tier || 'BRONZE'} Tier x${multiplier})`,
+                    expiresAt,
+                }
+            });
+
+            // Trigger tier recalculation after successful earn
+            await recalculateUserTier(userId);
+
+            return { success: true, points: provisioned.points };
+        }
+
+        return { error: 'No provisioned rewards found to finalize.' };
     } catch (error) {
         console.error('Earn points error:', error);
-        return { error: 'Failed to earn points.' };
+        return { error: 'Failed to earn rewards.' };
+    }
+}
+
+/**
+ * Recalculate User Tier (Elite Promotion Engine)
+ * Promotes user based on spend velocity in the last 30 days.
+ */
+export async function recalculateUserTier(userId) {
+    try {
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+        // Sum successful transactions in last 30 days
+        const spend = await prisma.transaction.aggregate({
+            where: {
+                userId,
+                status: 'COMPLETED',
+                createdAt: { gte: thirtyDaysAgo }
+            },
+            _sum: { amount: true }
+        });
+
+        const totalSpend = spend._sum.amount || 0;
+        const curUser = await prisma.user.findUnique({ where: { id: userId }, select: { tier: true } });
+
+        // Determine new tier
+        let newTier = 'BRONZE';
+        if (totalSpend >= TIER_CONFIG.PLATINUM.threshold) newTier = 'PLATINUM';
+        else if (totalSpend >= TIER_CONFIG.GOLD.threshold) newTier = 'GOLD';
+        else if (totalSpend >= TIER_CONFIG.SILVER.threshold) newTier = 'SILVER';
+
+        if (newTier !== curUser.tier) {
+            await prisma.user.update({
+                where: { id: userId },
+                data: { tier: newTier }
+            });
+            return { success: true, newTier, promoted: true };
+        }
+
+        return { success: true, currentTier: curUser.tier, promoted: false };
+    } catch (error) {
+        console.error('Tier recalculation error:', error);
+        return { error: 'Failed to recalculate tier.' };
     }
 }
 

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Sparkles, Clock, Calendar, CheckCircle, Star, Tag, ArrowRight, Loader2, MapPin } from 'lucide-react';
-import { listPackages } from '@/app/actions/cleaning';
+import { listPackages, bookCleaning } from '@/app/actions/cleaning';
 
 const FREQ_LABELS = { ONE_TIME: 'One-time', WEEKLY: 'Weekly', BI_WEEKLY: 'Bi-weekly', MONTHLY: 'Monthly' };
 const FREQ_COLORS = { ONE_TIME: 'bg-blue-100 text-blue-600', WEEKLY: 'bg-green-100 text-green-600', BI_WEEKLY: 'bg-purple-100 text-purple-600', MONTHLY: 'bg-amber-100 text-amber-600' };
@@ -14,6 +14,7 @@ export default function CleaningPage() {
     const [bookingDate, setBookingDate] = useState('');
     const [bookingTime, setBookingTime] = useState('');
     const [bookingAddress, setBookingAddress] = useState('');
+    const [bookingDescription, setBookingDescription] = useState('');
     const [booked, setBooked] = useState(false);
 
     useEffect(() => {
@@ -26,15 +27,35 @@ export default function CleaningPage() {
         load();
     }, []);
 
-    const handleBook = () => {
-        setBooked(true);
-        setTimeout(() => {
-            setSelectedPkg(null);
-            setBooked(false);
-            setBookingDate('');
-            setBookingTime('');
-            setBookingAddress('');
-        }, 2000);
+    const handleBook = async () => {
+        if (!selectedPkg || !bookingDate || !bookingAddress) return;
+
+        try {
+            const res = await bookCleaning({
+                packageId: selectedPkg.id,
+                date: bookingDate,
+                timeSlot: bookingTime || 'Any time',
+                address: bookingAddress,
+                notes: bookingDescription
+            });
+
+            if (res.success) {
+                setBooked(true);
+                setTimeout(() => {
+                    setSelectedPkg(null);
+                    setBooked(false);
+                    setBookingDate('');
+                    setBookingTime('');
+                    setBookingAddress('');
+                    setBookingDescription('');
+                }, 3000);
+            } else {
+                alert(res.error || 'Failed to book');
+            }
+        } catch (e) {
+            console.error(e);
+            alert('An error occurred');
+        }
     };
 
     const parseIncludes = (str) => {
@@ -139,6 +160,10 @@ export default function CleaningPage() {
                                 <div>
                                     <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Service Address</label>
                                     <input type="text" value={bookingAddress} onChange={e => setBookingAddress(e.target.value)} placeholder="Building, Floor, Apartment..." className="w-full px-4 py-3 rounded-2xl bg-gray-50 dark:bg-unizy-navy/50 border-2 border-transparent focus:border-emerald-500 outline-none text-gray-900 dark:text-white font-bold" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Issue / Special Instructions</label>
+                                    <textarea value={bookingDescription} onChange={e => setBookingDescription(e.target.value)} placeholder="Any specific areas to focus on or issues to report..." className="w-full px-4 py-3 rounded-2xl bg-gray-50 dark:bg-unizy-navy/50 border-2 border-transparent focus:border-emerald-500 outline-none text-gray-900 dark:text-white font-bold h-24 resize-none" />
                                 </div>
                                 <p className="text-[10px] text-gray-400 font-bold text-center italic">Pricing confirmed via phone/WhatsApp call.</p>
                                 <button onClick={handleBook} disabled={!bookingDate || !bookingAddress} className="w-full py-3.5 bg-emerald-600 text-white rounded-2xl font-black hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-500/30 disabled:opacity-50 disabled:cursor-not-allowed">

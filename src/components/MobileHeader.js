@@ -48,7 +48,7 @@ export default function MobileHeader() {
         };
     }, []);
 
-    if (isAuthPage || isSpecialPortal) return null;
+    if (isAuthPage || isSpecialPortal || isPublicPage) return null;
 
     return (
         <header className={`sm:hidden sticky top-0 z-50 transition-all duration-300 ${scrolled ? "bg-white/90 dark:bg-unizy-navy/90 backdrop-blur-md shadow-sm border-b border-slate-100 dark:border-slate-800" : "bg-white dark:bg-unizy-navy"
