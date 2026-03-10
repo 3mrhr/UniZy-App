@@ -1,6 +1,8 @@
 import { getFinanceReports, getRecentTransactions } from '@/app/actions/finance';
 import FinanceDashboardClient from './FinanceDashboardClient';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata = {
     title: 'Finance & Payouts | Admin | UniZy',
     description: 'Manage platform revenue and vendor settlements.',

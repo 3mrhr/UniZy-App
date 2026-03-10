@@ -13,7 +13,13 @@ import { uploadVerificationDoc } from "./upload";
  * If it's an email, we use Resend to send the code.
  * For MVP, phone OTP is logged to the console.
  */
-const resend = new Resend(process.env.RESEND_API_KEY);
+let resend = null;
+
+function getResendClient() {
+    if (!process.env.RESEND_API_KEY) return null;
+    if (!resend) resend = new Resend(process.env.RESEND_API_KEY);
+    return resend;
+}
 
 export async function requestOTP(identifier) {
     try {
@@ -41,7 +47,12 @@ export async function requestOTP(identifier) {
 
         if (isEmail) {
             try {
-                await resend.emails.send({
+                const resendClient = getResendClient();
+            if (!resendClient) {
+                throw new Error("Email service is not configured.");
+            }
+
+            await resendClient.emails.send({
                     from: 'UniZy <onboarding@resend.dev>', // Change to verified domain in production
                     to: identifier,
                     subject: 'UniZy Verification Code',
@@ -59,10 +70,6 @@ export async function requestOTP(identifier) {
                 console.log(`Email OTP sent to ${identifier}`);
             } catch (emailErr) {
                 console.error("Resend delivery failed:", emailErr);
-                // Fallback to console log for dev
-                console.log(`\n\n=== [FALLBACK] OTP for ${identifier} ===`);
-                console.log(`CODE: ${code}`);
-                console.log(`=======================\n\n`);
             }
         } else {
             console.log(`\n\n=== OTP for ${identifier} ===`);

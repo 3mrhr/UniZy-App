@@ -43,6 +43,7 @@ describe('Register Page', () => {
         fireEvent.change(screen.getByPlaceholderText('omar@example.com'), { target: { value: 'test@example.com' } });
         fireEvent.change(screen.getByPlaceholderText('01012345678'), { target: { value: '01012345678' } });
         fireEvent.change(screen.getByPlaceholderText('••••••••'), { target: { value: 'password123' } });
+        fireEvent.change(screen.getByPlaceholderText('20'), { target: { value: '20' } });
         fireEvent.change(screen.getByPlaceholderText('Engineering'), { target: { value: 'Engineering' } });
         fireEvent.change(screen.getByText('Select Year').closest('select'), { target: { value: '1st Year' } });
 

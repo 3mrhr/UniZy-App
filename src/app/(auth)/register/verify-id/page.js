@@ -17,11 +17,8 @@ export default function VerifyIDPage() {
     const handleUpload = (e) => {
         const file = e.target.files[0];
         if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setIdPhoto(reader.result);
-            };
-            reader.readAsDataURL(file);
+            const objectUrl = URL.createObjectURL(file);
+            setIdPhoto(objectUrl);
         }
     };
 

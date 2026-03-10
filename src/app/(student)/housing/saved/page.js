@@ -2,6 +2,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { getSavedHousing } from "@/app/actions/housing";
 
+export const dynamic = 'force-dynamic';
+
 export default async function SavedHousingPage() {
     const savedListings = await getSavedHousing();
 
