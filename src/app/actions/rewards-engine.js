@@ -9,7 +9,7 @@ const POINTS_PER_EGP = 0.1; // 1 EGP = 0.1 reward points (Base)
 const POINTS_EXPIRY_MONTHS = 6; // Points expire after 6 months
 
 // Tier Configuration (Elite Sync)
-export const TIER_CONFIG = {
+const TIER_CONFIG = {
     BRONZE: { multiplier: 1.0, threshold: 0, label: 'Bronze' },
     SILVER: { multiplier: 1.2, threshold: 500, label: 'Silver' },
     GOLD: { multiplier: 1.5, threshold: 1500, label: 'Gold' },

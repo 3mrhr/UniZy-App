@@ -2,11 +2,9 @@ import ThemeProvider from "@/components/ThemeProvider";
 import LanguageProvider from "@/i18n/LanguageProvider";
 import ClientLayout from "@/components/ClientLayout";
 import "./globals.css";
-import { Inter } from 'next/font/google';
-
-const inter = Inter({ subsets: ['latin'] });
 
 export const metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"),
   title: "UniZy - Student Super App",
   description: "The digital ecosystem for students",
 };
