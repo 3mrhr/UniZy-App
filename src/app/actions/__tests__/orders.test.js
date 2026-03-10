@@ -7,6 +7,7 @@ import { createNotification } from '../notifications';
 import { logAdminAction } from '../audit';
 import { revalidatePath } from 'next/cache';
 import { failure, success } from '@/lib/actionResult';
+import { authorizePayment, capturePayment } from '../payments';
 
 jest.mock('@/lib/prisma', () => ({
     prisma: {
@@ -77,11 +78,19 @@ jest.mock('../referrals', () => ({
     completeReferralIfEligible: jest.fn(),
 }));
 
+jest.mock('../payments', () => ({
+    __esModule: true,
+    authorizePayment: jest.fn().mockResolvedValue({ success: true }),
+    capturePayment: jest.fn().mockResolvedValue({ success: true }),
+}));
+
 beforeEach(() => {
     jest.resetAllMocks();
     // Set default implementations for common mocks that should succeed by default
     requireRole.mockResolvedValue({ id: 'user-1', role: 'STUDENT' });
     requireOwnership.mockImplementation(() => true);
+    authorizePayment.mockResolvedValue({ success: true });
+    capturePayment.mockResolvedValue({ success: true });
 });
 
 describe('createOrder', () => {
@@ -179,7 +188,7 @@ describe('createOrder', () => {
         // Since `result.success` is probably undefined (it's `result.ok`), logEvent won't be called.
         // I'll fix this in the source code as well.
         expect(logEvent).toHaveBeenCalledWith('ORDER_CREATED', 'order-1', { service: 'TRANSPORT', total: 50 });
-        expect(logEvent).toHaveBeenCalledWith('PAYMENT_SUCCEEDED', 'order-1', { amount: 50 });
+        expect(logEvent).toHaveBeenCalledWith('PAYMENT_AUTHORIZED', 'order-1', { amount: 50 });
         expect(createNotification).toHaveBeenCalledWith('user-1', 'Order Placed', 'Your transport order has been placed.', 'SYSTEM', '/activity/tracking/order-1');
     });
 
@@ -400,7 +409,7 @@ describe('updateMerchantOrderStatus', () => {
             where: { id: 'order-123' },
             data: { status: 'ACCEPTED' }
         });
-        expect(createNotification).toHaveBeenCalledWith('user-456', 'Order Update', 'Your order is now ACCEPTED.', 'SYSTEM', '/activity/tracking/order-123');
+        expect(createNotification).toHaveBeenCalledWith('user-456', 'Order Update', 'The merchant has accepted your order and is starting to prepare it.', 'SYSTEM', '/activity/tracking/order-123');
         expect(logEvent).toHaveBeenCalledWith('ORDER_STATUS_TRANSITION', 'order-123', { newStatus: 'ACCEPTED', actor: 'MERCHANT' });
         expect(revalidatePath).toHaveBeenCalledWith('/merchant');
         expect(result).toEqual(success({ order: updatedOrder }));
@@ -456,7 +465,7 @@ describe('acceptOrder', () => {
     });
 
     it('should successfully accept an order when status is READY and driver is assigned', async () => {
-        const mockDriver = { id: 'driver-123' };
+        const mockDriver = { id: 'driver-123', isOnline: true };
         const mockOrder = { id: 'order-123', userId: 'user-123', status: 'PICKED_UP', driverId: 'driver-123' };
 
         requireRole.mockResolvedValue(mockDriver);
@@ -486,7 +495,7 @@ describe('acceptOrder', () => {
     });
 
     it('should return failure if order is already taken or does not exist', async () => {
-        const mockDriver = { id: 'driver-123' };
+        const mockDriver = { id: 'driver-123', isOnline: true };
         requireRole.mockResolvedValue(mockDriver);
         prisma.order.updateMany.mockResolvedValue({ count: 0 });
 
@@ -507,7 +516,7 @@ describe('acceptOrder', () => {
     });
 
     it('should handle notification failure gracefully', async () => {
-        const mockDriver = { id: 'driver-123' };
+        const mockDriver = { id: 'driver-123', isOnline: true };
         const mockOrder = { id: 'order-123', userId: 'user-123', status: 'PICKED_UP', driverId: 'driver-123' };
 
         requireRole.mockResolvedValue(mockDriver);
@@ -524,7 +533,7 @@ describe('acceptOrder', () => {
     });
 
     it('should return failure on unexpected database error', async () => {
-        const mockDriver = { id: 'driver-123' };
+        const mockDriver = { id: 'driver-123', isOnline: true };
         requireRole.mockResolvedValue(mockDriver);
         prisma.order.updateMany.mockRejectedValue(new Error('DB Error'));
 
@@ -562,7 +571,7 @@ describe('orders action - getStudentOrders', () => {
         const result = await getStudentOrders();
 
         // Assert
-        expect(requireRole).toHaveBeenCalledWith(['STUDENT']);
+        expect(requireRole).toHaveBeenCalledWith(['STUDENT', 'GUEST']);
         expect(prisma.order.findMany).toHaveBeenCalledWith({
             where: { userId: mockUser.id },
             orderBy: { createdAt: 'desc' }
@@ -579,7 +588,7 @@ describe('orders action - getStudentOrders', () => {
         const result = await getStudentOrders();
 
         // Assert
-        expect(requireRole).toHaveBeenCalledWith(['STUDENT']);
+        expect(requireRole).toHaveBeenCalledWith(['STUDENT', 'GUEST']);
         expect(prisma.order.findMany).not.toHaveBeenCalled();
         expect(consoleErrorSpy).toHaveBeenCalledWith('Failed to fetch orders:', error);
         expect(result).toEqual([]);
@@ -597,7 +606,7 @@ describe('orders action - getStudentOrders', () => {
         const result = await getStudentOrders();
 
         // Assert
-        expect(requireRole).toHaveBeenCalledWith(['STUDENT']);
+        expect(requireRole).toHaveBeenCalledWith(['STUDENT', 'GUEST']);
         expect(prisma.order.findMany).toHaveBeenCalled();
         expect(consoleErrorSpy).toHaveBeenCalledWith('Failed to fetch orders:', error);
         expect(result).toEqual([]);
@@ -684,7 +693,7 @@ describe('getDriverOrders', () => {
 
     it('should successfully fetch orders for a valid driver', async () => {
         // Arrange
-        const mockUser = { id: 'driver-123' };
+        const mockUser = { id: 'driver-123', isOnline: true };
         requireRole.mockResolvedValue(mockUser);
 
         const mockOrders = [
@@ -744,7 +753,7 @@ describe('getDriverOrders', () => {
 
     it('should return an empty array and log error when prisma.order.findMany fails (database error)', async () => {
         // Arrange
-        const mockUser = { id: 'driver-123' };
+        const mockUser = { id: 'driver-123', isOnline: true };
         requireRole.mockResolvedValue(mockUser);
 
         const dbError = new Error('Database connection failed');
@@ -772,7 +781,7 @@ describe('updateOrderStatus', () => {
         const result = await updateOrderStatus('order-1', 'IN_TRANSIT');
 
         expect(result).toEqual(failure('NOT_FOUND', 'Order not found.'));
-        expect(requireRole).toHaveBeenCalledWith(['DRIVER']);
+        expect(requireRole).toHaveBeenCalledWith(['DRIVER', 'ADMIN_OPERATIONS', 'ADMIN_SUPER']);
         expect(prisma.order.findUnique).toHaveBeenCalledWith({ where: { id: 'order-1' } });
     });
 
@@ -842,7 +851,7 @@ describe('updateOrderStatus', () => {
 
     it('should successfully transition status to DELIVERED and calculate rewards correctly', async () => {
         const user = { id: 'driver-1' };
-        const order = { id: 'order-1', driverId: 'driver-1', status: 'IN_TRANSIT', userId: 'user-1', total: 100 };
+        const order = { id: 'order-1', driverId: 'driver-1', status: 'IN_TRANSIT', userId: 'user-1', total: 100, service: 'DELIVERY', deliveryOTP: '123456', failedOtpAttempts: 0 };
         const updatedOrder = { ...order, status: 'DELIVERED' };
         const txn = { id: 'txn-1', orderId: 'order-1', amount: 100.55, status: 'PENDING' }; // Points should be 10.06
 
@@ -855,7 +864,7 @@ describe('updateOrderStatus', () => {
         prisma.order.update.mockResolvedValue(updatedOrder);
         prisma.transaction.findFirst.mockResolvedValue(txn);
 
-        const result = await updateOrderStatus('order-1', 'DELIVERED');
+        const result = await updateOrderStatus('order-1', 'DELIVERED', '123456');
 
         expect(result).toEqual(success({ order: updatedOrder }));
 
@@ -874,19 +883,7 @@ describe('updateOrderStatus', () => {
             update: { currentBalance: { increment: 10.06 } },
             create: { userId: 'user-1', currentBalance: 10.06 },
         });
-        expect(prisma.transaction.update).toHaveBeenCalledWith({
-            where: { id: 'txn-1' },
-            data: { status: 'COMPLETED' },
-        });
-        expect(prisma.transactionHistory.create).toHaveBeenCalledWith({
-            data: {
-                transactionId: 'txn-1',
-                oldStatus: 'PENDING',
-                newStatus: 'COMPLETED',
-                actorId: 'driver-1',
-                reason: 'Order delivered',
-            },
-        });
+        expect(capturePayment).toHaveBeenCalledWith('txn-1');
 
         expect(logEvent).toHaveBeenCalledWith('PAYMENT_SUCCEEDED', 'order-1', { amount: 100 });
         expect(logEvent).toHaveBeenCalledWith('ORDER_STATUS_TRANSITION', 'order-1', { newStatus: 'DELIVERED' });

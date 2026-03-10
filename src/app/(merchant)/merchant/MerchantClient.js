@@ -175,7 +175,7 @@ export default function MerchantClient({ merchantData }) {
                     kanbanColumns={kanbanColumns}
                     isUpdating={isUpdating}
                     updateStatus={updateStatus}
-                    refreshOrders={refreshOrders}
+                    refreshOrders={refreshData}
                     statusLabel={statusLabel}
                 />
 

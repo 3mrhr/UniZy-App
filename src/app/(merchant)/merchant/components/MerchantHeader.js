@@ -1,6 +1,6 @@
 import ThemeLangControls from '@/components/ThemeLangControls';
 
-export default function MerchantHeader({ merchantName, storeOpen }) {
+export default function MerchantHeader({ merchantName, storeOpen, onToggleStatus }) {
     return (
         <header className="bg-white dark:bg-unizy-dark px-6 py-6 shadow-sm border-b border-gray-100 dark:border-white/5 flex justify-between items-center sticky top-0 z-50">
             <div className="flex items-center gap-3">
