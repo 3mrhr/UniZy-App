@@ -3,14 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "dev": "node scripts/doctor-local.mjs --fix && next dev",
+    "build": "node scripts/doctor-local.mjs && next build",
     "start": "next start",
     "lint": "eslint",
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
     "seed": "node prisma/seed.mjs",
-    "test": "jest --testMatch=\"**/__tests__/**/*.test.js\""
+    "test": "jest --testMatch=\"**/__tests__/**/*.test.js\"",
+    "doctor:local": "node scripts/doctor-local.mjs --fix"
   },
   "prisma": {
     "seed": "node prisma/seed.mjs"

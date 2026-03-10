@@ -185,6 +185,12 @@ npm run seed
 npm run dev
 ```
 
+If local startup keeps failing because of stale locks/caches, run:
+
+```bash
+npm run doctor:local
+```
+
 ---
 
 ## Database & Seeding
@@ -213,6 +219,7 @@ npm run build     # Build production bundle
 npm run start     # Run production server
 npm run lint      # Run ESLint
 npm run seed      # Seed database via prisma/seed.mjs
+npm run doctor:local # Remove stale Next.js lock/cache and verify deps
 ```
 
 ---
