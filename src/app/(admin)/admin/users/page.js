@@ -120,7 +120,7 @@ export default function UserManagementPortal() {
                     <tbody className="divide-y divide-white/5 text-sm">
                         {/* Placeholder rows for UI demonstration */}
                         {[
-                            { name: 'Omar Ryan', email: 'omar@unizy.app', role: 'STUDENT', status: 'ACTIVE', verified: 'VERIFIED', img: null },
+                            { name: 'Sample Student', email: 'student@example.com', role: 'STUDENT', status: 'ACTIVE', verified: 'VERIFIED', img: null },
                             { name: 'Sarah Ahmed', email: 'sarah.a@uni.edu', role: 'DRIVER', status: 'ACTIVE', verified: 'PENDING', img: null },
                             { name: 'Tech Solutions', email: 'merch@tech.com', role: 'MERCHANT', status: 'ACTIVE', verified: 'VERIFIED', img: null },
                             { name: 'Bad Actor', email: 'scam@gmail.com', role: 'STUDENT', status: 'SUSPENDED', verified: 'REJECTED', img: null }

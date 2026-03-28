@@ -17,7 +17,7 @@ const STATS = [
 ];
 
 const RECENT_ORDERS = [
-    { id: '#ORD-9281', customer: 'Omar Ali', vendor: 'Burger Bros', status: 'DELIVERING', amount: '120 EGP' },
+    { id: '#ORD-9281', customer: 'Sample Student', vendor: 'Burger Bros', status: 'DELIVERING', amount: '120 EGP' },
     { id: '#ORD-9280', customer: 'Sara Ahmed', vendor: 'Pizza Hut', status: 'COMPLETED', amount: '240 EGP' },
     { id: '#ORD-9279', customer: 'Ziad Nour', vendor: 'Sushi Express', status: 'PENDING', amount: '310 EGP' },
 ];

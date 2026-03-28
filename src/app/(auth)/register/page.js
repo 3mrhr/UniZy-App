@@ -114,7 +114,7 @@ export default function Register() {
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
                                 className="w-full px-5 py-3 rounded-2xl bg-gray-50 dark:bg-unizy-navy/50 border-2 border-transparent focus:bg-white dark:focus:bg-unizy-navy focus:border-brand-500 focus:ring-0 outline-none transition-all text-gray-900 dark:text-white font-bold"
-                                placeholder="Omar Hassan"
+                                placeholder="Student Name"
                                 required
                             />
                         </div>
@@ -125,7 +125,7 @@ export default function Register() {
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 className="w-full px-5 py-3 rounded-2xl bg-gray-50 dark:bg-unizy-navy/50 border-2 border-transparent focus:bg-white dark:focus:bg-unizy-navy focus:border-brand-500 focus:ring-0 outline-none transition-all text-gray-900 dark:text-white font-bold"
-                                placeholder="omar@example.com"
+                                placeholder="student@example.com"
                                 required
                             />
                         </div>
