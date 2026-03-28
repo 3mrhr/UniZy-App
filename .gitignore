@@ -30,8 +30,16 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
+# build & dev logs
+*.log
+app_dev*.log
+build*.log
+final_build*.log
+install.log
+
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -42,3 +50,15 @@ next-env.d.ts
 
 /src/generated/prisma
 dev.db
+
+# local agent/editor tooling
+.claude/
+.codex/
+.idea/
+.vscode/
+
+# local temp and test artifacts
+*.bak
+playwright-temp.spec.js
+test-results/
+tsc_output.txt
